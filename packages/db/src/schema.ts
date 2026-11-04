@@ -129,6 +129,8 @@ export interface WorkspaceSettings {
   phone?: string;
   /** The address outgoing emails come from (the connected mailbox in production). */
   mailboxAddress?: string;
+  /** Default "purpose of payment" wording on invoices. */
+  purposeWording?: string;
 }
 export type Role = "owner" | "finance" | "accountant" | "viewer";
 

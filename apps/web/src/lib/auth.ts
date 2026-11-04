@@ -1,6 +1,7 @@
 import "server-only";
-import { account, getDb, session, twoFactor as twoFactorTable, user, verification } from "@ebo/db";
+import { account, getDb, member, session, twoFactor as twoFactorTable, user, verification } from "@ebo/db";
 import { betterAuth } from "better-auth";
+import { eq } from "drizzle-orm";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { anonymous, twoFactor } from "better-auth/plugins";
@@ -16,5 +17,12 @@ export const auth = betterAuth({
   database: drizzleAdapter(getDb(), { provider: "pg", schema: { user, session, account, verification, twoFactor: twoFactorTable } }),
   emailAndPassword: { enabled: true, minPasswordLength: 10, autoSignIn: true },
   session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
-  plugins: [twoFactor({ issuer: "IT Export Back Office" }), anonymous({ emailDomainName: "visitor.invalid" }), nextCookies()],
+  plugins: [twoFactor({ issuer: "IT Export Back Office" }), anonymous({
+      emailDomainName: "visitor.invalid",
+      // A visitor who signs up keeps their demo copy. Signing in to an existing account doesn't take it along.
+      onLinkAccount: async ({ anonymousUser, newUser, ctx }) => {
+        if (!ctx.path?.startsWith("/sign-up")) return;
+        await getDb().update(member).set({ userId: newUser.user.id }).where(eq(member.userId, anonymousUser.user.id));
+      },
+    }), nextCookies()],
 });

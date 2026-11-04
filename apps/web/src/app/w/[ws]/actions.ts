@@ -10,14 +10,8 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { engineDeps, startRun } from "@/lib/engine";
 import { humanProblem, REVIEW_KINDS, type ReviewState } from "@/lib/review";
-import { canAct, requireWorkspace } from "@/lib/session";
+import { actor } from "@/lib/actor";
 
-/** The signed-in member, if their role may change things here (owners for settings). */
-async function actor(slug: string, need: "act" | "own" = "act") {
-  const m = await requireWorkspace(slug);
-  if (need === "own" ? m.role !== "owner" : !canAct(m.role)) throw new Error(need === "own" ? "Only the workspace owner can change this." : "Your role can view this workspace but not change it.");
-  return m;
-}
 
 const refresh = (slug: string) => revalidatePath(`/w/${slug}`, "layout");
 

@@ -23,9 +23,16 @@ export default async function Landing() {
           <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-ink">₨</span>
           IT Export Back Office
         </div>
-        <Link href={session ? "/workspaces" : "/login"} className="btn btn-secondary">
-          {session ? "Open app" : "Sign in"}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {!session ? (
+            <Link href="/signup" className="btn btn-secondary hidden sm:inline-flex">
+              Create an account
+            </Link>
+          ) : null}
+          <Link href={session ? "/workspaces" : "/login"} className="btn btn-secondary">
+            {session ? "Open app" : "Sign in"}
+          </Link>
+        </div>
       </nav>
 
       <section className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:items-center">
@@ -44,6 +51,13 @@ export default async function Landing() {
               Sign in with a demo account
             </Link>
           </div>
+          <p className="mt-3 text-sm">
+            Ready to use it for real?{" "}
+            <Link href="/signup" className="font-medium text-accent hover:underline">
+              Create an account
+            </Link>{" "}
+            and set up your own workspace.
+          </p>
           <p className="mt-3 text-xs text-muted">The demo gives you a private copy of two fictional workspaces (a 22-person software house and a freelancer) that expires in 7 days. All names, numbers and documents are simulated.</p>
         </div>
         <div className="rounded-2xl border border-line bg-panel p-5 shadow-sm">

@@ -4,19 +4,20 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import Link from "next/link";
 import { Badge, Card, Empty, PageHeader, Status, Table, cx } from "@/components/ui";
 import { day, money } from "@/lib/format";
-import { requireWorkspace } from "@/lib/session";
+import { canAct, requireWorkspace } from "@/lib/session";
 
 export const metadata = { title: "Invoices" };
 
 const TABS = [
   ["open", "Open"],
+  ["drafts", "Drafts"],
   ["all", "All"],
 ] as const;
 
 export default async function InvoicesPage({ params, searchParams }: { params: Promise<{ ws: string }>; searchParams: Promise<{ show?: string }> }) {
   const { ws: slug } = await params;
   const { show = "open" } = await searchParams;
-  const { ws } = await requireWorkspace(slug);
+  const { ws, role } = await requireWorkspace(slug);
   const db = getDb();
   const today = dateInZone(ws.demoClock ?? new Date(), ws.timezone);
   const rows = await db
@@ -27,13 +28,23 @@ export default async function InvoicesPage({ params, searchParams }: { params: P
     })
     .from(invoice)
     .innerJoin(client, eq(client.id, invoice.clientId))
-    .where(show === "all" ? eq(invoice.workspaceId, ws.id) : and(eq(invoice.workspaceId, ws.id), inArray(invoice.status, ["sent", "part_paid"])))
+    .where(show === "all" ? eq(invoice.workspaceId, ws.id) : and(eq(invoice.workspaceId, ws.id), show === "drafts" ? eq(invoice.status, "draft") : inArray(invoice.status, ["sent", "part_paid"])))
     .orderBy(desc(invoice.issuedOn), desc(invoice.number));
   const base = `/w/${slug}`;
 
   return (
     <>
-      <PageHeader title="Invoices" sub="What clients owe, what has arrived against each invoice, and what is overdue." />
+      <PageHeader
+        title="Invoices"
+        sub="What clients owe, what has arrived against each invoice, and what is overdue."
+        actions={
+          canAct(role) ? (
+            <Link href={`${base}/invoices/new`} className="btn btn-primary">
+              New invoice
+            </Link>
+          ) : null
+        }
+      />
       <div className="mb-4 flex gap-1">
         {TABS.map(([k, label]) => (
           <Link key={k} href={`${base}/invoices?show=${k}`} className={cx("rounded-lg px-3 py-1.5 text-sm", k === show ? "bg-accent/10 font-medium text-accent" : "text-muted hover:text-ink")}>
@@ -70,7 +81,7 @@ export default async function InvoicesPage({ params, searchParams }: { params: P
           </Table>
         ) : (
           <div className="p-4">
-            <Empty>No invoices here.</Empty>
+            <Empty>{show === "drafts" ? "No draft invoices." : "No invoices here."}</Empty>
           </div>
         )}
       </Card>

@@ -117,6 +117,13 @@ function checkInvoice(input: InvoiceInput, options: RouteOption[]): { problems: 
   return { problems, lines, route: chosen };
 }
 
+/** The number the next invoice issued on this date would get (shown in the editor; given for real on save). */
+export async function peekInvoiceNumber(db: Db, ws: Workspace, issuedOn: IsoDate): Promise<string> {
+  const year = issuedOn.slice(0, 4);
+  const used = await db.select({ number: invoice.number }).from(invoice).where(and(eq(invoice.workspaceId, ws.id), like(invoice.number, `${ws.invoicePrefix}-${year}-%`)));
+  return invoiceNumber(ws.invoicePrefix, issuedOn, Math.max(ws.nextInvoiceSeq, highestSequence(used.map((u) => u.number), ws.invoicePrefix, year) + 1));
+}
+
 /** Creates an invoice, or changes one that's still a draft. Numbers continue after the highest used this year. */
 export async function saveInvoice(db: Db, ws: Workspace, input: InvoiceInput, userId: string, invoiceId?: string): Promise<SaveResult> {
   const [c] = await db.select().from(client).where(and(eq(client.workspaceId, ws.id), eq(client.id, input.clientId)));
