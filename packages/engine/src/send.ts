@@ -1,5 +1,5 @@
 import { checkNumbers, dateInZone, TEMPLATE_ALLOW_LIST } from "@ebo/core";
-import { complianceItem, draftAction, flag, invoiceReminder, message, workspace, type Db } from "@ebo/db";
+import { complianceItem, draftAction, flag, invoice, invoiceReminder, message, workspace, type Db } from "@ebo/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { audit, workspaceClock, type Mailer } from "./context";
 
@@ -51,6 +51,9 @@ export async function sendDraft(deps: { db: Db; mailer: Mailer }, draftId: strin
     const stage = /:stage(\d+)$/.exec(d.key)?.[1];
     if (d.invoiceId && stage && ["T1", "T2", "T3"].includes(d.template ?? "")) {
       await tx.insert(invoiceReminder).values({ workspaceId: ws.id, invoiceId: d.invoiceId, stage: Number(stage), sentOn: today, draftActionId: d.id });
+    }
+    if (d.invoiceId && d.template === "T11") {
+      await tx.update(invoice).set({ status: "sent", sentAt: at }).where(and(eq(invoice.id, d.invoiceId), eq(invoice.status, "draft")));
     }
     if (d.flagIds.length) {
       const flags = await tx.select().from(flag).where(inArray(flag.id, d.flagIds));

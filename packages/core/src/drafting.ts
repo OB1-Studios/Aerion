@@ -58,9 +58,9 @@ export const PURPOSE_CODE_DESCRIPTIONS: Record<string, string> = {
 
 const firstName = (name: string | null | undefined) => (name ?? "").replace(/^(Dr|Mr|Mrs|Ms)\.?\s+/i, "").split(/\s+/)[0] ?? "";
 
-export function planDrafts(flags: FlagCandidate[], ctx: DraftContext): DraftPlan[] {
-  const out: DraftPlan[] = [];
-  const base: Evidence = {
+/** Who signs, and the workspace's own details, as every email's evidence. */
+function signatureEvidence(ctx: Pick<DraftContext, "workspace" | "sender">): Evidence {
+  return {
     "sender.name": ev.text(ctx.sender.name),
     "sender.title": ev.text(ctx.sender.title),
     "workspace.legal_name": ev.text(ctx.workspace.legalName),
@@ -69,15 +69,21 @@ export function planDrafts(flags: FlagCandidate[], ctx: DraftContext): DraftPlan
     ...(ctx.workspace.ntn ? { "workspace.ntn": ev.text(ctx.workspace.ntn) } : {}),
     ...(ctx.workspace.psebRegNo ? { "workspace.pseb_reg_no": ev.text(ctx.workspace.psebRegNo) } : {}),
   };
-  const clientEvidence = (clientId: string): Evidence => {
-    const c = ctx.clients.get(clientId);
-    const contact = c?.contactName ?? c?.name ?? "";
-    return {
-      "client.name": ev.text(c?.name ?? ""),
-      "client.contact_name": ev.text(contact),
-      "client.contact_first_name": ev.text(firstName(contact) || "there"),
-    };
+}
+
+function contactEvidence(c: { name: string; contactName?: string | null } | undefined): Evidence {
+  const contact = c?.contactName ?? c?.name ?? "";
+  return {
+    "client.name": ev.text(c?.name ?? ""),
+    "client.contact_name": ev.text(contact),
+    "client.contact_first_name": ev.text(firstName(contact) || "there"),
   };
+}
+
+export function planDrafts(flags: FlagCandidate[], ctx: DraftContext): DraftPlan[] {
+  const out: DraftPlan[] = [];
+  const base = signatureEvidence(ctx);
+  const clientEvidence = (clientId: string): Evidence => contactEvidence(ctx.clients.get(clientId));
   const accountFor = (invoiceId: string | null | undefined, txId?: string | null) => {
     const accId =
       (txId && ctx.transactions.get(txId)?.receivingAccountId) ||
@@ -297,4 +303,40 @@ export function planDrafts(flags: FlagCandidate[], ctx: DraftContext): DraftPlan
   }
 
   return out;
+}
+
+export interface InvoiceEmailInput {
+  invoiceId: string;
+  number: string;
+  amount: string;
+  currency: string;
+  dueOn: IsoDate;
+  client: { name: string; contactName?: string | null; contactEmails: string[] };
+  /** How to pay, e.g. "Bank wire (SWIFT) to the ESFCA (USD)". */
+  routeName: string;
+  /** The exact payment instructions, one per line (core/invoicing.ts). */
+  instructions: string[];
+  purposeWording?: string | null;
+}
+
+/**
+ * The email that sends a new invoice (T11). Asked for by a person, so it has no flag; the
+ * policy keeps it for approval, and the numbers check runs on it like on any other draft.
+ */
+export function planInvoiceEmail(i: InvoiceEmailInput, ctx: Pick<DraftContext, "policy" | "grouping" | "workspace" | "sender">): DraftPlan {
+  const evidence: Evidence = {
+    ...signatureEvidence(ctx),
+    ...contactEvidence(i.client),
+    "invoice.number": ev.text(i.number),
+    "invoice.amount": ev.money(i.amount, i.currency),
+    "invoice.due_on": ev.date(i.dueOn),
+    "route.name": ev.text(i.routeName),
+    "receiving_account.payment_instructions": ev.text(i.instructions.join("\n")),
+    ...(i.purposeWording ? { "route.purpose_wording": ev.text(i.purposeWording) } : {}),
+  };
+  const t = TEMPLATES.T11!;
+  const r = renderEmail(t, evidence, { grouping: ctx.grouping });
+  const to = i.client.contactEmails[0] ?? null;
+  const decision = decideSend({ template: "T11", numbersCheckOk: r.numbersCheck.ok, missingPlaceholders: r.unknown, recipientOnFile: !!to, clientHasOpenDispute: false }, ctx.policy);
+  return { key: `T11:invoice:${i.invoiceId}`, flagKeys: [], kind: "client_email", template: "T11", invoiceId: i.invoiceId, to, subject: r.subject, body: r.body, bodyTemplate: r.bodyTemplate, evidence, numbersCheck: r.numbersCheck, decision };
 }
