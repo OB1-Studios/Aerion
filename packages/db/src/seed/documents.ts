@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { formatAmount, formatMoney, type IsoDate } from "@ebo/core";
+import type { DocumentKind } from "../schema";
 
 /**
  * Simulated documents (data spec section 12). Layouts are invented and every document says
@@ -145,13 +146,32 @@ export function marketplaceCsv(rows: MarketplaceRow[]): string {
 }
 
 /** A bank SMS as pasted into the app (data spec section 11). */
-export function bankSms(s: { pkrAmount: string; accountTail: string; payer: string; via: string; date: IsoDate; purposeCode: string; bankName: string }): string {
+export interface SmsFields {
+  pkrAmount: string;
+  accountTail: string;
+  payer: string;
+  via: string;
+  date: IsoDate;
+  purposeCode: string;
+  bankName: string;
+}
+
+export function bankSms(s: SmsFields): string {
   const purpose = s.purposeCode === "9471" ? "Home Remittance" : "IT Services Export";
-  return `PKR ${formatAmount(s.pkrAmount)} received in A/C ****${s.accountTail} from ${s.payer} via ${s.via} on ${pkDate(s.date)}. Purpose: ${s.purposeCode} ${purpose}. -${s.bankName.replace(/ Ltd$/, "")}`;
+  return `PKR ${formatAmount(s.pkrAmount)} received in A/C ****${s.accountTail} from ${s.payer} via ${s.via} on ${pkDate(s.date)}. Purpose: ${s.purposeCode} ${purpose}. -${s.bankName.replace(/ Ltd$/, "")} (SIMULATED)`;
 }
 
 /** A client's "transfer submitted" screenshot. Generic look, not any real bank's interface. */
-export function transferScreenshotSvg(s: { amount: string; currency: string; beneficiary: string; accountTail: string; date: IsoDate; reference: string }): string {
+export interface ScreenshotFields {
+  amount: string;
+  currency: string;
+  beneficiary: string;
+  accountTail: string;
+  date: IsoDate;
+  reference: string;
+}
+
+export function transferScreenshotSvg(s: ScreenshotFields): string {
   const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const [y, m, d] = s.date.split("-");
   const shown = `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(m) - 1]} ${Number(d)}, ${y}`;
@@ -179,7 +199,20 @@ export function transferScreenshotSvg(s: { amount: string; currency: string; ben
 }
 
 /** A copy of the client's SWIFT confirmation, as a client would forward it. */
-export function mt103Text(m: { reference: string; valueDate: IsoDate; currency: string; amount: string; orderingCustomer: string; senderSwift: string; beneficiaryIban: string; beneficiary: string; remittanceInfo: string; uetr: string }): string {
+export interface Mt103Fields {
+  reference: string;
+  valueDate: IsoDate;
+  currency: string;
+  amount: string;
+  orderingCustomer: string;
+  senderSwift: string;
+  beneficiaryIban: string;
+  beneficiary: string;
+  remittanceInfo: string;
+  uetr: string;
+}
+
+export function mt103Text(m: Mt103Fields): string {
   const yymmdd = m.valueDate.slice(2).replace(/-/g, "");
   return [
     "MT103 Single Customer Credit Transfer (copy)",
@@ -198,4 +231,39 @@ export function mt103Text(m: { reference: string; valueDate: IsoDate; currency: 
     RULE,
     "",
   ].join("\n");
+}
+
+/**
+ * What a generated document says, kept beside the file: the answer key is derived from it, so
+ * the key and the documents can never disagree (data spec section 14).
+ */
+export type Truth =
+  | { type: "advice"; fields: AdviceFields }
+  | { type: "eprc"; fields: EprcFields }
+  | { type: "sms"; fields: SmsFields }
+  | { type: "screenshot"; fields: ScreenshotFields }
+  | { type: "mt103"; fields: Mt103Fields };
+
+export interface GeneratedFile {
+  name: string;
+  mimeType: string;
+  content: string;
+  kind: DocumentKind;
+  truth: Truth;
+}
+
+/** Renders a document in the demo bank's layout, keeping what it says beside it. */
+export function generated(name: string, truth: Truth): GeneratedFile {
+  switch (truth.type) {
+    case "advice":
+      return { name, mimeType: "text/plain", content: creditAdviceText(truth.fields), kind: "credit_advice", truth };
+    case "eprc":
+      return { name, mimeType: "text/plain", content: eprcText(truth.fields), kind: "eprc", truth };
+    case "sms":
+      return { name, mimeType: "text/plain", content: bankSms(truth.fields), kind: "pasted_text", truth };
+    case "screenshot":
+      return { name, mimeType: "image/svg+xml", content: transferScreenshotSvg(truth.fields), kind: "screenshot", truth };
+    case "mt103":
+      return { name, mimeType: "text/plain", content: mt103Text(truth.fields), kind: "other", truth };
+  }
 }

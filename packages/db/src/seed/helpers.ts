@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
-import { addDays, Decimal, dec, matchCredit, rulesFrom, type CreditForMatching, type IsoDate, type Route } from "@ebo/core";
+import { addDays, Decimal, dec, matchCredit, rulesFrom, type CreditForMatching, type IsoDate, type Route, type TemplateKey } from "@ebo/core";
 import type { Db } from "../client";
 import * as s from "../schema";
 import { documentKey, sha256, type Storage } from "../storage";
+import type { Truth } from "./documents";
 import { simulatedRate } from "./rates";
 
 export const uuid = () => randomUUID();
@@ -166,4 +167,42 @@ export function ibanIsValid(iban: string): boolean {
   let rem = 0;
   for (const ch of digits) rem = (rem * 10 + Number(ch)) % 97;
   return rem === 1;
+}
+
+// ---------------------------------------------------------------------------
+// The simulated mailbox
+// ---------------------------------------------------------------------------
+
+export type Attachment = { name: string; mimeType: string; content: string; kind?: s.DocumentKind; truth?: Truth };
+
+/** One message or upload that "arrives" when the demo clock passes `at`. */
+export interface InboxSpec {
+  at: Date;
+  channel: "email" | "upload" | "paste";
+  from?: string;
+  to?: string;
+  subject?: string;
+  body?: string;
+  attachments: Attachment[];
+  kindHint?: s.DocumentKind;
+  requires?: TemplateKey;
+}
+
+export async function storeInbox(rows: Rows, storage: Storage, ws: string, items: InboxSpec[]): Promise<void> {
+  for (const it of items) {
+    const attachments: StoredFile[] = [];
+    for (const a of it.attachments) attachments.push(await storeFile(storage, ws, a.name, a.mimeType, a.content, a.kind));
+    rows.demoInboxItem.push({
+      workspaceId: ws,
+      deliverAt: it.at,
+      channel: it.channel,
+      fromAddress: it.from ?? null,
+      toAddress: it.to ?? null,
+      subject: it.subject ?? null,
+      bodyText: it.body ?? null,
+      attachments,
+      kindHint: it.kindHint ?? null,
+      requiresSentTemplate: it.requires ?? null,
+    });
+  }
 }

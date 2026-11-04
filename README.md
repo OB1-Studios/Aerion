@@ -58,6 +58,16 @@ Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ───�
   audit log (private VPC host, TLS)                                                (OpenAI-compatible, JSON)
 ```
 
+## Reading benchmark
+
+The model is chosen by measurement. `pnpm bench` has every reader read the answer key: 61 SIMULATED documents, each with the values it should yield, taken from the generator's own inputs so the key can't drift from the files. 16 are in the demo bank's layout. The other 45 show the same facts in layouts the built-in rules were never written for: another bank's advice, a letter, a noisy scan, other SMS wording (one in Roman Urdu), another app's screenshot and a printed MT103. Three advices are addressed to someone else. A field counts when the answer or the reading has a value, so an invented value is a miss.
+
+| Reader | Fields right, demo layout | Fields right, other layouts | Documents fully right | Cost |
+| --- | --- | --- | --- | --- |
+| Layout rules (no model) | 100% | 12% | 19 of 61 | $0 |
+
+The model rows come from `pnpm bench --models candidates`, which needs `VULTR_INFERENCE_API_KEY`. It runs every candidate model the key can use and reports tokens, cost and time per document; add `--out <dir>` to save the report. A test checks that the layout rules read every demo document exactly as the key says, and that a model which can't be reached counts as a miss rather than borrowing the rules' answer.
+
 ## Try the demo
 
 All data is fictional and marked SIMULATED: a software house (Ravi Code Works) and a freelancer (Ayesha Siddiqui), with their invoices, bank documents, wallet exports and client emails.
@@ -83,7 +93,7 @@ pnpm seed                # the shared demo workspaces and users
 pnpm local               # http://localhost:3000, a production build using about 200 MB of memory
 ```
 
-`pnpm local` builds the app (again only when the source changes) and runs the workflow inside the web process, so no worker is needed. For hot reload while coding, use `pnpm dev` (the web app only, and much heavier), or `pnpm dev:all` to run the worker as well. Every command reads the `.env` at the repo root; variables already set in your shell win. Without `VULTR_INFERENCE_API_KEY`, documents are read by the built-in layout rules. With a key, `pnpm --filter @ebo/ai models` lists the models it can use. Set `VULTR_INFERENCE_MODEL` to choose one, and `pnpm --filter @ebo/ai try <file>` reads a single document with it.
+`pnpm local` builds the app (again only when the source changes) and runs the workflow inside the web process, so no worker is needed. For hot reload while coding, use `pnpm dev` (the web app only, and much heavier), or `pnpm dev:all` to run the worker as well. Every command reads the `.env` at the repo root; variables already set in your shell win. Without `VULTR_INFERENCE_API_KEY`, documents are read by the built-in layout rules. With a key, `pnpm --filter @ebo/ai models` lists the models it can use. Set `VULTR_INFERENCE_MODEL` to choose one, and `pnpm --filter @ebo/ai try <file>` reads a single document with it. `pnpm bench` scores the readers against the answer key.
 
 ```bash
 pnpm typecheck
@@ -114,8 +124,8 @@ Without Object Storage, documents go to a Docker volume shared by `web` and `wor
 | `apps/worker` | Claims queued runs, runs the weekly cron and the demo clean-up, and has a CLI |
 | `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending |
 | `packages/core` | Pure rules: money, dates, matching, flags, templates, the numbers check, the approval policy |
-| `packages/ai` | The Vultr Serverless Inference client, prompts, extraction schemas and model-backed readers |
-| `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data |
+| `packages/ai` | The Vultr Serverless Inference client, prompts, extraction schemas, model-backed readers and the reading benchmark |
+| `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data and its answer key |
 | `packages/vultr` | A typed Vultr API client generated from the OpenAPI document, plus platform status |
 | `infra` | `plan`, `apply` and `status` for the Vultr stack |
 
