@@ -4,6 +4,8 @@ export interface FormState {
   values: Record<string, string> | null;
   /** Set when a form that stays on the page saved successfully. */
   saved?: number;
+  /** Something to show after saving, such as an invitation link to copy. */
+  notice?: string;
 }
 
 export const FORM_START: FormState = { problems: [], values: null };

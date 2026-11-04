@@ -12,8 +12,11 @@ const DEMO_ACCOUNTS = [
   ["ayesha@ayeshabuilds.example", "Freelancer"],
 ];
 
-export default async function LoginPage() {
-  if (await getSession()) redirect("/workspaces");
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; email?: string }> }) {
+  const q = await searchParams;
+  const next = q.next?.startsWith("/invite/") ? q.next : undefined;
+  const session = await getSession();
+  if (session && !(session.user as { isAnonymous?: boolean | null }).isAnonymous) redirect(next ?? "/workspaces");
   return (
     <main className="mx-auto grid min-h-dvh max-w-md content-center px-4 py-10">
       <Link href="/" className="mb-6 text-sm text-muted hover:text-ink">
@@ -21,11 +24,11 @@ export default async function LoginPage() {
       </Link>
       <div className="rounded-2xl border border-line bg-panel p-6 shadow-sm">
         <h1 className="text-lg font-semibold">Sign in</h1>
-        <LoginForm />
+        <LoginForm next={next} email={q.email} />
       </div>
       <p className="mt-4 text-center text-sm text-muted">
         New here?{" "}
-        <Link href="/signup" className="font-medium text-accent hover:underline">
+        <Link href={next ? `/signup?${new URLSearchParams({ next, ...(q.email ? { email: q.email } : {}) })}` : "/signup"} className="font-medium text-accent hover:underline">
           Create an account
         </Link>
       </p>

@@ -1,10 +1,13 @@
 "use server";
 
-import { getDb } from "@ebo/db";
+import { getDb, member } from "@ebo/db";
 import {
   addReceivingAccount,
   connectMailbox,
   disconnectMailbox,
+  inviteMember,
+  revokeInvitation,
+  setMemberRole,
   draftInvoiceEmail,
   markInvoiceSent,
   saveBusinessDetails,
@@ -16,7 +19,10 @@ import {
   type BusinessInput,
   type ClientInput,
 } from "@ebo/engine";
+import type { Role } from "@ebo/db";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { actor } from "@/lib/actor";
 import { formValues, type FormState } from "@/lib/forms";
@@ -160,4 +166,47 @@ export async function disconnectMailboxAction(slug: string) {
   await disconnectMailbox(getDb(), ws.id, user.id);
   refresh(slug);
   redirect(`/w/${slug}/setup#mailbox`);
+}
+
+// ---------------------------------------------------------------------------
+// People: owners only
+// ---------------------------------------------------------------------------
+
+/** The address people open the app at, for links they're sent. */
+async function appOrigin(): Promise<string> {
+  const h = await headers();
+  const origin = h.get("origin");
+  if (origin && /^https?:\/\/[^/\s]+$/.test(origin)) return origin;
+  return (process.env.BETTER_AUTH_URL ?? `http://${h.get("host") ?? "localhost:3000"}`).replace(/\/$/, "");
+}
+
+/** Invites someone by email; the page shows the link to send them (it works once, for that address). */
+export async function inviteAction(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const { user, ws } = await actor(slug, "own");
+  const v = formValues(form);
+  if (ws.isDemo) return { problems: ["People can't be changed in a demo workspace."], values: v };
+  const r = await inviteMember(getDb(), ws, { email: field(v, "email"), role: field(v, "role") }, user.id);
+  if (!r.ok) return { problems: r.problems, values: v };
+  refresh(slug);
+  return { problems: [], values: null, saved: Date.now(), notice: `${await appOrigin()}/invite/${r.token}` };
+}
+
+export async function revokeInviteAction(slug: string, invitationId: string) {
+  const { user, ws } = await actor(slug, "own");
+  if (ws.isDemo) redirect(`/w/${slug}/settings#people`);
+  await revokeInvitation(getDb(), ws.id, invitationId, user.id);
+  refresh(slug);
+  redirect(`/w/${slug}/settings#people`);
+}
+
+export async function setRoleAction(slug: string, memberId: string, remove: boolean, form: FormData) {
+  const { user, ws } = await actor(slug, "own");
+  if (ws.isDemo) redirect(`/w/${slug}/settings?people=${encodeURIComponent("People can't be changed in a demo workspace.")}#people`);
+  const role = remove ? null : (String(form.get("role") ?? "") as Role);
+  const r = await setMemberRole(getDb(), ws.id, memberId, role, user.id);
+  refresh(slug);
+  if (!r.ok) redirect(`/w/${slug}/settings?people=${encodeURIComponent(r.reason)}#people`);
+  // Someone who removed themselves can't see this workspace any more.
+  const [still] = await getDb().select({ id: member.id }).from(member).where(and(eq(member.workspaceId, ws.id), eq(member.userId, user.id)));
+  redirect(still ? `/w/${slug}/settings#people` : "/workspaces");
 }
