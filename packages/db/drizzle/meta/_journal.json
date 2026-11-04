@@ -43,6 +43,13 @@
       "when": 1793803329495,
       "tag": "0005_retainers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793806607872,
+      "tag": "0006_credit_note_number",
+      "breakpoints": true
     }
   ]
 }

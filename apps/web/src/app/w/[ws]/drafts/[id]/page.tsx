@@ -106,7 +106,7 @@ export default async function DraftPage({ params, searchParams }: { params: Prom
               <p className="mt-3 text-xs text-muted">Approving sends it straight away. The numbers check runs again on this exact text first; if anything changed in the records, the email is held back.</p>
             </Card>
           ) : null}
-          {d.rejectedReason && (d.status === "rejected" || d.status === "cancelled" || d.status === "failed") ? <Notice tone="amber">{d.rejectedReason}</Notice> : null}
+          {d.rejectedReason && (d.status === "rejected" || d.status === "cancelled" || d.status === "failed" || d.status === "blocked") ? <Notice tone="amber">{d.rejectedReason}</Notice> : null}
         </div>
 
         <div className="space-y-6">
