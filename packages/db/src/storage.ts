@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve, sep } from "node:path";
-import { DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 /**
  * Where documents live. Vultr Object Storage (S3-compatible) when S3_* is configured,
@@ -15,6 +15,15 @@ export interface Storage {
   get(key: string): Promise<Uint8Array>;
   getText(key: string): Promise<string>;
   deletePrefix(prefix: string): Promise<void>;
+  /** Every object under a prefix (a folder, like "db"). */
+  list(prefix: string): Promise<StoredObject[]>;
+  delete(key: string): Promise<void>;
+}
+
+export interface StoredObject {
+  key: string;
+  size: number;
+  modified: Date;
 }
 
 export function sha256(body: Uint8Array | string): string {
@@ -62,6 +71,21 @@ export function localStorage(root = process.env.STORAGE_DIR ?? join(repoRoot(), 
     async deletePrefix(prefix) {
       await rm(pathOf(prefix), { recursive: true, force: true });
     },
+    async list(prefix) {
+      const dir = pathOf(prefix);
+      if (!existsSync(dir)) return [];
+      const out: StoredObject[] = [];
+      for (const entry of await readdir(dir, { recursive: true, withFileTypes: true })) {
+        if (!entry.isFile()) continue;
+        const full = join(entry.parentPath, entry.name);
+        const st = await stat(full);
+        out.push({ key: relative(base, full).split(sep).join("/"), size: st.size, modified: st.mtime });
+      }
+      return out.sort((a, b) => a.key.localeCompare(b.key));
+    },
+    async delete(key) {
+      await rm(pathOf(key), { force: true });
+    },
   };
 }
 
@@ -105,6 +129,20 @@ export function s3Storage(s: S3Settings): Storage {
         token = page.IsTruncated ? page.NextContinuationToken : undefined;
       } while (token);
     },
+    async list(prefix) {
+      const p = checkKey(prefix).replace(/\/?$/, "/");
+      const out: StoredObject[] = [];
+      let token: string | undefined;
+      do {
+        const page = await client.send(new ListObjectsV2Command({ Bucket: s.bucket, Prefix: p, ContinuationToken: token }));
+        for (const o of page.Contents ?? []) if (o.Key) out.push({ key: o.Key, size: o.Size ?? 0, modified: o.LastModified ?? new Date(0) });
+        token = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (token);
+      return out.sort((a, b) => a.key.localeCompare(b.key));
+    },
+    async delete(key) {
+      await client.send(new DeleteObjectCommand({ Bucket: s.bucket, Key: checkKey(key) }));
+    },
   };
 }
 
@@ -115,6 +153,18 @@ export function storageFromEnv(env: Record<string, string | undefined> = process
     return s3Storage({ endpoint: S3_ENDPOINT, accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY, bucket: S3_BUCKET_DOCUMENTS });
   }
   return localStorage();
+}
+
+/**
+ * Where database backups go: the separate backups bucket (S3_BUCKET_BACKUPS, created by
+ * `pnpm infra:apply`) with the same Object Storage keys, or a local folder otherwise.
+ */
+export function backupStorageFromEnv(env: Record<string, string | undefined> = process.env): Storage {
+  const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET_BACKUPS } = env;
+  if (S3_ENDPOINT && S3_ACCESS_KEY && S3_SECRET_KEY && S3_BUCKET_BACKUPS) {
+    return s3Storage({ endpoint: S3_ENDPOINT, accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY, bucket: S3_BUCKET_BACKUPS });
+  }
+  return localStorage(env.BACKUP_DIR ?? join(repoRoot(), ".backups"));
 }
 
 const EXTENSIONS: Record<string, string> = {
