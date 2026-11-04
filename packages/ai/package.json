@@ -1,0 +1,19 @@
+{
+  "name": "@ebo/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "models": "tsx src/cli.ts models",
+    "try": "tsx src/cli.ts try",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ebo/core": "workspace:*",
+    "@ebo/db": "workspace:*",
+    "@ebo/engine": "workspace:*"
+  }
+}

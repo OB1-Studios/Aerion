@@ -1,0 +1,27 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets and local state
+.env
+.env.*
+!.env.example
+infra/.state.json
+
+# Local Postgres for development (scripts/dev-db.mjs)
+.pgdata/
+
+# Real customer documents must never be committed
+private/
+*.real.pdf
+
+.DS_Store
+
+# Vultr OpenAPI spec (download from Vultr; types are generated into packages/vultr/src/schema.d.ts)
+packages/vultr/openapi.json
+packages/vultr/openapi.trimmed.json
+.storage/

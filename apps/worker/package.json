@@ -1,0 +1,21 @@
+{
+  "name": "@ebo/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "cli": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ebo/ai": "workspace:*",
+    "@ebo/core": "workspace:*",
+    "@ebo/db": "workspace:*",
+    "@ebo/engine": "workspace:*",
+    "@ebo/vultr": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "pg-boss": "^12.38.0"
+  }
+}

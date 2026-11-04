@@ -1,0 +1,58 @@
+# Deployed by Coolify on the Vultr VM (`pnpm infra:apply` creates it with the Coolify marketplace image).
+# In Coolify: New resource -> Docker Compose -> this repo. Give the `web` service your domain on port 3000
+# and paste the variables from .env.vultr plus the secrets below into the environment settings.
+# Every deploy runs the migrations first; web and worker start only if they succeed.
+
+x-env: &env
+  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL (Vultr Managed PostgreSQL)}
+  DATABASE_CA_CERT: ${DATABASE_CA_CERT:-}
+  S3_ENDPOINT: ${S3_ENDPOINT:-}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+  S3_BUCKET_DOCUMENTS: ${S3_BUCKET_DOCUMENTS:-}
+  # Without Object Storage, documents go to this volume (shared by web and worker).
+  STORAGE_DIR: /data/storage
+  VULTR_INFERENCE_API_KEY: ${VULTR_INFERENCE_API_KEY:-}
+  VULTR_INFERENCE_MODEL: ${VULTR_INFERENCE_MODEL:-}
+  VULTR_INFERENCE_CLASSIFY_MODEL: ${VULTR_INFERENCE_CLASSIFY_MODEL:-}
+  VULTR_INFERENCE_JSON_MODE: ${VULTR_INFERENCE_JSON_MODE:-object}
+
+services:
+  migrate:
+    build: { context: ., target: worker }
+    command: ["pnpm", "--filter", "@ebo/db", "migrate"]
+    environment:
+      <<: *env
+    restart: "no"
+
+  web:
+    build: { context: ., target: web }
+    environment:
+      <<: *env
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32)}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL (https://your-domain)}
+      # Optional: live Vultr status on the settings page (use an API key restricted to the VM's IP).
+      VULTR_API_KEY: ${VULTR_API_KEY:-}
+      VULTR_INSTANCE_ID: ${VULTR_INSTANCE_ID:-}
+      VULTR_DATABASE_ID: ${VULTR_DATABASE_ID:-}
+      VULTR_OBJECT_STORAGE_ID: ${VULTR_OBJECT_STORAGE_ID:-}
+      VULTR_INFERENCE_ID: ${VULTR_INFERENCE_ID:-}
+    expose: ["3000"]
+    volumes: ["documents:/data/storage"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  worker:
+    build: { context: ., target: worker }
+    environment:
+      <<: *env
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+    expose: ["8081"]
+    volumes: ["documents:/data/storage"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+volumes:
+  documents:
