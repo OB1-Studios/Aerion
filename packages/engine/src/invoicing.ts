@@ -26,7 +26,7 @@ import {
 import { client, draftAction, invoice, invoiceLine, match, receivingAccount, transaction, workspace, type Db } from "@ebo/db";
 import { and, asc, desc, eq, gt, inArray, like } from "drizzle-orm";
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
-import { audit, workspaceClock, type Workspace } from "./context";
+import { actorOf, audit, workspaceClock, type AuditActor, type Workspace } from "./context";
 
 /**
  * Invoices a person writes (main doc W6): numbering, the route picker, the A4 PDF with exact
@@ -84,21 +84,24 @@ export interface InvoiceInput {
   /** "route:accountId", as the route picker sends it. */
   routeChoice: string;
   purposeWording: string;
-  lines: InvoiceLineInput[];
+  lines: InvoiceLine[];
 }
+
+/** A line as typed, plus, for invoices drafted from a contract, which contract and month it bills. */
+export type InvoiceLine = InvoiceLineInput & { contractId?: string | null; milestoneLabel?: string | null };
 
 export type SaveResult = { ok: true; id: string; number: string } | { ok: false; problems: string[] };
 
 const MONEY_RE = /^\d+(\.\d{1,2})?$/;
 
 /** Checks the form and returns clean lines, or what's wrong in plain words. */
-function checkInvoice(input: InvoiceInput, options: RouteOption[]): { problems: string[]; lines: InvoiceLineInput[]; route: RouteOption | null } {
+function checkInvoice(input: InvoiceInput, options: RouteOption[]): { problems: string[]; lines: InvoiceLine[]; route: RouteOption | null } {
   const problems: string[] = [];
   if (!isIsoDate(input.issuedOn)) problems.push("The issue date isn't a date.");
   if (!Number.isInteger(input.termsDays) || input.termsDays < 0 || input.termsDays > 365) problems.push("Payment terms should be between 0 and 365 days.");
   if (!/^[A-Z]{3}$/.test(input.currency)) problems.push("The currency should be a three-letter code, like USD.");
   const lines = input.lines
-    .map((l) => ({ description: l.description.trim(), quantity: l.quantity.trim().replace(/,/g, "") || "1", unitPrice: l.unitPrice.trim().replace(/,/g, "") }))
+    .map((l) => ({ description: l.description.trim(), quantity: l.quantity.trim().replace(/,/g, "") || "1", unitPrice: l.unitPrice.trim().replace(/,/g, ""), contractId: l.contractId ?? null, milestoneLabel: l.milestoneLabel ?? null }))
     .filter((l) => l.description || l.unitPrice);
   lines.forEach((l, i) => {
     const n = `Line ${i + 1}`;
@@ -124,8 +127,12 @@ export async function peekInvoiceNumber(db: Db, ws: Workspace, issuedOn: IsoDate
   return invoiceNumber(ws.invoicePrefix, issuedOn, Math.max(ws.nextInvoiceSeq, highestSequence(used.map((u) => u.number), ws.invoicePrefix, year) + 1));
 }
 
-/** Creates an invoice, or changes one that's still a draft. Numbers continue after the highest used this year. */
-export async function saveInvoice(db: Db, ws: Workspace, input: InvoiceInput, userId: string, invoiceId?: string): Promise<SaveResult> {
+/**
+ * Creates an invoice, or changes one that's still a draft. Numbers continue after the highest
+ * used this year. Lines drafted from a retainer keep their contract and month through edits.
+ */
+export async function saveInvoice(db: Db, ws: Workspace, input: InvoiceInput, by: AuditActor, invoiceId?: string): Promise<SaveResult> {
+  const actor = actorOf(by);
   const [c] = await db.select().from(client).where(and(eq(client.workspaceId, ws.id), eq(client.id, input.clientId)));
   if (!c) return { ok: false, problems: ["Choose a client."] };
   const { problems, lines, route } = checkInvoice(input, await invoiceRoutes(db, ws.id, c.id, input.currency));
@@ -141,18 +148,33 @@ export async function saveInvoice(db: Db, ws: Workspace, input: InvoiceInput, us
     receivingAccountId: route.accountId,
     purposeWording: input.purposeWording.trim() || null,
   };
-  const lineRows = (id: string) => lines.map((l, i) => ({ workspaceId: ws.id, invoiceId: id, position: i, description: l.description, quantity: l.quantity, unitPrice: dec(l.unitPrice).toFixed(2), amount: lineAmount(l.quantity, l.unitPrice).toFixed(2) }));
+  type Tags = { contractId: string | null; milestoneLabel: string | null };
+  const lineRows = (id: string, before: Tags[] = []) =>
+    lines.map((l, i) => ({
+      workspaceId: ws.id,
+      invoiceId: id,
+      position: i,
+      description: l.description,
+      quantity: l.quantity,
+      unitPrice: dec(l.unitPrice).toFixed(2),
+      amount: lineAmount(l.quantity, l.unitPrice).toFixed(2),
+      contractId: l.contractId ?? before[i]?.contractId ?? null,
+      milestoneLabel: l.milestoneLabel ?? before[i]?.milestoneLabel ?? null,
+    }));
 
   if (invoiceId) {
     const [existing] = await db.select().from(invoice).where(and(eq(invoice.workspaceId, ws.id), eq(invoice.id, invoiceId)));
     if (!existing) return { ok: false, problems: ["That invoice doesn't exist."] };
     if (existing.status !== "draft") return { ok: false, problems: ["Only a draft invoice can be changed; this one has been sent."] };
     await db.transaction(async (tx) => {
+      const before = await tx.select({ position: invoiceLine.position, contractId: invoiceLine.contractId, milestoneLabel: invoiceLine.milestoneLabel }).from(invoiceLine).where(eq(invoiceLine.invoiceId, existing.id));
+      const tags: Tags[] = [];
+      for (const b of before) tags[b.position] = b;
       await tx.update(invoice).set(values).where(eq(invoice.id, existing.id));
       await tx.delete(invoiceLine).where(eq(invoiceLine.invoiceId, existing.id));
-      await tx.insert(invoiceLine).values(lineRows(existing.id));
+      await tx.insert(invoiceLine).values(lineRows(existing.id, tags));
     });
-    await audit(db, { workspaceId: ws.id, actorType: "user", actorId: userId, action: "invoice.updated", objectType: "invoice", objectId: existing.id, details: { number: existing.number, amount: values.amount, currency: values.currency } });
+    await audit(db, { workspaceId: ws.id, ...actor, action: "invoice.updated", objectType: "invoice", objectId: existing.id, details: { number: existing.number, amount: values.amount, currency: values.currency } });
     return { ok: true, id: existing.id, number: existing.number };
   }
 
@@ -169,7 +191,7 @@ export async function saveInvoice(db: Db, ws: Workspace, input: InvoiceInput, us
         await tx.update(workspace).set({ nextInvoiceSeq: seq + 1 }).where(eq(workspace.id, ws.id));
         return row!.id;
       });
-      await audit(db, { workspaceId: ws.id, actorType: "user", actorId: userId, action: "invoice.created", objectType: "invoice", objectId: id, details: { number, amount: values.amount, currency: values.currency, route: values.route } });
+      await audit(db, { workspaceId: ws.id, ...actor, action: "invoice.created", objectType: "invoice", objectId: id, details: { number, amount: values.amount, currency: values.currency, route: values.route } });
       return { ok: true, id, number };
     } catch (err) {
       // Someone took this number a moment ago: try the next one.
@@ -375,7 +397,8 @@ export async function invoicePdf(db: Db, workspaceId: string, invoiceId: string)
 // ---------------------------------------------------------------------------
 
 /** Prepares the email that sends a draft invoice (T11). It waits in the inbox for approval, like every client email. */
-export async function draftInvoiceEmail(db: Db, workspaceId: string, invoiceId: string, userId: string): Promise<{ ok: true; draftId: string } | { ok: false; reason: string }> {
+export async function draftInvoiceEmail(db: Db, workspaceId: string, invoiceId: string, by: AuditActor): Promise<{ ok: true; draftId: string } | { ok: false; reason: string }> {
+  const actor = actorOf(by);
   const d = await loadInvoiceDocument(db, workspaceId, invoiceId);
   if (!d) return { ok: false, reason: "That invoice doesn't exist." };
   if (d.inv.status !== "draft") return { ok: false, reason: "This invoice has already been sent." };
@@ -399,13 +422,14 @@ export async function draftInvoiceEmail(db: Db, workspaceId: string, invoiceId: 
     status: plan.decision?.mode === "blocked" ? ("blocked" as const) : ("draft" as const),
     rejectedReason: null,
     model: "template",
+    ...(actor.actorType === "agent" ? { runId: actor.actorId } : {}),
   };
   const [existing] = await db.select().from(draftAction).where(and(eq(draftAction.workspaceId, workspaceId), eq(draftAction.key, plan.key)));
   if (existing && ["sending", "sent", "approved", "scheduled"].includes(existing.status)) return { ok: false, reason: "This invoice's email is already on its way." };
   const draftId = existing
     ? (await db.update(draftAction).set(content).where(eq(draftAction.id, existing.id)).returning({ id: draftAction.id }))[0]!.id
     : (await db.insert(draftAction).values({ workspaceId, key: plan.key, flagIds: [], ...content }).returning({ id: draftAction.id }))[0]!.id;
-  await audit(db, { workspaceId, actorType: "user", actorId: userId, action: "draft.created", objectType: "draft_action", objectId: draftId, details: { template: "T11", invoice: d.inv.number, to: plan.to, status: content.status } });
+  await audit(db, { workspaceId, ...actor, action: "draft.created", objectType: "draft_action", objectId: draftId, details: { template: "T11", invoice: d.inv.number, to: plan.to, status: content.status } });
   return { ok: true, draftId };
 }
 

@@ -1,8 +1,9 @@
-import { businessDaysBetween, dateInZone, formatDateLong, planDrafts, type FlagCandidate, type RuleKey } from "@ebo/core";
+import { businessDaysBetween, dateInZone, formatDateLong, formatMoney, periodLabel, planDrafts, type FlagCandidate, type RuleKey } from "@ebo/core";
 import { draftAction, flag, task } from "@ebo/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { audit } from "../context";
 import { draftContext, loadBooks } from "../books";
+import { draftDueRetainers } from "../retainers";
 import { bump, type Step } from "./types";
 
 /** A bank gets this many business days to answer a document request before a person chases it. */
@@ -13,15 +14,26 @@ export function flagRowToCandidate(f: typeof flag.$inferSelect): FlagCandidate {
 }
 
 /**
- * Draft: turn open flags into emails and tasks (core/drafting.ts), filled from templates and
- * checked number by number. Re-runs update a draft nobody has acted on instead of adding
- * another; drafts whose flags have closed are cancelled.
+ * Draft: write this month's retainer invoices that are due (retainers.ts), then turn open flags
+ * into emails and tasks (core/drafting.ts), filled from templates and checked number by number.
+ * Re-runs update a draft nobody has acted on instead of adding another; drafts whose flags have
+ * closed are cancelled.
  */
 export const draftStep: Step = {
   name: "draft",
   async run(c) {
     const { db } = c.deps;
     const wsId = c.w.ws.id;
+
+    const retainers = await draftDueRetainers(db, c.w, c.runId);
+    for (const r of retainers) {
+      const what = `the ${periodLabel(r.period)} retainer invoice for ${r.client}`;
+      if (!r.number) c.report.push(`Couldn't draft ${what}: ${r.problem} A task asks a person to fix it.`);
+      else {
+        bump(c, "retainer_invoices");
+        c.report.push(`Drafted ${what} (${r.number}, ${formatMoney(r.amount, r.currency, { grouping: c.w.ws.numberGrouping })})${r.draftId ? "; the email that sends it waits for approval" : `, but not its email: ${r.problem}`}.`);
+      }
+    }
     const books = await loadBooks(db, c.w);
     const flags = await db.select().from(flag).where(and(eq(flag.workspaceId, wsId), inArray(flag.status, ["open", "actioned"])));
     const items = new Map(books.compliance.map((x) => [x.id, x]));
@@ -122,6 +134,6 @@ export const draftStep: Step = {
     const blocked = created.filter((d) => (d.decision as { mode?: string } | undefined)?.mode === "blocked").length;
     if (created.length) c.report.push(`Drafted ${created.length} email${created.length === 1 ? "" : "s"}${waiting ? `, ${waiting} waiting for approval` : ""}${blocked ? `, ${blocked} blocked by the numbers check` : ""}.`);
     if (newTasks.length) c.report.push(`Created ${newTasks.length} task${newTasks.length === 1 ? "" : "s"} for a person: ${newTasks.join("; ")}.`);
-    return { created, refreshed, cancelled: stale.map((d) => d.key), tasks: newTasks };
+    return { retainers, created, refreshed, cancelled: stale.map((d) => d.key), tasks: newTasks };
   },
 };

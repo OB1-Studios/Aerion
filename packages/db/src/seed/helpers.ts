@@ -42,6 +42,7 @@ export class Rows {
   receivingAccount: (typeof s.receivingAccount.$inferInsert)[] = [];
   client: (typeof s.client.$inferInsert)[] = [];
   clientAlias: (typeof s.clientAlias.$inferInsert)[] = [];
+  contract: (typeof s.contract.$inferInsert)[] = [];
   invoice: (typeof s.invoice.$inferInsert)[] = [];
   invoiceLine: (typeof s.invoiceLine.$inferInsert)[] = [];
   document: (typeof s.document.$inferInsert)[] = [];
@@ -62,6 +63,7 @@ export class Rows {
         [s.receivingAccount, this.receivingAccount],
         [s.client, this.client],
         [s.clientAlias, this.clientAlias],
+        [s.contract, this.contract],
         [s.invoice, this.invoice],
         [s.invoiceLine, this.invoiceLine],
         [s.document, this.document],

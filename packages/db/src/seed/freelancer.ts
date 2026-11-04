@@ -80,7 +80,7 @@ export async function seedFreelancer(db: Db, storage: Storage, opts: SeedWorkspa
     invoicePrefix: "INV-AS",
     nextInvoiceSeq: 19,
     timezone: "Asia/Karachi",
-    settings: { senderName: NAME, senderTitle: "Flutter developer", directorName: NAME, directorTitle: "Owner", mailboxAddress: MAILBOX },
+    settings: { senderName: NAME, senderTitle: "Flutter developer", directorName: NAME, directorTitle: "Owner", mailboxAddress: MAILBOX, purposeWording: "Payment for IT services exported" },
     isDemo: opts.isDemo ?? true,
     demoClock: new Date(FREELANCER_CLOCK),
     expiresAt: opts.expiresAt ?? null,
@@ -104,13 +104,19 @@ export async function seedFreelancer(db: Db, storage: Storage, opts: SeedWorkspa
   }
   const spec = (ref: string) => CLIENTS.find((c) => c.ref === ref)!;
 
+  // Harbor & Pine's retainer (F-C1): billed on the 1st since July. October was the last
+  // invoice, so the Nov 2 run drafts November's for her to review.
+  const retainer = { id: uuid(), ref: "F-C1" };
+  rows.contract.push({ id: retainer.id, workspaceId: ws, clientId: clientId.get(retainer.ref)!, kind: "retainer", currency: "USD", amountOrRate: "2400.00", description: spec(retainer.ref).line, billingDay: 1, startsOn: "2026-07-01", lastPeriod: "2026-10" });
+
   const invoiceId = new Map<string, string>();
   const addInvoice = (num: string, ref: string, amount: string, issued: IsoDate, due: IsoDate, status: s.InvoiceStatus) => {
     const c = spec(ref);
     const id = uuid();
     invoiceId.set(num, id);
     rows.invoice.push({ id, workspaceId: ws, number: num, clientId: clientId.get(ref)!, currency: c.currency, amount, issuedOn: issued, dueOn: due, route: c.route, receivingAccountId: accountForRoute(c.route), purposeWording: "Payment for IT services exported", status, sentAt: pkt(issued, "11:00") });
-    rows.invoiceLine.push({ workspaceId: ws, invoiceId: id, position: 0, description: `${c.line}, ${MONTH_NAMES[Number(issued.slice(5, 7)) - 1]} 2026`, quantity: "1", unitPrice: amount, amount });
+    const fromRetainer = ref === retainer.ref ? { contractId: retainer.id, milestoneLabel: issued.slice(0, 7) } : {};
+    rows.invoiceLine.push({ workspaceId: ws, invoiceId: id, position: 0, description: `${c.line}, ${MONTH_NAMES[Number(issued.slice(5, 7)) - 1]} 2026`, quantity: "1", unitPrice: amount, amount, ...fromRetainer });
   };
   for (const [num, ref, amount, issued, due] of HISTORY) addInvoice(num, ref, amount, issued, due, "paid");
   for (const [num, ref, amount, issued, due] of OPEN) addInvoice(num, ref, amount, issued, due, "sent");

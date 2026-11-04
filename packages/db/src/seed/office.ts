@@ -130,7 +130,7 @@ export async function seedOffice(db: Db, storage: Storage, opts: SeedWorkspaceOp
     invoicePrefix: "INV",
     nextInvoiceSeq: 33,
     timezone: "Asia/Karachi",
-    settings: { senderName: "Hamza Rafiq", senderTitle: "Finance", directorName: "Sana Malik", directorTitle: "Director", phone: "+92 42 0000 0417", mailboxAddress: MAILBOX },
+    settings: { senderName: "Hamza Rafiq", senderTitle: "Finance", directorName: "Sana Malik", directorTitle: "Director", phone: "+92 42 0000 0417", mailboxAddress: MAILBOX, purposeWording: "Payment for IT services exported" },
     isDemo: opts.isDemo ?? true,
     demoClock: new Date(OFFICE_CLOCK),
     expiresAt: opts.expiresAt ?? null,

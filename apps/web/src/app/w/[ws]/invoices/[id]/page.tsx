@@ -1,4 +1,4 @@
-import { dec, sumDec } from "@ebo/core";
+import { dec, periodLabel, sumDec } from "@ebo/core";
 import { client, clientClaim, dispute, draftAction, flag, getDb, invoice, invoiceLine, invoiceReminder, match, promiseToPay, transaction } from "@ebo/db";
 import { loadInvoiceDocument } from "@ebo/engine";
 import { and, asc, eq } from "drizzle-orm";
@@ -42,6 +42,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   const base = `/w/${slug}`;
   const pdf = `/api/w/${slug}/invoices/${inv.id}/pdf`;
   const draft = inv.status === "draft";
+  const retainerLine = lines.find((l) => l.contractId && l.milestoneLabel);
   const acts = canAct(role);
   const emailWaiting = email && ["draft", "blocked", "approved", "scheduled", "sending"].includes(email.status);
 
@@ -79,6 +80,15 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
       {q.saved ? <Notice tone="green">Saved{draft ? " as a draft. Check the PDF, then send it for approval when it looks right." : "."}</Notice> : null}
       {q.marked ? <Notice tone="green">Marked as sent. The agent now watches for the payment and will remind the client if it&apos;s late.</Notice> : null}
       {q.error ? <Notice tone="red">{q.error.slice(0, 300)}</Notice> : null}
+      {retainerLine?.milestoneLabel ? (
+        <Notice tone="violet">
+          {draft ? "The agent drafted this from " : "Billed under "}
+          <Link href={`${base}/clients/${inv.clientId}#retainers`} className="font-medium underline">
+            {row.client.name}&apos;s monthly retainer
+          </Link>
+          , for {periodLabel(retainerLine.milestoneLabel)}.{draft ? (email ? " Check it, then approve its email in the inbox." : " Check it, then send it for approval.") : ""}
+        </Notice>
+      ) : null}
       {draft && acts ? (
         <Card title="Send it" className="mb-6">
           {emailWaiting ? (
