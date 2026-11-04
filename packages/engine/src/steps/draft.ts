@@ -103,7 +103,7 @@ export const draftStep: Step = {
         created.push({ key: p.key, template: p.template, to: p.to, subject: p.subject, decision: p.decision });
         bump(c, `drafts_${status}`);
       } else if (existing.status === "draft" || existing.status === "blocked") {
-        await db.update(draftAction).set({ ...content, status }).where(eq(draftAction.id, existing.id));
+        await db.update(draftAction).set({ ...content, status, rejectedReason: null }).where(eq(draftAction.id, existing.id)); // a draft held back after the invoice changed is redrafted here
         refreshed.push(p.key);
       }
     }

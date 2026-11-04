@@ -1,5 +1,5 @@
 import { dateInZone, dec } from "@ebo/core";
-import { client, getDb, invoice, match } from "@ebo/db";
+import { client, creditNote, getDb, invoice, match } from "@ebo/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import Link from "next/link";
 import { Badge, Card, Empty, PageHeader, Status, Table, cx } from "@/components/ui";
@@ -25,6 +25,7 @@ export default async function InvoicesPage({ params, searchParams }: { params: P
       inv: invoice,
       client: client.name,
       applied: sql<string>`coalesce((select sum(${match.appliedAmount}) from ${match} where ${match.invoiceId} = ${invoice.id}), 0)`,
+      credited: sql<string>`coalesce((select sum(${creditNote.amount}) from ${creditNote} where ${creditNote.invoiceId} = ${invoice.id}), 0)`,
     })
     .from(invoice)
     .innerJoin(client, eq(client.id, invoice.clientId))
@@ -55,8 +56,8 @@ export default async function InvoicesPage({ params, searchParams }: { params: P
       <Card pad={false}>
         {rows.length ? (
           <Table head={["Invoice", "Client", "Amount", "Received", "Balance", "Due", "Status"]}>
-            {rows.map(({ inv, client: name, applied }) => {
-              const balance = dec(inv.amount).minus(applied);
+            {rows.map(({ inv, client: name, applied, credited }) => {
+              const balance = dec(inv.amount).minus(applied).minus(credited);
               const overdue = (inv.status === "sent" || inv.status === "part_paid") && inv.dueOn < today && balance.gt(0);
               return (
                 <tr key={inv.id} className="hover:bg-canvas">

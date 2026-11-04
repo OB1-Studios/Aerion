@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "credit_note_ws_number" ON "credit_note" USING btree ("workspace_id","number");--> statement-breakpoint
+CREATE INDEX "credit_note_invoice_idx" ON "credit_note" USING btree ("invoice_id");

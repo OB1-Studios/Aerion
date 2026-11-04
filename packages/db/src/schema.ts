@@ -312,19 +312,25 @@ export const invoiceLine = pgTable("invoice_line", {
   milestoneLabel: text("milestone_label"),
 });
 
-export const creditNote = pgTable("credit_note", {
-  id: id(),
-  workspaceId: wsId(),
-  invoiceId: uuid("invoice_id")
-    .notNull()
-    .references(() => invoice.id),
-  number: text("number").notNull(),
-  kind: text("kind").$type<"credit" | "write_off" | "void">().notNull(),
-  amount: money("amount").notNull(),
-  reason: text("reason").notNull(),
-  approvedBy: text("approved_by"),
-  createdAt: createdAt(),
-});
+/** Credit notes, write-offs and voids (W9): each takes money off an invoice's balance, with a reason. */
+export const creditNote = pgTable(
+  "credit_note",
+  {
+    id: id(),
+    workspaceId: wsId(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoice.id),
+    number: text("number").notNull(),
+    kind: text("kind").$type<"credit" | "write_off" | "void">().notNull(),
+    amount: money("amount").notNull(),
+    reason: text("reason").notNull(),
+    /** The member who recorded it. */
+    approvedBy: text("approved_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("credit_note_ws_number").on(t.workspaceId, t.number), index("credit_note_invoice_idx").on(t.invoiceId)],
+);
 
 export type TransactionKind =
   | "credit"

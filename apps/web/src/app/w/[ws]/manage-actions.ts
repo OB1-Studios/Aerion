@@ -8,6 +8,7 @@ import {
   connectMailbox,
   disconnectMailbox,
   inviteMember,
+  issueCredit,
   revokeInvitation,
   setMemberRole,
   draftInvoiceEmail,
@@ -127,6 +128,17 @@ export async function markInvoiceSentAction(slug: string, invoiceId: string) {
   const ok = await markInvoiceSent(getDb(), ws, invoiceId, user.id);
   refresh(slug);
   redirect(`/w/${slug}/invoices/${invoiceId}?${ok ? "marked=1" : `error=${encodeURIComponent("Only a draft invoice can be marked as sent.")}`}`);
+}
+
+/** A credit note, write-off or void, with its reason (W9). The engine checks it against the invoice as it stands. */
+export async function creditAction(slug: string, invoiceId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const { user, ws } = await actor(slug);
+  const v = formValues(form);
+  const r = await issueCredit(getDb(), ws, invoiceId, { kind: field(v, "kind"), amount: field(v, "amount"), reason: field(v, "reason") }, user.id);
+  if (!r.ok) return { problems: r.problems, values: v };
+  refresh(slug);
+  const q = new URLSearchParams({ credited: r.number, closed: String(r.flagsResolved), held: String(r.draftsHeld), cancelled: String(r.draftsCancelled) });
+  redirect(`/w/${slug}/invoices/${invoiceId}?${q}`);
 }
 
 // ---------------------------------------------------------------------------

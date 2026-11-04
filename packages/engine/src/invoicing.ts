@@ -298,13 +298,16 @@ export async function renderInvoicePdf(d: InvoiceDocument): Promise<Uint8Array> 
 
   // Header: the seller on the left, the invoice on the right.
   text(seller, M, 16, bold);
-  right("INVOICE", W - M, 22, bold);
+  // A voided invoice says so, so a copy that's downloaded later can't be paid by mistake.
+  const voided = d.inv.status === "void";
+  right(voided ? "VOID INVOICE" : "INVOICE", W - M, 22, bold, voided ? rgb(0.72, 0.11, 0.11) : ink);
   y -= 18;
   const sellerLines = [d.ws.city, d.ws.ntn ? `NTN ${d.ws.ntn}` : null, d.ws.psebRegNo ? `PSEB registration ${d.ws.psebRegNo}` : null, d.ws.settings?.mailboxAddress ?? null].filter((x): x is string => !!x);
   const meta: Array<[string, string]> = [
     ["Number", d.inv.number],
     ["Issued", formatDateLong(d.inv.issuedOn)],
     ["Due", formatDateLong(d.inv.dueOn)],
+    ...(voided ? ([["Status", "Void, not payable"]] as Array<[string, string]>) : []),
   ];
   const headerRows = Math.max(sellerLines.length, meta.length);
   for (let i = 0; i < headerRows; i++) {

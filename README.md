@@ -33,6 +33,14 @@ Each run is recorded step by step, and the run page shows what each step did and
 
 It uses the same books and reference rates as the run. Every chart has its numbers in a table underneath.
 
+On an invoice, a person can record a **credit note**, a **write-off** or a **void**, each with a reason. They are numbered CN-, WO- and VD- per year. The balance and every report follow at once:
+
+- flags about the invoice that no longer hold are resolved
+- an open dispute is closed by the credit
+- emails waiting to go out are either held (the next run redrafts them with the new balance) or cancelled when no longer needed
+
+A void is only possible before any money has come in. Its PDF then says VOID.
+
 The **Tax-year file** page exports the year's credits and the banking-channel share as CSV for the accountant.
 
 ### Why a business can let it run
@@ -154,7 +162,7 @@ The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It bac
 | --- | --- |
 | `apps/web` | Next.js app: landing page, sign-up and sign-in, setup, the inbox, dashboard, runs, flags, payments, clients, invoices (editor and PDF), documents, tax-year file, rules, settings, audit log |
 | `apps/worker` | Claims queued runs, runs the weekly cron, the mailbox check, the nightly backup and the demo clean-up, and has a CLI (runs, demo reset, backup and restore) |
-| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, invoices with their PDF, retainers, people, the mailbox, the dashboard figures, and backups |
+| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, invoices with their PDF, retainers, credit notes and write-offs, people, the mailbox, the dashboard figures, and backups |
 | `packages/core` | Pure rules: money, dates, matching, flags, templates, the numbers check, the approval policy |
 | `packages/ai` | The Vultr Serverless Inference client, prompts, extraction schemas, model-backed readers and the reading benchmark |
 | `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data and its answer key |

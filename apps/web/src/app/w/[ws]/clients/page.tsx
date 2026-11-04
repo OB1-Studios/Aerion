@@ -1,5 +1,5 @@
 import { dateInZone, dec, ROUTE_LABELS, type Decimal } from "@ebo/core";
-import { client, getDb, invoice, match } from "@ebo/db";
+import { client, creditNote, getDb, invoice, match } from "@ebo/db";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import Link from "next/link";
 import { Badge, Card, Empty, PageHeader, Table } from "@/components/ui";
@@ -17,14 +17,14 @@ export default async function ClientsPage({ params }: { params: Promise<{ ws: st
   const [clients, open] = await Promise.all([
     db.select().from(client).where(eq(client.workspaceId, ws.id)).orderBy(asc(client.name)),
     db
-      .select({ clientId: invoice.clientId, amount: invoice.amount, currency: invoice.currency, dueOn: invoice.dueOn, applied: sql<string>`coalesce((select sum(${match.appliedAmount}) from ${match} where ${match.invoiceId} = ${invoice.id}), 0)` })
+      .select({ clientId: invoice.clientId, amount: invoice.amount, currency: invoice.currency, dueOn: invoice.dueOn, applied: sql<string>`coalesce((select sum(${match.appliedAmount}) from ${match} where ${match.invoiceId} = ${invoice.id}), 0)`, credited: sql<string>`coalesce((select sum(${creditNote.amount}) from ${creditNote} where ${creditNote.invoiceId} = ${invoice.id}), 0)` })
       .from(invoice)
       .where(and(eq(invoice.workspaceId, ws.id), inArray(invoice.status, ["sent", "part_paid"]))),
   ]);
   const owed = new Map<string, { count: number; byCcy: Map<string, Decimal>; overdueDays: number }>();
   for (const i of open) {
     const o = owed.get(i.clientId) ?? { count: 0, byCcy: new Map(), overdueDays: 0 };
-    const balance = dec(i.amount).minus(i.applied);
+    const balance = dec(i.amount).minus(i.applied).minus(i.credited);
     if (balance.lte(0)) continue;
     o.count++;
     o.byCcy.set(i.currency, (o.byCcy.get(i.currency) ?? dec(0)).plus(balance));

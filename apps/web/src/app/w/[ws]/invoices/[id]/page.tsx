@@ -1,5 +1,5 @@
-import { dec, periodLabel, sumDec } from "@ebo/core";
-import { client, clientClaim, dispute, draftAction, flag, getDb, invoice, invoiceLine, invoiceReminder, match, promiseToPay, transaction } from "@ebo/db";
+import { CREDIT_KIND_LABELS, creditKindsAllowed, dateInZone, dec, periodLabel, sumDec } from "@ebo/core";
+import { client, clientClaim, creditNote, dispute, draftAction, flag, getDb, invoice, invoiceLine, invoiceReminder, match, promiseToPay, transaction, user } from "@ebo/db";
 import { loadInvoiceDocument } from "@ebo/engine";
 import { and, asc, eq } from "drizzle-orm";
 import Link from "next/link";
@@ -8,12 +8,13 @@ import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, Empty, KeyValues, Notice, PageHeader, Status, Table, severityTone } from "@/components/ui";
 import { clock, day, money } from "@/lib/format";
 import { canAct, requireWorkspace } from "@/lib/session";
-import { markInvoiceSentAction, sendInvoiceAction } from "../../manage-actions";
+import { creditAction, markInvoiceSentAction, sendInvoiceAction } from "../../manage-actions";
+import { CreditForm } from "./credit-form";
 import { UUID_RE } from "../shared";
 
 export const metadata = { title: "Invoice" };
 
-export default async function InvoicePage({ params, searchParams }: { params: Promise<{ ws: string; id: string }>; searchParams: Promise<{ saved?: string; marked?: string; error?: string }> }) {
+export default async function InvoicePage({ params, searchParams }: { params: Promise<{ ws: string; id: string }>; searchParams: Promise<{ saved?: string; marked?: string; error?: string; credited?: string; closed?: string; held?: string; cancelled?: string }> }) {
   const { ws: slug, id } = await params;
   const q = await searchParams;
   const { ws, role } = await requireWorkspace(slug);
@@ -26,7 +27,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
     .where(and(eq(invoice.workspaceId, ws.id), eq(invoice.id, id)));
   if (!row) notFound();
   const { inv } = row;
-  const [lines, matches, reminders, claims, promises, disputes, flags, doc, [email]] = await Promise.all([
+  const [lines, matches, reminders, claims, promises, disputes, flags, doc, [email], credits] = await Promise.all([
     db.select().from(invoiceLine).where(eq(invoiceLine.invoiceId, inv.id)).orderBy(asc(invoiceLine.position)),
     db.select({ m: match, tx: transaction }).from(match).innerJoin(transaction, eq(transaction.id, match.transactionId)).where(and(eq(match.workspaceId, ws.id), eq(match.invoiceId, inv.id))),
     db.select().from(invoiceReminder).where(eq(invoiceReminder.invoiceId, inv.id)).orderBy(asc(invoiceReminder.stage)),
@@ -36,9 +37,21 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
     db.select().from(flag).where(and(eq(flag.workspaceId, ws.id), eq(flag.subjectType, "invoice"), eq(flag.subjectId, inv.id))),
     loadInvoiceDocument(db, ws.id, inv.id),
     db.select({ id: draftAction.id, status: draftAction.status, sentAt: draftAction.sentAt, to: draftAction.toAddress }).from(draftAction).where(and(eq(draftAction.workspaceId, ws.id), eq(draftAction.key, `T11:invoice:${inv.id}`))),
+    db
+      .select({ c: creditNote, by: user.name })
+      .from(creditNote)
+      .leftJoin(user, eq(user.id, creditNote.approvedBy))
+      .where(and(eq(creditNote.workspaceId, ws.id), eq(creditNote.invoiceId, inv.id)))
+      .orderBy(asc(creditNote.createdAt), asc(creditNote.number)),
   ]);
   const applied = sumDec(matches.map(({ m }) => m.appliedAmount));
-  const balance = dec(inv.amount).minus(applied);
+  const credited = sumDec(credits.map(({ c }) => c.amount));
+  const balance = dec(inv.amount).minus(applied).minus(credited);
+  const owed = (balance.gt(0) ? balance : dec(0)).toFixed(2);
+  const kinds = creditKindsAllowed({ status: inv.status, applied: applied.toFixed(2), balance: owed });
+  const voided = inv.status === "void" ? credits.find(({ c }) => c.kind === "void")?.c : undefined;
+  const recorded = q.credited ? credits.find(({ c }) => c.number === q.credited)?.c : undefined;
+  const count = (n: string | undefined, one: string) => (Number(n) > 0 ? `${n} ${one}${n === "1" ? "" : "s"}` : "");
   const base = `/w/${slug}`;
   const pdf = `/api/w/${slug}/invoices/${inv.id}/pdf`;
   const draft = inv.status === "draft";
@@ -80,6 +93,20 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
       {q.saved ? <Notice tone="green">Saved{draft ? " as a draft. Check the PDF, then send it for approval when it looks right." : "."}</Notice> : null}
       {q.marked ? <Notice tone="green">Marked as sent. The agent now watches for the payment and will remind the client if it&apos;s late.</Notice> : null}
       {q.error ? <Notice tone="red">{q.error.slice(0, 300)}</Notice> : null}
+      {recorded ? (
+        <Notice tone="green">
+          {CREDIT_KIND_LABELS[recorded.kind]} {recorded.number} recorded: {money(recorded.amount, inv.currency)} off.{" "}
+          {inv.status === "void" ? "The invoice is void." : balance.gt(0) ? `${money(owed, inv.currency)} is still owed.` : "Nothing is owed on it now."}
+          {Number(q.closed) > 0 ? ` ${count(q.closed, "flag")} about it closed.` : ""}
+          {Number(q.held) > 0 ? ` ${count(q.held, "email")} waiting to go out ${q.held === "1" ? "was" : "were"} held back; the next run redrafts ${q.held === "1" ? "it" : "them"} with the new balance.` : ""}
+          {Number(q.cancelled) > 0 ? ` ${count(q.cancelled, "email")} waiting to go out ${q.cancelled === "1" ? "was" : "were"} cancelled.` : ""}
+        </Notice>
+      ) : null}
+      {voided && !recorded ? (
+        <Notice tone="amber">
+          Voided on {day(dateInZone(voided.createdAt, ws.timezone))} ({voided.number}): {voided.reason}
+        </Notice>
+      ) : null}
       {retainerLine?.milestoneLabel ? (
         <Notice tone="violet">
           {draft ? "The agent drafted this from " : "Billed under "}
@@ -152,15 +179,40 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
                 <Empty>Nothing received yet.</Empty>
               </div>
             )}
-            <div className="flex justify-end gap-6 border-t border-line px-4 py-3 text-sm">
+            <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 border-t border-line px-4 py-3 text-sm">
               <span className="text-muted">
                 Received <b className="tabular-nums text-ink">{money(applied.toFixed(2), inv.currency)}</b>
               </span>
+              {credits.length ? (
+                <span className="text-muted">
+                  Credited, written off or voided <b className="tabular-nums text-ink">{money(credited.toFixed(2), inv.currency)}</b>
+                </span>
+              ) : null}
               <span className="text-muted">
-                Balance <b className="tabular-nums text-ink">{money((balance.gt(0) ? balance : dec(0)).toFixed(2), inv.currency)}</b>
+                Balance <b className="tabular-nums text-ink">{money(owed, inv.currency)}</b>
               </span>
             </div>
           </Card>
+          {credits.length ? (
+            <Card title="Credit notes, write-offs and voids" pad={false}>
+              <Table head={["Number", "Amount", "Why", "Recorded"]}>
+                {credits.map(({ c, by }) => (
+                  <tr key={c.id}>
+                    <td className="whitespace-nowrap">
+                      <span className="tabular-nums">{c.number}</span>
+                      <div className="text-xs text-muted">{CREDIT_KIND_LABELS[c.kind]}</div>
+                    </td>
+                    <td className="whitespace-nowrap tabular-nums">{money(c.amount, inv.currency)}</td>
+                    <td className="min-w-48">{c.reason}</td>
+                    <td className="whitespace-nowrap text-xs text-muted">
+                      {clock(c.createdAt, ws.timezone)}
+                      {by ? <div>by {by}</div> : null}
+                    </td>
+                  </tr>
+                ))}
+              </Table>
+            </Card>
+          ) : null}
         </div>
         <div className="space-y-6">
           {doc ? (
@@ -215,6 +267,11 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
               {!reminders.length && !claims.length && !promises.length && !disputes.length ? <li className="text-muted">No reminders, claims or promises.</li> : null}
             </ul>
           </Card>
+          {acts && kinds.length ? (
+            <Card title={kinds.length === 1 && kinds[0] === "void" ? "Void this invoice" : "Credit, write off or void"}>
+              <CreditForm action={creditAction.bind(null, slug, inv.id)} kinds={kinds} balance={owed} owedText={money(owed, inv.currency)} currency={inv.currency} />
+            </Card>
+          ) : null}
           {flags.length ? (
             <Card title="Flags" pad={false}>
               <ul className="divide-y divide-line text-sm">
