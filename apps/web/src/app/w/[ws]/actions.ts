@@ -205,6 +205,25 @@ export async function uploadDocuments(slug: string, form: FormData) {
   redirect(`/w/${slug}/documents?${back}`);
 }
 
+/** A bank SMS or alert pasted as text: stored like an uploaded text file and read the same way. */
+export async function pasteText(slug: string, form: FormData) {
+  const { user, ws } = await actor(slug);
+  const text = String(form.get("text") ?? "").replace(/\r\n/g, "\n").trim();
+  if (!text) redirect(`/w/${slug}/documents?upload=empty-paste`);
+  if (text.length > 10_000) redirect(`/w/${slug}/documents?upload=long-paste`);
+  const deps = engineDeps();
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  const r = await addUpload(deps, ws, { name: `pasted-${stamp}.txt`, bytes: new TextEncoder().encode(`${text}\n`) }, { kindHint: "pasted_text", userId: user.id });
+  const back = new URLSearchParams();
+  if (r.status === "added") {
+    back.set("added", "1");
+    if (form.get("read") === "on") back.set("run", await startRun(ws.id, "manual", user.id));
+  } else if (r.status === "duplicate") back.set("dup", "1");
+  else back.set("rejected", `${r.name} ${r.reason}`.slice(0, 400));
+  refresh(slug);
+  redirect(`/w/${slug}/documents?${back}`);
+}
+
 /** Demo help: a SIMULATED credit advice paying the oldest open invoice, uploaded and read at once. */
 export async function uploadSample(slug: string) {
   const { user, ws } = await actor(slug);

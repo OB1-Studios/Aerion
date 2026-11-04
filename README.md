@@ -40,6 +40,7 @@ Each run is recorded step by step, and the run page shows what each step did and
 - **Create an account**, then a workspace for a software house or a freelancer. It starts empty: nothing in it is simulated. Sign-up records the pilot terms and, separately, whether documents may be read by a model; without that consent the workspace uses the built-in layout rules only.
 - **Setup** takes what goes on invoices (legal name, NTN, PSEB registration and expiry, ATL status, the email signature), the accounts money arrives in (ESFCA, PKR account, Wise, Payoneer; Pakistani IBANs are checked down to the check digits) and the invoice numbering. A checklist shows what is left. Only owners change these.
 - **Clients** holds each client's currency, payment terms, usual payment route and the payer names their money arrives under. The matcher learns more names as it goes.
+- **Mailbox:** connect the finance mailbox (Gmail, Google Workspace, Zoho or any IMAP and SMTP host) with an app password. Both logins are tested before anything is saved, and the password is stored encrypted (AES-256-GCM). Each run then reads the mail that arrived since the last one, read-only, and keeps attachments as documents. Approved emails go out through the same mailbox. Bank SMS alerts can be pasted on the Documents page.
 - **Invoices** are written in the app. The editor suggests how the client should pay and says why (for example, that their last bank wire lost USD 25.00 to fees). Numbers continue after the highest one used. The A4 PDF quotes the exact payment instructions and the purpose-of-payment wording the bank needs to report the money as an IT export. Emailing an invoice goes through the approval inbox like every other email: the numbers check runs, the PDF is attached, and the copy that was sent is kept on file.
 
 ## How it uses Vultr
@@ -85,7 +86,7 @@ All data is fictional and marked SIMULATED: a software house (Ravi Code Works) a
 - The first Monday (2 Nov 2026) produces 6 emails to approve, 9 flags and the tasks for a person. After you approve the emails, the next Monday's replies close four flags and mark the short-paid invoice paid. The bank that didn't send a withholding certificate gets a phone-call task.
 - The shared demo accounts (`pnpm seed`) are `sana@`, `hamza@ravicodeworks.example`, `qureshi@qureshi-associates.example` and `ayesha@ayeshabuilds.example`, with the password set in `DEMO_PASSWORD`. Sana owns the software house, Hamza does its finance, Qureshi is the outside accountant for both workspaces (read-only), and Ayesha is the freelancer.
 
-**What's simulated in this build:** the mailbox, bank alerts and wallet exports are sample data that "arrive" as the demo clock moves. There's no live connection to a mailbox, bank or Payoneer yet; uploaded documents are the real way in. Sending records the email in the workspace; nothing leaves the system.
+**What's simulated in this build:** in the demo workspaces, the mailbox, bank alerts and wallet exports are sample data that "arrive" as the demo clock moves, and sending only records the email. A workspace you create can connect a real mailbox (IMAP in, SMTP out). There's no live connection to a bank or to Payoneer; their documents come in by email or upload.
 
 ## Run it locally
 
@@ -115,6 +116,7 @@ pnpm --filter @ebo/worker cli run ravi-code-works   # run one workspace from the
 3. **Apply.** `pnpm infra:apply -- --yes` creates what's missing: the SSH key, VPC, firewall group, VM with Coolify, Managed PostgreSQL, Object Storage with its buckets, the Serverless Inference subscription and the optional DNS record. Resources are found by label, so running it again is safe. The connection details go to `.env.vultr` (secret, gitignored). *This step costs money.*
 4. **Coolify.** Open `http://<vm-ip>:8000` from your IP and create the admin account. Add this repository as a **Docker Compose** resource, give the `web` service your domain on port 3000, and paste `.env.vultr` into the environment variables. Also add these:
    - `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (`https://app.<domain>`)
+   - `APP_ENCRYPTION_KEY` (`openssl rand -hex 32`), which seals mailbox app passwords. Keep it: changing it means reconnecting mailboxes
    - `DEMO_PASSWORD`
    - optionally `VULTR_API_KEY` for the live status on the settings page (restrict the key to the VM's IP)
    - optionally `DATABASE_CA_CERT` (the database's CA certificate, `\n` for line breaks) to verify the database's certificate

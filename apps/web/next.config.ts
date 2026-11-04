@@ -10,7 +10,7 @@ const config: NextConfig = {
   output: "standalone",
   // Internal packages ship TypeScript source.
   transpilePackages: ["@ebo/ai", "@ebo/core", "@ebo/db", "@ebo/engine", "@ebo/vultr"],
-  serverExternalPackages: ["pg", "@aws-sdk/client-s3", "unpdf"],
+  serverExternalPackages: ["pg", "@aws-sdk/client-s3", "unpdf", "imapflow", "mailparser", "nodemailer"],
   outputFileTracingRoot: new URL("../..", import.meta.url).pathname,
   poweredByHeader: false,
   // Two build workers keep `next build` within a laptop's memory (and the 2-vCPU VM's).

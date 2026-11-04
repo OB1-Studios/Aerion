@@ -207,3 +207,54 @@ export function InvoiceSettingsForm({ action, initial, canEdit, preview }: { act
     </form>
   );
 }
+
+export function MailboxForm({ action, providers }: { action: Action; providers: Array<{ key: string; label: string; help: string }> }) {
+  const { state, formAction, v, key } = useSavingForm(action, { provider: providers[0]?.key ?? "other" });
+  // Until JavaScript runs every field shows; after that the server fields only for "Other".
+  const [provider, setProvider] = useState<string | null>(null);
+  useEffect(() => setProvider(v.provider || providers[0]?.key || "other"), [v.provider, providers]);
+  const help = providers.find((p) => p.key === provider)?.help;
+  return (
+    <form action={formAction} key={key} className="space-y-4">
+      <FormProblems problems={state.problems} title="Not connected:" />
+      <div className={grid}>
+        <Field label="Mail provider" hint={help}>
+          <select name="provider" defaultValue={v.provider} onChange={(e) => setProvider(e.target.value)} className="input w-full">
+            {providers.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+            <option value="other">Other (your host&apos;s IMAP and SMTP settings)</option>
+          </select>
+        </Field>
+        <Field label="Mailbox address" hint="Best a finance address, like accounts@yourcompany.com.">
+          <input type="email" name="address" defaultValue={v.address} required maxLength={120} autoComplete="off" className="input w-full" />
+        </Field>
+        <Field label="App password" hint="Stored encrypted; never shown again.">
+          <input type="password" name="password" required maxLength={200} autoComplete="new-password" className="input w-full" />
+        </Field>
+      </div>
+      {provider == null || provider === "other" ? (
+        <div className={grid}>
+          <Field label="IMAP server (reading)">
+            <input name="imapHost" defaultValue={v.imapHost} maxLength={253} placeholder="mail.yourcompany.com" className="input w-full" />
+          </Field>
+          <Field label="IMAP port" hint="993 (SSL). 143 only with STARTTLS.">
+            <input name="imapPort" defaultValue={v.imapPort} inputMode="numeric" placeholder="993" className="input w-full" />
+          </Field>
+          <Field label="SMTP server (sending)">
+            <input name="smtpHost" defaultValue={v.smtpHost} maxLength={253} placeholder="mail.yourcompany.com" className="input w-full" />
+          </Field>
+          <Field label="SMTP port" hint="465 (SSL), or 587 with STARTTLS.">
+            <input name="smtpPort" defaultValue={v.smtpPort} inputMode="numeric" placeholder="465" className="input w-full" />
+          </Field>
+          <Field label="Login name" hint="Leave empty if it's the mailbox address.">
+            <input name="username" defaultValue={v.username} maxLength={120} autoComplete="off" className="input w-full" />
+          </Field>
+        </div>
+      ) : null}
+      <SubmitButton pendingText="Checking the connection…">Connect the mailbox</SubmitButton>
+    </form>
+  );
+}

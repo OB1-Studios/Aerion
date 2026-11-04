@@ -1,6 +1,7 @@
 import { clockNow, dateInZone, Decimal, dec, rulesFrom, type IsoDate, type RefRate, type Rules } from "@ebo/core";
 import { auditEvent, fxReferenceRate, rule, workspace, type Db, type Storage } from "@ebo/db";
 import { and, eq, isNull, or } from "drizzle-orm";
+import type { MailboxReader } from "./mailbox";
 import type { Readers } from "./readers/types";
 
 export type Workspace = typeof workspace.$inferSelect;
@@ -11,12 +12,16 @@ export interface EngineDeps {
   storage: Storage;
   readers: Readers;
   mailer: Mailer;
+  /** Reads the workspace's own mailbox over IMAP. Without it only the demo mailbox and uploads come in. */
+  mailbox?: MailboxReader;
   env?: Record<string, string | undefined>;
 }
 
 export interface OutgoingEmail {
   workspaceId: string;
   from: string;
+  /** The name shown with the address, e.g. the business's legal name. */
+  fromName?: string;
   to: string;
   cc?: string | null;
   subject: string;
@@ -28,7 +33,8 @@ export interface OutgoingEmail {
 /** Sends email. The demo mailer only records the message; production uses the connected mailbox. */
 export interface Mailer {
   readonly kind: "demo" | "smtp";
-  send(email: OutgoingEmail): Promise<{ messageId: string | null }>;
+  /** `via` says whether the email really left ("smtp") or was only recorded. */
+  send(email: OutgoingEmail): Promise<{ messageId: string | null; via?: "smtp" | "recorded" }>;
 }
 
 export const demoMailer: Mailer = {

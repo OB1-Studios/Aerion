@@ -8,7 +8,7 @@ import { Card, cx, Empty, Notice, PageHeader, Status, Table } from "@/components
 import { clock, humanize } from "@/lib/format";
 import { readerInfo } from "@/lib/platform";
 import { canAct, requireWorkspace } from "@/lib/session";
-import { uploadDocuments, uploadSample } from "../actions";
+import { pasteText, uploadDocuments, uploadSample } from "../actions";
 
 export const metadata = { title: "Documents" };
 
@@ -43,6 +43,8 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
 
       {q.upload === "none" ? <Notice tone="amber">Choose at least one file to upload.</Notice> : null}
       {q.upload === "toomany" ? <Notice tone="amber">Up to {UPLOAD_MAX_FILES} files at a time, please.</Notice> : null}
+      {q.upload === "empty-paste" ? <Notice tone="amber">Paste the text of the SMS or alert first.</Notice> : null}
+      {q.upload === "long-paste" ? <Notice tone="amber">That&apos;s longer than a bank alert (10,000 characters at most). Upload it as a file instead.</Notice> : null}
       {q.upload === "nothing-open" ? <Notice tone="amber">Every invoice paid by bank wire is settled, so there&apos;s nothing for a sample to pay. Reset the demo to start again.</Notice> : null}
       {q.sample ? (
         <Notice tone="green">{q.dup ? `That sample credit advice (for ${q.sample}) is already here.` : `Uploaded a sample credit advice: the client's payment for ${q.sample}.`}</Notice>
@@ -90,6 +92,20 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
               <input type="checkbox" name="read" defaultChecked /> Read them now
             </label>
             <SubmitButton pendingText="Uploading…">Upload</SubmitButton>
+          </form>
+          <form action={pasteText.bind(null, slug)} className="mt-4 space-y-2 border-t border-line pt-4">
+            <label className="block text-sm">
+              <span className="mb-1 block text-muted">Or paste a bank SMS or alert</span>
+              <textarea name="text" rows={3} maxLength={10000} placeholder="e.g. Your A/C ****4567 has been credited with USD 3,975.00 on 28-Oct-26. Ref: FT2630..." className="input w-full font-mono text-xs" />
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <SubmitButton variant="secondary" pendingText="Adding…">
+                Add the text
+              </SubmitButton>
+              <label className="flex items-center gap-2 text-sm text-ink">
+                <input type="checkbox" name="read" defaultChecked /> Read it now
+              </label>
+            </div>
           </form>
           <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-4 text-sm text-muted">
             <span>No document to hand?</span>

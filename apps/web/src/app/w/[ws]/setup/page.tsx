@@ -1,13 +1,14 @@
 import { ACCOUNT_KIND_LABELS, DEFAULT_PURPOSE_WORDING, formatIban } from "@ebo/core";
-import { client, document, getDb, invoice, receivingAccount } from "@ebo/db";
-import { peekInvoiceNumber, workspaceToday } from "@ebo/engine";
+import { client, document, getDb, invoice, mailboxConnection, receivingAccount } from "@ebo/db";
+import { MAILBOX_PROVIDERS, peekInvoiceNumber, workspaceToday } from "@ebo/engine";
 import { asc, count, eq } from "drizzle-orm";
 import Link from "next/link";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, Notice, PageHeader, cx } from "@/components/ui";
+import { clock } from "@/lib/format";
 import { requireWorkspace } from "@/lib/session";
-import { addAccountAction, saveBusinessAction, saveInvoiceSettingsAction, toggleAccountAction } from "../manage-actions";
-import { AccountForm, BusinessForm, InvoiceSettingsForm } from "./forms";
+import { addAccountAction, connectMailboxAction, disconnectMailboxAction, saveBusinessAction, saveInvoiceSettingsAction, toggleAccountAction } from "../manage-actions";
+import { AccountForm, BusinessForm, InvoiceSettingsForm, MailboxForm } from "./forms";
 
 export const metadata = { title: "Setup" };
 
@@ -17,12 +18,16 @@ export default async function SetupPage({ params, searchParams }: { params: Prom
   const { ws, role } = await requireWorkspace(slug);
   const db = getDb();
   const n = (rows: Array<{ n: number }>) => Number(rows[0]?.n ?? 0);
-  const [accounts, clients, invoices, documents, preview] = await Promise.all([
+  const [accounts, clients, invoices, documents, preview, [mailbox]] = await Promise.all([
     db.select().from(receivingAccount).where(eq(receivingAccount.workspaceId, ws.id)).orderBy(asc(receivingAccount.createdAt)),
     db.select({ n: count() }).from(client).where(eq(client.workspaceId, ws.id)).then(n),
     db.select({ n: count() }).from(invoice).where(eq(invoice.workspaceId, ws.id)).then(n),
     db.select({ n: count() }).from(document).where(eq(document.workspaceId, ws.id)).then(n),
     peekInvoiceNumber(db, ws, workspaceToday(ws)),
+    db
+      .select({ username: mailboxConnection.username, imapHost: mailboxConnection.imapHost, smtpHost: mailboxConnection.smtpHost, status: mailboxConnection.status, lastError: mailboxConnection.lastError, lastPolledAt: mailboxConnection.lastPolledAt, createdAt: mailboxConnection.createdAt })
+      .from(mailboxConnection)
+      .where(eq(mailboxConnection.workspaceId, ws.id)),
   ]);
   const owner = role === "owner";
   const base = `/w/${slug}`;
@@ -32,6 +37,7 @@ export default async function SetupPage({ params, searchParams }: { params: Prom
     { done: accounts.some((a) => a.active), title: "Where money arrives", text: "Your ESFCA, PKR account or Payoneer. Invoices quote the exact details, and the agent knows where to look for payments.", href: "#accounts", cta: "Add an account" },
     { done: clients > 0, title: "Your clients", text: "Who you invoice, their currency and terms, and the names their payments arrive under.", href: `${base}/clients/new`, cta: "Add a client" },
     { done: invoices > 0, title: "Your first invoice", text: "Write it here, download the PDF, and send it after approval. The agent then watches for the payment.", href: `${base}/invoices/new`, cta: "New invoice" },
+    { done: !!mailbox, title: "The finance mailbox (optional)", text: "Connect the mailbox bank advices and client replies arrive in. Each run reads the new mail, and approved emails go out from it.", href: "#mailbox", cta: "Connect" },
     { done: documents > 0, title: "Bank documents", text: "Upload credit advices, PRCs or a bank statement export, and the agent reads them and matches the money to invoices.", href: `${base}/documents`, cta: "Upload" },
   ];
   const left = steps.filter((x) => !x.done).length;
@@ -109,6 +115,41 @@ export default async function SetupPage({ params, searchParams }: { params: Prom
               </div>
             ) : (
               <p className="p-4 text-sm text-muted">Only an owner can add or change accounts.</p>
+            )}
+          </Card>
+
+          <Card title={<span id="mailbox">Mailbox</span>}>
+            {ws.isDemo ? (
+              <p className="text-sm text-muted">Demo workspaces read a simulated mailbox, and emails they &ldquo;send&rdquo; are only recorded. A workspace of your own can connect a real one here.</p>
+            ) : mailbox ? (
+              <div className="space-y-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-ink">{mailbox.username}</span>
+                  <Badge tone={mailbox.status === "ok" ? "green" : mailbox.status === "error" ? "red" : "gray"}>{mailbox.status === "ok" ? "connected" : mailbox.status === "error" ? "can't read it" : "paused"}</Badge>
+                </div>
+                <p className="text-muted">
+                  Reads new mail from {mailbox.imapHost} at the start of every run (it doesn&apos;t mark anything as read or move it), and sends approved emails through {mailbox.smtpHost}.{" "}
+                  {mailbox.lastPolledAt ? `Last read ${clock(mailbox.lastPolledAt, ws.timezone)}.` : "Mail that arrives from now on is read at the next run."}
+                </p>
+                {mailbox.lastError ? <Notice tone="red">{mailbox.lastError}</Notice> : null}
+                {owner ? (
+                  <form action={disconnectMailboxAction.bind(null, slug)}>
+                    <SubmitButton variant="secondary" pendingText="Disconnecting…">
+                      Disconnect
+                    </SubmitButton>
+                  </form>
+                ) : null}
+              </div>
+            ) : owner ? (
+              <>
+                <p className="mb-4 text-sm text-muted">
+                  Bank advices, ePRCs and client replies usually arrive by email. Connect the mailbox they come to with an app password, and each run reads the mail that arrived since the last one. Approved emails then go out from it too. Both logins are
+                  checked before anything is saved.
+                </p>
+                <MailboxForm action={connectMailboxAction.bind(null, slug)} providers={Object.entries(MAILBOX_PROVIDERS).map(([key, p]) => ({ key, label: p.label, help: p.help }))} />
+              </>
+            ) : (
+              <p className="text-sm text-muted">No mailbox connected. Only an owner can connect one; until then, upload documents on the Documents page.</p>
             )}
           </Card>
 
