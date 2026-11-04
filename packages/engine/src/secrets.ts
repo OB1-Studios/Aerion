@@ -9,10 +9,10 @@ import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:cr
 
 type Env = Record<string, string | undefined>;
 
-function key(env: Env): Buffer {
+function key(env: Env, info = "mailbox-secret-v1"): Buffer {
   const raw = env.APP_ENCRYPTION_KEY || env.BETTER_AUTH_SECRET;
   if (!raw) throw new Error("Set APP_ENCRYPTION_KEY (or BETTER_AUTH_SECRET) before storing secrets.");
-  return Buffer.from(hkdfSync("sha256", raw, "ebo-secrets", "mailbox-secret-v1", 32));
+  return Buffer.from(hkdfSync("sha256", raw, "ebo-secrets", info, 32));
 }
 
 export function sealSecret(plain: string, env: Env = process.env): string {
@@ -28,4 +28,27 @@ export function openSecret(sealed: string, env: Env = process.env): string {
   const decipher = createDecipheriv("aes-256-gcm", key(env), Buffer.from(iv, "base64url"));
   decipher.setAuthTag(Buffer.from(tag, "base64url"));
   return Buffer.concat([decipher.update(Buffer.from(body, "base64url")), decipher.final()]).toString("utf8");
+}
+
+/** Backups: "EBOBAK1\n", then the IV (12 bytes), the GCM tag (16 bytes) and the encrypted body. */
+const BACKUP_MAGIC = Buffer.from("EBOBAK1\n");
+
+export function sealBackup(body: Uint8Array, env: Env = process.env): Buffer {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key(env, "backup-v1"), iv);
+  const enc = Buffer.concat([cipher.update(body), cipher.final()]);
+  return Buffer.concat([BACKUP_MAGIC, iv, cipher.getAuthTag(), enc]);
+}
+
+export function openBackup(sealed: Uint8Array, env: Env = process.env): Buffer {
+  const b = Buffer.from(sealed);
+  if (b.length < BACKUP_MAGIC.length + 28 || !b.subarray(0, BACKUP_MAGIC.length).equals(BACKUP_MAGIC)) throw new Error("This file isn't a backup made by this app.");
+  const at = BACKUP_MAGIC.length;
+  const decipher = createDecipheriv("aes-256-gcm", key(env, "backup-v1"), b.subarray(at, at + 12));
+  decipher.setAuthTag(b.subarray(at + 12, at + 28));
+  try {
+    return Buffer.concat([decipher.update(b.subarray(at + 28)), decipher.final()]);
+  } catch {
+    throw new Error("Can't open this backup: it was made with a different APP_ENCRYPTION_KEY, or the file is damaged.");
+  }
 }

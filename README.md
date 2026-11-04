@@ -51,7 +51,7 @@ Each run is recorded step by step, and the run page shows what each step did and
 | --- | --- |
 | **Cloud Compute** (Coolify marketplace image) | Runs the app as three containers from `docker-compose.yml`: `migrate` runs the migrations before every deploy, `web` serves the Next.js app, and `worker` runs the workflow and the schedules. A firewall group opens 80/443 to everyone, and SSH and the Coolify dashboard only to your IP. Daily VM backups run at 02:00 PKT. |
 | **Managed Databases for PostgreSQL** | Holds all records: invoices, transactions, matches, flags, drafts, the audit log, sign-in sessions, the run queue and the cron schedules (pg-boss). It's reached over the VPC's private hostname, only from the VPC, with TLS (verified when `DATABASE_CA_CERT` is set), and backed up daily. |
-| **Object Storage** | Stores the documents (credit advices, ePRCs, screenshots, wallet exports and uploads) and the PDF of every invoice as it was sent, through the S3 API, keyed by SHA-256, so the same file is never stored or counted twice. A second bucket is created for backups but isn't used by the app yet. |
+| **Object Storage** | Stores the documents (credit advices, ePRCs, screenshots, wallet exports and uploads) and the PDF of every invoice as it was sent, through the S3 API, keyed by SHA-256, so the same file is never stored or counted twice. A second bucket holds the nightly database backups. At 02:30 PKT the worker writes every table from one consistent snapshot as a gzipped file sealed with AES-256-GCM, and keeps the newest 14. |
 | **Serverless Inference** | Reads documents and emails through the OpenAI-compatible API: it classifies each document, extracts its fields with JSON output and a quote for each value, and reads client replies for promises to pay and claims of payment. |
 | **Vultr API** | `packages/vultr` is a typed client generated from Vultr's OpenAPI document (`openapi-typescript` + `openapi-fetch`). `pnpm infra:plan / apply / status` uses it to create the whole stack. The settings page uses it to show live status: VM, backups, database, storage, and model usage and cost. |
 | **DNS** (optional) | If `DOMAIN` is a Vultr DNS zone, `infra:apply` adds an A record for `app.<domain>`. |
@@ -64,8 +64,8 @@ Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ───�
           ┌────────────────────────────┴──────────────┬─────────────────────┴───────────────┐
           ▼                                           ▼                                     ▼
   Managed PostgreSQL                          Object Storage                       Serverless Inference
-  records, run queue, schedules,              documents (S3 API)                   classify, extract, read replies
-  audit log (private VPC host, TLS)                                                (OpenAI-compatible, JSON)
+  records, run queue, schedules,              documents (S3 API),                  classify, extract, read replies
+  audit log (private VPC host, TLS)           sealed nightly backups               (OpenAI-compatible, JSON)
 ```
 
 ## Reading benchmark
@@ -119,7 +119,7 @@ pnpm --filter @ebo/worker cli run ravi-code-works   # run one workspace from the
 3. **Apply.** `pnpm infra:apply -- --yes` creates what's missing: the SSH key, VPC, firewall group, VM with Coolify, Managed PostgreSQL, Object Storage with its buckets, the Serverless Inference subscription and the optional DNS record. Resources are found by label, so running it again is safe. The connection details go to `.env.vultr` (secret, gitignored). *This step costs money.*
 4. **Coolify.** Open `http://<vm-ip>:8000` from your IP and create the admin account. Add this repository as a **Docker Compose** resource, give the `web` service your domain on port 3000, and paste `.env.vultr` into the environment variables. Also add these:
    - `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (`https://app.<domain>`)
-   - `APP_ENCRYPTION_KEY` (`openssl rand -hex 32`), which seals mailbox app passwords. Keep it: changing it means reconnecting mailboxes
+   - `APP_ENCRYPTION_KEY` (`openssl rand -hex 32`), which seals mailbox app passwords and the nightly backups. Keep a copy off the server: without it, neither can be opened
    - `DEMO_PASSWORD`
    - optionally `VULTR_API_KEY` for the live status on the settings page (restrict the key to the VM's IP)
    - optionally `DATABASE_CA_CERT` (the database's CA certificate, `\n` for line breaks) to verify the database's certificate
@@ -128,13 +128,23 @@ pnpm --filter @ebo/worker cli run ravi-code-works   # run one workspace from the
 
 Without Object Storage, documents go to a Docker volume shared by `web` and `worker`. The worker runs every queued run. `RUNS_INLINE=1` (run the workflow inside the web process) is for local development and is safe alongside a worker.
 
+**Backups and restore.** The worker backs up the database every night to the backups bucket (`S3_BUCKET_BACKUPS`, from `infra:apply`), on top of the managed database's own daily backups and the VM's. Each backup is one file: every table, read from one consistent snapshot, with each row written by Postgres as JSON. It is gzipped and sealed with AES-256-GCM using a key derived from `APP_ENCRYPTION_KEY`. Values come back exactly, and no `pg_dump` has to match the server's version. From the worker's terminal, or locally (backups go to `./.backups`):
+
+```bash
+pnpm backup                                   # back up now, as the nightly job does
+pnpm backup:list
+pnpm backup:restore latest postgres://…/new   # into a new database: migrated first if blank; refuses one with data
+```
+
+The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It backs up the whole database, restores it into a new one, and checks that every row came back identical. It also checks that a restore refuses a database with data, one from another release, the wrong key and a damaged file.
+
 ## Repository
 
 | Path | What's in it |
 | --- | --- |
 | `apps/web` | Next.js app: landing page, sign-up and sign-in, setup, the inbox, runs, flags, payments, clients, invoices (editor and PDF), documents, tax-year file, rules, settings, audit log |
-| `apps/worker` | Claims queued runs, runs the weekly cron and the demo clean-up, and has a CLI |
-| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, and invoices with their PDF |
+| `apps/worker` | Claims queued runs, runs the weekly cron, the mailbox check, the nightly backup and the demo clean-up, and has a CLI (runs, demo reset, backup and restore) |
+| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, invoices with their PDF, retainers, people, the mailbox, and backups |
 | `packages/core` | Pure rules: money, dates, matching, flags, templates, the numbers check, the approval policy |
 | `packages/ai` | The Vultr Serverless Inference client, prompts, extraction schemas, model-backed readers and the reading benchmark |
 | `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data and its answer key |

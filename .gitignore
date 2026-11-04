@@ -25,3 +25,4 @@ private/
 packages/vultr/openapi.json
 packages/vultr/openapi.trimmed.json
 .storage/
+.backups/

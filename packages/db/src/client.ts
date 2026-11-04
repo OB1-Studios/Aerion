@@ -3,6 +3,8 @@ import pg from "pg";
 import * as schema from "./schema";
 
 export type Db = NodePgDatabase<typeof schema>;
+export type PgPool = pg.Pool;
+export type PgClient = pg.PoolClient;
 
 export const LOCAL_DATABASE_URL = "postgres://ebo:ebo@localhost:54329/ebo";
 

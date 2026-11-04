@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema.ts",
-    "./seed": "./src/seed/index.ts"
+    "./seed": "./src/seed/index.ts",
+    "./migrate": "./src/migrate.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

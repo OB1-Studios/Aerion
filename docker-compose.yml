@@ -10,13 +10,18 @@ x-env: &env
   S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
   S3_SECRET_KEY: ${S3_SECRET_KEY:-}
   S3_BUCKET_DOCUMENTS: ${S3_BUCKET_DOCUMENTS:-}
-  # Without Object Storage, documents go to this volume (shared by web and worker).
+  # The worker's nightly database backup (02:30 PKT) goes to its own bucket; the newest BACKUP_KEEP are kept.
+  S3_BUCKET_BACKUPS: ${S3_BUCKET_BACKUPS:-}
+  BACKUP_KEEP: ${BACKUP_KEEP:-14}
+  # Without Object Storage, documents and backups go to this volume (shared by web and worker).
   STORAGE_DIR: /data/storage
+  BACKUP_DIR: /data/backups
   VULTR_INFERENCE_API_KEY: ${VULTR_INFERENCE_API_KEY:-}
   VULTR_INFERENCE_MODEL: ${VULTR_INFERENCE_MODEL:-}
   VULTR_INFERENCE_CLASSIFY_MODEL: ${VULTR_INFERENCE_CLASSIFY_MODEL:-}
   VULTR_INFERENCE_JSON_MODE: ${VULTR_INFERENCE_JSON_MODE:-object}
-  # Seals mailbox app passwords; web connects mailboxes, the worker reads and sends with them.
+  # Seals mailbox app passwords and the nightly backups. Keep a copy somewhere safe off the server:
+  # without it, neither can be opened.
   APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY (openssl rand -hex 32)}
 
 services:
