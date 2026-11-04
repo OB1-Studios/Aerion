@@ -89,7 +89,7 @@ export function Stat({ label, value, hint, tone }: { label: string; value: React
   return (
     <div className="rounded-xl border border-line bg-panel p-4 shadow-sm">
       <div className="text-xs font-medium uppercase tracking-wide text-muted">{label}</div>
-      <div className={cx("mt-1 text-2xl font-semibold tabular-nums", tone === "good" && "text-emerald-700 dark:text-emerald-400", tone === "warn" && "text-amber-700 dark:text-amber-400", tone === "bad" && "text-rose-700 dark:text-rose-400", !tone && "text-ink")}>{value}</div>
+      <div className={cx("mt-1 text-2xl font-semibold", tone === "good" && "text-emerald-700 dark:text-emerald-400", tone === "warn" && "text-amber-700 dark:text-amber-400", tone === "bad" && "text-rose-700 dark:text-rose-400", !tone && "text-ink")}>{value}</div>
       {hint ? <div className="mt-1 text-xs text-muted">{hint}</div> : null}
     </div>
   );
