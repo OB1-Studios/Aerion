@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+  - infra
+
+# pnpm 10 runs no install scripts unless listed here.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - "@tailwindcss/oxide"
+  - unrs-resolver
+  - "@embedded-postgres/linux-x64"

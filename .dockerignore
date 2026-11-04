@@ -1,0 +1,17 @@
+**/node_modules
+**/.next
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+.git
+.github
+.pgdata
+.storage
+private
+**/*.real.pdf
+.env
+.env.*
+!.env.example
+infra/.state.json
+packages/vultr/openapi.json
+packages/vultr/openapi.trimmed.json

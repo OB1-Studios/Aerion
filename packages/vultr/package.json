@@ -1,0 +1,19 @@
+{
+  "name": "@ebo/vultr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/prepare-spec.mjs ${VULTR_OPENAPI:-./openapi.json} ./openapi.trimmed.json && openapi-typescript ./openapi.trimmed.json -o ./src/schema.d.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0"
+  }
+}
