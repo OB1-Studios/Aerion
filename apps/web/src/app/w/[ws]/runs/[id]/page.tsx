@@ -1,3 +1,4 @@
+import { formatMoney, periodLabel } from "@ebo/core";
 import { getDb, modelCall, run, runStep, user, type RunStepName } from "@ebo/db";
 import { and, asc, eq } from "drizzle-orm";
 import Link from "next/link";
@@ -16,7 +17,7 @@ const STEPS: Array<{ step: RunStepName; label: string; does: string }> = [
   { step: "read", label: "Read", does: "Classify and extract every document and email; check each field against the source text." },
   { step: "reconcile", label: "Reconcile", does: "Link transfers between our accounts, match money to invoices, explain fees and FX." },
   { step: "flag", label: "Flag", does: "Re-check every rule; open new flags and close the ones that cleared." },
-  { step: "draft", label: "Draft", does: "Write emails and tasks from templates; check every number against the records." },
+  { step: "draft", label: "Draft", does: "Draft the retainer invoices that are due, then write emails and tasks from templates; check every number against the records." },
   { step: "send", label: "Send", does: "Send what a person approved or the policy allows." },
   { step: "follow_up", label: "Follow up", does: "Close claims and promises; list what needs a person." },
 ];
@@ -317,8 +318,27 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
       const created = arr<{ key: string; template: string | null; to: string | null; subject: string; decision?: { mode: string } }>(out.created);
       const tasks = arr<string>(out.tasks);
       const cancelled = arr<string>(out.cancelled);
+      const retainers = arr<{ contractId: string; client: string; period: string; amount: string; currency: string; invoiceId: string | null; number: string | null; problem: string | null }>(out.retainers);
       return (
         <div className="space-y-2">
+          {retainers.length ? (
+            <Lines>
+              {retainers.map((r) => (
+                <li key={`${r.contractId}:${r.period}`} className="flex flex-wrap items-baseline gap-2">
+                  <Badge tone={r.invoiceId ? "violet" : "red"}>{r.invoiceId ? "invoice drafted" : "couldn't draft"}</Badge>
+                  {r.invoiceId ? (
+                    <Link href={`${base}/invoices/${r.invoiceId}`} className="font-medium text-ink hover:text-accent">
+                      {r.number}
+                    </Link>
+                  ) : null}
+                  <span className="min-w-0">
+                    {r.client}&apos;s retainer for {periodLabel(r.period)}, {formatMoney(r.amount, r.currency)}
+                  </span>
+                  {r.problem ? <span className="text-xs text-rose-700 dark:text-rose-300">{r.problem}</span> : null}
+                </li>
+              ))}
+            </Lines>
+          ) : null}
           {created.length ? (
             <Lines>
               {created.map((d) => (
@@ -332,7 +352,7 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
           ) : null}
           {tasks.length ? <p className="text-xs text-muted">Tasks for a person: {tasks.join("; ")}.</p> : null}
           {cancelled.length ? <p className="text-xs text-muted">{cancelled.length} draft{cancelled.length === 1 ? "" : "s"} cancelled because the problem was resolved.</p> : null}
-          {!created.length && !tasks.length && !cancelled.length ? <p className="text-muted">Nothing new to write.</p> : null}
+          {!created.length && !tasks.length && !cancelled.length && !retainers.length ? <p className="text-muted">Nothing new to write.</p> : null}
         </div>
       );
     }

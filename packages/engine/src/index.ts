@@ -17,3 +17,4 @@ export * from "./setup";
 export * from "./mailbox";
 export * from "./team";
 export { sealSecret, openSecret } from "./secrets";
+export * from "./retainers";

@@ -7,7 +7,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { complianceItem, createDb, createPool, document, draftAction, flag, invoice, invoiceReminder, localStorage, match, purgeWorkspace, receivingAccount, run, task, transaction, workspace, type Db } from "@ebo/db";
+import { complianceItem, contract, createDb, createPool, document, draftAction, flag, invoice, invoiceLine, invoiceReminder, localStorage, match, purgeWorkspace, receivingAccount, run, task, transaction, workspace, type Db } from "@ebo/db";
 import { creditAdviceText, seedFreelancer, seedOffice, seedReferenceData } from "@ebo/db/seed";
 import { and, eq } from "drizzle-orm";
 import { addUpload, approveAndSend, claimQueuedRun, defaultDeps, queueRun, runWorkspace, sampleCreditAdvice, type EngineDeps } from "../src/index";
@@ -110,11 +110,23 @@ describe.skipIf(!dbUp)("weekly workflow on the simulated dataset", () => {
     expect(r.status, r.error).toBe("succeeded");
     expect(r.counts).toMatchObject({ matched: 2, transfers: 2 });
     expect(await flagKinds(ids.freelancer!)).toEqual(["atl_status", "pseb_savings_estimate", "wrong_purpose_code"]);
-    expect((await drafts(ids.freelancer!)).map((x) => x.template)).toEqual(["T6"]);
+    expect((await drafts(ids.freelancer!)).map((x) => x.template).sort()).toEqual(["T11", "T6"]);
     await approveAll(ids.freelancer!);
     await setClock(ids.freelancer!, "2026-11-09T09:00:00+05:00");
     await runWorkspace(deps, ids.freelancer!, { kind: "weekly" });
     expect(await flagKinds(ids.freelancer!, ["resolved"])).toEqual(["wrong_purpose_code"]);
+  });
+
+  it("freelancer: Harbor & Pine's November retainer invoice was drafted on Nov 2, once, and went out on approval", async () => {
+    const lines = await db.select({ inv: invoice, line: invoiceLine }).from(invoiceLine).innerJoin(invoice, eq(invoice.id, invoiceLine.invoiceId)).where(and(eq(invoice.workspaceId, ids.freelancer!), eq(invoiceLine.milestoneLabel, "2026-11")));
+    expect(lines).toHaveLength(1);
+    const [{ inv, line }] = lines as [(typeof lines)[number]];
+    expect(inv).toMatchObject({ number: "INV-AS-2026-019", amount: "2400.00", currency: "USD", issuedOn: "2026-11-01", dueOn: "2026-12-01", route: "payoneer", purposeWording: "Payment for IT services exported", status: "sent" });
+    expect(line).toMatchObject({ description: "Flutter app development, monthly retainer, November 2026", unitPrice: "2400.00" });
+    const [c] = await db.select().from(contract).where(eq(contract.id, line.contractId!));
+    expect(c).toMatchObject({ kind: "retainer", lastPeriod: "2026-11" });
+    const [email] = (await drafts(ids.freelancer!)).filter((d) => d.template === "T11");
+    expect(email).toMatchObject({ status: "sent", invoiceId: inv.id, toAddress: "ap@harborandpine.example" });
   });
 
   it("autopilot (Proposed): routine emails go out on their own, the short-payment email waits 30 minutes", async () => {

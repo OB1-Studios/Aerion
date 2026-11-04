@@ -260,9 +260,13 @@ export const contract = pgTable("contract", {
   kind: text("kind").$type<"retainer" | "milestone" | "hourly" | "fixed">().notNull(),
   currency: char("currency", { length: 3 }).notNull(),
   amountOrRate: money("amount_or_rate").notNull(),
+  /** What the work is, as it appears on each invoice line ("Flutter app development, monthly retainer"). */
+  description: text("description"),
   billingDay: integer("billing_day"),
   startsOn: day("starts_on"),
   endsOn: day("ends_on"),
+  /** The last month ("2026-11") a retainer invoice was drafted for, so each month is drafted once. */
+  lastPeriod: text("last_period"),
   documentId: uuid("document_id"),
   createdAt: createdAt(),
 });

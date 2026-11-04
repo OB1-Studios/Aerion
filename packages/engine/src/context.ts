@@ -110,6 +110,10 @@ export interface AuditInput {
   details?: Record<string, unknown>;
 }
 
+/** Who did something: a user's id, or the agent during a run. */
+export type AuditActor = string | { actorType: "user" | "agent" | "system"; actorId: string };
+export const actorOf = (by: AuditActor): { actorType: "user" | "agent" | "system"; actorId: string } => (typeof by === "string" ? { actorType: "user", actorId: by } : by);
+
 export async function audit(db: Pick<Db, "insert">, a: AuditInput | AuditInput[]): Promise<void> {
   const list = Array.isArray(a) ? a : [a];
   if (!list.length) return;

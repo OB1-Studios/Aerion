@@ -1,8 +1,10 @@
 "use server";
 
+import { formatDateLong } from "@ebo/core";
 import { getDb, member } from "@ebo/db";
 import {
   addReceivingAccount,
+  addRetainer,
   connectMailbox,
   disconnectMailbox,
   inviteMember,
@@ -15,6 +17,8 @@ import {
   saveInvoice,
   saveInvoiceSettings,
   setAccountActive,
+  stopRetainer,
+  workspaceToday,
   type AccountInput,
   type BusinessInput,
   type ClientInput,
@@ -89,6 +93,27 @@ export async function saveInvoiceAction(slug: string, invoiceId: string | null, 
 }
 
 /** Prepares the invoice email for approval and opens it, so the person sees exactly what goes out. */
+// ---------------------------------------------------------------------------
+// Retainers: the run drafts each month's invoice from these
+// ---------------------------------------------------------------------------
+
+export async function addRetainerAction(slug: string, clientId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const { user, ws } = await actor(slug);
+  const v = formValues(form);
+  const r = await addRetainer(getDb(), ws, clientId, { description: field(v, "description"), amount: field(v, "amount"), currency: field(v, "currency"), billingDay: field(v, "billingDay"), startsOn: field(v, "startsOn") }, user.id);
+  if (!r.ok) return { problems: r.problems, values: v };
+  refresh(slug);
+  const notice = !r.firstOn ? "" : r.firstOn <= workspaceToday(ws) ? "This month's invoice is drafted at the next run; press Run now to draft it straight away." : `The first invoice is drafted on ${formatDateLong(r.firstOn)}.`;
+  return { problems: [], values: null, saved: Date.now(), notice };
+}
+
+export async function stopRetainerAction(slug: string, clientId: string, contractId: string) {
+  const { user, ws } = await actor(slug);
+  await stopRetainer(getDb(), ws, contractId, user.id, workspaceToday(ws));
+  refresh(slug);
+  redirect(`/w/${slug}/clients/${clientId}?stopped=1#retainers`);
+}
+
 export async function sendInvoiceAction(slug: string, invoiceId: string) {
   const { user, ws } = await actor(slug);
   const r = await draftInvoiceEmail(getDb(), ws.id, invoiceId, user.id);
