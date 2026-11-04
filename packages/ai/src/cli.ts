@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { loadLocalEnv } from "@ebo/db";
-import { textLayer } from "@ebo/engine";
+import { documentText } from "@ebo/engine";
 import { inferenceClient } from "./client";
 import { readersFromEnv } from "./index";
 
@@ -20,8 +20,8 @@ async function main() {
   }
   if (cmd === "try" && file) {
     const readers = readersFromEnv()!;
-    const mimeType = mime ?? (file.endsWith(".svg") ? "image/svg+xml" : file.endsWith(".csv") ? "text/csv" : "text/plain");
-    const text = textLayer(new Uint8Array(readFileSync(file)), mimeType);
+    const mimeType = mime ?? (file.endsWith(".svg") ? "image/svg+xml" : file.endsWith(".csv") ? "text/csv" : file.endsWith(".pdf") ? "application/pdf" : "text/plain");
+    const text = await documentText(new Uint8Array(readFileSync(file)), mimeType);
     const res = await readers.document.read(
       { id: "cli", name: file.split("/").pop() ?? file, mimeType, text, kindHint: null },
       { workspaceName: "Ravi Code Works", legalName: "Ravi Code Works (Pvt) Ltd", ibans: ["PK33DEMO0001004410001234", "PK41DEMO0001004470005678"], receivedOn: new Date().toISOString().slice(0, 10) },

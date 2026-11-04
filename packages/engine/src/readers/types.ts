@@ -53,6 +53,15 @@ export interface Extraction {
   notes: string | null;
 }
 
+/** Fields a person checked and confirmed in the review queue; the next run applies them as read. */
+export interface ConfirmedReading {
+  kind: DocumentKind;
+  fields: Record<string, string | null>;
+  by: string;
+  byName: string;
+  at: string;
+}
+
 export interface DocumentReadResult {
   classification: Classification;
   extraction: Extraction | null;

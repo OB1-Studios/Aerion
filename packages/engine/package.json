@@ -12,6 +12,7 @@
   "dependencies": {
     "@ebo/core": "workspace:*",
     "@ebo/db": "workspace:*",
-    "drizzle-orm": "^0.45.4"
+    "drizzle-orm": "^0.45.4",
+    "unpdf": "^2.1.0"
   }
 }
