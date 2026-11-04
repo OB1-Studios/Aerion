@@ -35,13 +35,20 @@ Each run is recorded step by step, and the run page shows what each step did and
 - **The workflow survives a model outage.** If inference is down or returns something unusable, built-in layout rules read the documents, the run still completes, and the failed calls are recorded.
 - **Everything is on the record.** The audit log records every action by people and by the agent. Each model call is stored with its model, prompt version, tokens and cost. Running twice at the same clock changes nothing.
 
+### Setting up your own workspace
+
+- **Create an account**, then a workspace for a software house or a freelancer. It starts empty: nothing in it is simulated. Sign-up records the pilot terms and, separately, whether documents may be read by a model; without that consent the workspace uses the built-in layout rules only.
+- **Setup** takes what goes on invoices (legal name, NTN, PSEB registration and expiry, ATL status, the email signature), the accounts money arrives in (ESFCA, PKR account, Wise, Payoneer; Pakistani IBANs are checked down to the check digits) and the invoice numbering. A checklist shows what is left. Only owners change these.
+- **Clients** holds each client's currency, payment terms, usual payment route and the payer names their money arrives under. The matcher learns more names as it goes.
+- **Invoices** are written in the app. The editor suggests how the client should pay and says why (for example, that their last bank wire lost USD 25.00 to fees). Numbers continue after the highest one used. The A4 PDF quotes the exact payment instructions and the purpose-of-payment wording the bank needs to report the money as an IT export. Emailing an invoice goes through the approval inbox like every other email: the numbers check runs, the PDF is attached, and the copy that was sent is kept on file.
+
 ## How it uses Vultr
 
 | Vultr service | What it does here |
 | --- | --- |
 | **Cloud Compute** (Coolify marketplace image) | Runs the app as three containers from `docker-compose.yml`: `migrate` runs the migrations before every deploy, `web` serves the Next.js app, and `worker` runs the workflow and the schedules. A firewall group opens 80/443 to everyone, and SSH and the Coolify dashboard only to your IP. Daily VM backups run at 02:00 PKT. |
 | **Managed Databases for PostgreSQL** | Holds all records: invoices, transactions, matches, flags, drafts, the audit log, sign-in sessions, the run queue and the cron schedules (pg-boss). It's reached over the VPC's private hostname, only from the VPC, with TLS (verified when `DATABASE_CA_CERT` is set), and backed up daily. |
-| **Object Storage** | Stores the documents (credit advices, ePRCs, screenshots, wallet exports and uploads) through the S3 API, keyed by SHA-256, so the same file is never stored or counted twice. A second bucket is created for backups but isn't used by the app yet. |
+| **Object Storage** | Stores the documents (credit advices, ePRCs, screenshots, wallet exports and uploads) and the PDF of every invoice as it was sent, through the S3 API, keyed by SHA-256, so the same file is never stored or counted twice. A second bucket is created for backups but isn't used by the app yet. |
 | **Serverless Inference** | Reads documents and emails through the OpenAI-compatible API: it classifies each document, extracts its fields with JSON output and a quote for each value, and reads client replies for promises to pay and claims of payment. |
 | **Vultr API** | `packages/vultr` is a typed client generated from Vultr's OpenAPI document (`openapi-typescript` + `openapi-fetch`). `pnpm infra:plan / apply / status` uses it to create the whole stack. The settings page uses it to show live status: VM, backups, database, storage, and model usage and cost. |
 | **DNS** (optional) | If `DOMAIN` is a Vultr DNS zone, `infra:apply` adds an A record for `app.<domain>`. |
@@ -72,7 +79,7 @@ The model rows come from `pnpm bench --models candidates`, which needs `VULTR_IN
 
 All data is fictional and marked SIMULATED: a software house (Ravi Code Works) and a freelancer (Ayesha Siddiqui), with their invoices, bank documents, wallet exports and client emails.
 
-- On the landing page, **Try the demo** gives you a private copy of both workspaces for 7 days (no sign-up).
+- On the landing page, **Try the demo** gives you a private copy of both workspaces for 7 days (no sign-up). If you then create an account, the copy stays with you until it expires.
 - Each demo workspace has its own clock. **Run now** runs the workflow at the current clock. **Next Monday →** moves the clock to the next Monday 09:00 PKT, lets that week's replies arrive, and runs the weekly workflow. **Reset** starts again.
 - On **Documents**, upload your own files (PDF, CSV, text or an image, up to 10 at a time), or press **Upload a sample credit advice**. The sample is a SIMULATED bank advice for the oldest open invoice: the run reads it, matches it and marks the invoice paid. Uploads that fail a check appear under **Need a person**, where you can correct and confirm them.
 - The first Monday (2 Nov 2026) produces 6 emails to approve, 9 flags and the tasks for a person. After you approve the emails, the next Monday's replies close four flags and mark the short-paid invoice paid. The bank that didn't send a withholding certificate gets a phone-call task.
@@ -120,9 +127,9 @@ Without Object Storage, documents go to a Docker volume shared by `web` and `wor
 
 | Path | What's in it |
 | --- | --- |
-| `apps/web` | Next.js app: landing page, sign-in, the inbox, runs, flags, payments, invoices, documents, tax-year file, rules, settings, audit log |
+| `apps/web` | Next.js app: landing page, sign-up and sign-in, setup, the inbox, runs, flags, payments, clients, invoices (editor and PDF), documents, tax-year file, rules, settings, audit log |
 | `apps/worker` | Claims queued runs, runs the weekly cron and the demo clean-up, and has a CLI |
-| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending |
+| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, and invoices with their PDF |
 | `packages/core` | Pure rules: money, dates, matching, flags, templates, the numbers check, the approval policy |
 | `packages/ai` | The Vultr Serverless Inference client, prompts, extraction schemas, model-backed readers and the reading benchmark |
 | `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data and its answer key |
