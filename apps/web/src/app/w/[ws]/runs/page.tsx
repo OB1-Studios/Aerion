@@ -2,9 +2,11 @@ import { getDb, run, user } from "@ebo/db";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { RunPoller } from "@/components/run-poller";
+import { SubmitButton } from "@/components/submit-button";
 import { Card, Empty, PageHeader, Status, Table } from "@/components/ui";
 import { clock, duration } from "@/lib/format";
-import { requireWorkspace } from "@/lib/session";
+import { canAct, requireWorkspace } from "@/lib/session";
+import { runNow } from "../actions";
 
 export const metadata = { title: "Runs" };
 
@@ -19,7 +21,7 @@ const COUNT_LABELS: Array<[string, string]> = [
 
 export default async function RunsPage({ params }: { params: Promise<{ ws: string }> }) {
   const { ws: slug } = await params;
-  const { ws } = await requireWorkspace(slug);
+  const { ws, role } = await requireWorkspace(slug);
   const runs = await getDb()
     .select({ r: run, who: user.name, anon: user.isAnonymous })
     .from(run)
@@ -32,7 +34,17 @@ export default async function RunsPage({ params }: { params: Promise<{ ws: strin
   return (
     <>
       <RunPoller active={active} everyMs={2000} />
-      <PageHeader title="Runs" sub="Every run of the workflow, step by step. The weekly run starts on its own every Monday at 09:00 PKT." />
+      <PageHeader
+        title="Runs"
+        sub="Every run of the workflow, step by step. The weekly run starts on its own every Monday at 09:00 PKT."
+        actions={
+          canAct(role) && !ws.isDemo ? (
+            <form action={runNow.bind(null, slug)}>
+              <SubmitButton pendingText="Starting…">Run now</SubmitButton>
+            </form>
+          ) : null
+        }
+      />
       <Card pad={false}>
         {runs.length ? (
           <Table head={["As of", "Kind", "Status", "Took", "Results", "Started by"]}>

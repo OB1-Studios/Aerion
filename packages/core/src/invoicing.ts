@@ -27,7 +27,7 @@ export const formatIban = (s: string) => compactIban(s).replace(/(.{4})/g, "$1 "
 /** ISO 13616 check: two letters, two check digits, the account; the mod-97 remainder must be 1. Null when valid. */
 export function ibanProblem(input: string): string | null {
   const iban = compactIban(input);
-  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(iban)) return "doesn't look like an IBAN (two letters, two digits, then the account number)";
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(iban)) return "it doesn't look like an IBAN (two letters, two digits, then the account number)";
   if (iban.startsWith("PK") && iban.length !== 24) return "a Pakistani IBAN has 24 characters";
   const digits = `${iban.slice(4)}${iban.slice(0, 4)}`.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
   let mod = 0;

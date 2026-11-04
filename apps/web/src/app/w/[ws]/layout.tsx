@@ -1,4 +1,4 @@
-import { document, draftAction, flag, getDb, task, transaction } from "@ebo/db";
+import { client, document, draftAction, flag, getDb, receivingAccount, task, transaction } from "@ebo/db";
 import { and, count, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -15,7 +15,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   const { user, ws, role } = await requireWorkspace(slug);
   const db = getDb();
   const n = (rows: Array<{ n: number }>) => Number(rows[0]?.n ?? 0);
-  const [drafts, tasks, review, unmatched, flags, scheduled, mine] = await Promise.all([
+  const [drafts, tasks, review, unmatched, flags, scheduled, mine, accounts, clients] = await Promise.all([
     db.select({ n: count() }).from(draftAction).where(and(eq(draftAction.workspaceId, ws.id), inArray(draftAction.status, ["draft", "blocked"]))).then(n),
     db.select({ n: count() }).from(task).where(and(eq(task.workspaceId, ws.id), eq(task.status, "open"))).then(n),
     db.select({ n: count() }).from(document).where(and(eq(document.workspaceId, ws.id), eq(document.parseStatus, "needs_review"))).then(n),
@@ -23,6 +23,8 @@ export default async function WorkspaceLayout({ children, params }: { children: 
     db.select({ n: count() }).from(flag).where(and(eq(flag.workspaceId, ws.id), inArray(flag.status, ["open", "actioned"]))).then(n),
     db.select({ n: count() }).from(draftAction).where(and(eq(draftAction.workspaceId, ws.id), eq(draftAction.status, "scheduled"))).then(n),
     myWorkspaces(user.id),
+    db.select({ n: count() }).from(receivingAccount).where(and(eq(receivingAccount.workspaceId, ws.id), eq(receivingAccount.active, true))).then(n),
+    db.select({ n: count() }).from(client).where(eq(client.workspaceId, ws.id)).then(n),
   ]);
   const base = `/w/${slug}`;
   const items = [
@@ -31,13 +33,23 @@ export default async function WorkspaceLayout({ children, params }: { children: 
     { href: `${base}/flags`, label: "Flags", count: flags },
     { href: `${base}/payments`, label: "Payments" },
     { href: `${base}/invoices`, label: "Invoices" },
+    { href: `${base}/clients`, label: "Clients" },
     { href: `${base}/documents`, label: "Documents" },
     { href: `${base}/export`, label: "Tax-year file" },
     { href: `${base}/rules`, label: "Rules" },
+    { href: `${base}/setup`, label: "Setup", count: !ws.isDemo ? Number(!accounts) + Number(!clients) : 0 },
     { href: `${base}/settings`, label: "Settings" },
     { href: `${base}/audit`, label: "Audit log" },
   ];
   const acts = canAct(role);
+  // Real workspaces start empty: point at the next thing to set up.
+  const hint = ws.isDemo
+    ? null
+    : !accounts && role === "owner"
+      ? { text: "Add the account clients pay into, so invoices can say how to pay.", href: `${base}/setup#accounts`, cta: "Finish setting up" }
+      : !clients && acts
+        ? { text: "Add your first client to start invoicing.", href: `${base}/clients/new`, cta: "Add a client" }
+        : null;
   const others = mine.filter((w) => w.slug !== slug);
 
   return (
@@ -99,6 +111,15 @@ export default async function WorkspaceLayout({ children, params }: { children: 
                     Switch to {w.name}
                   </Link>
                 ))}
+                {user.isAnonymous ? (
+                  <Link href="/signup" className="block rounded px-2 py-1.5 hover:bg-canvas">
+                    Create an account
+                  </Link>
+                ) : (
+                  <Link href="/workspaces/new" className="block rounded px-2 py-1.5 hover:bg-canvas">
+                    New workspace
+                  </Link>
+                )}
                 <form action={signOut}>
                   <button className="w-full rounded px-2 py-1.5 text-left hover:bg-canvas">Sign out</button>
                 </form>
@@ -107,7 +128,17 @@ export default async function WorkspaceLayout({ children, params }: { children: 
           </div>
           <WorkspaceNav items={items} />
         </aside>
-        <main className="min-w-0">{children}</main>
+        <main className="min-w-0">
+          {hint ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+              <span>{hint.text}</span>
+              <Link href={hint.href} className="font-medium underline">
+                {hint.cta}
+              </Link>
+            </div>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
   );

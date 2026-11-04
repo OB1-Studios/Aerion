@@ -13,3 +13,4 @@ export * from "./demo";
 export { simplePdf } from "./pdf";
 export * from "./uploads";
 export * from "./invoicing";
+export * from "./setup";

@@ -11,13 +11,25 @@ export default async function WorkspacesPage() {
   const user = await requireUser();
   const list = await myWorkspaces(user.id);
   if (list.length === 1) redirect(`/w/${list[0]!.slug}/inbox`);
+  if (!list.length && !user.isAnonymous) redirect("/workspaces/new");
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Your workspaces</h1>
-        <form action={signOut}>
-          <button className="btn btn-secondary">Sign out</button>
-        </form>
+        <div className="flex flex-wrap gap-2">
+          {user.isAnonymous ? (
+            <Link href="/signup" className="btn btn-primary">
+              Create an account
+            </Link>
+          ) : (
+            <Link href="/workspaces/new" className="btn btn-primary">
+              New workspace
+            </Link>
+          )}
+          <form action={signOut}>
+            <button className="btn btn-secondary">Sign out</button>
+          </form>
+        </div>
       </div>
       {list.length ? (
         <ul className="space-y-2">

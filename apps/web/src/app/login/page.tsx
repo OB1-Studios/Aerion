@@ -23,6 +23,12 @@ export default async function LoginPage() {
         <h1 className="text-lg font-semibold">Sign in</h1>
         <LoginForm />
       </div>
+      <p className="mt-4 text-center text-sm text-muted">
+        New here?{" "}
+        <Link href="/signup" className="font-medium text-accent hover:underline">
+          Create an account
+        </Link>
+      </p>
       <div className="mt-6 rounded-xl border border-line bg-panel p-4 text-sm">
         <div className="font-medium">Shared demo accounts</div>
         <p className="mt-1 text-muted">These share one copy of the demo. For your own copy, use &ldquo;Try the demo&rdquo; on the home page. The password is in the submission notes.</p>
