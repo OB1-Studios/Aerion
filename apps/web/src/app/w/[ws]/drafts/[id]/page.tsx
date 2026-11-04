@@ -77,6 +77,13 @@ export default async function DraftPage({ params, searchParams }: { params: Prom
               <Row k="Subject">
                 <b>{highlight(d.subject ?? "", found)}</b>
               </Row>
+              {d.template === "T11" && d.invoiceId && inv[0] ? (
+                <Row k="Attached">
+                  <a href={`/api/w/${slug}/invoices/${d.invoiceId}/pdf`} target="_blank" rel="noopener" className="text-accent hover:underline">
+                    {inv[0].number}.pdf
+                  </a>
+                </Row>
+              ) : null}
             </div>
             <div className="whitespace-pre-wrap px-4 py-4 font-sans text-sm leading-relaxed text-ink">{highlight(d.bodyRendered ?? "", found)}</div>
           </Card>

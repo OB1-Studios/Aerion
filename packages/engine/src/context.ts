@@ -21,6 +21,8 @@ export interface OutgoingEmail {
   cc?: string | null;
   subject: string;
   body: string;
+  /** Files sent with the email (an invoice email carries the invoice PDF). */
+  attachments?: Array<{ name: string; contentType: string; content: Uint8Array }>;
 }
 
 /** Sends email. The demo mailer only records the message; production uses the connected mailbox. */

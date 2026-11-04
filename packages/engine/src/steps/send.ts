@@ -19,7 +19,7 @@ export const sendStep: Step = {
     const sent: string[] = [];
     const failed: Array<{ subject: string | null; reason?: string }> = [];
     for (const d of due) {
-      const r = await sendDraft({ db, mailer: c.deps.mailer }, d.id, { type: "agent", id: c.runId });
+      const r = await sendDraft({ db, mailer: c.deps.mailer, storage: c.deps.storage }, d.id, { type: "agent", id: c.runId });
       if (r.ok) sent.push(d.subject ?? d.key);
       else failed.push({ subject: d.subject, reason: r.reason });
     }

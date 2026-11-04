@@ -1,7 +1,8 @@
 import { checkNumbers, dateInZone, TEMPLATE_ALLOW_LIST } from "@ebo/core";
-import { complianceItem, draftAction, flag, invoice, invoiceReminder, message, workspace, type Db } from "@ebo/db";
+import { complianceItem, document, documentKey, draftAction, flag, invoice, invoiceReminder, message, sha256, workspace, type Db, type Storage } from "@ebo/db";
 import { and, eq, inArray } from "drizzle-orm";
-import { audit, workspaceClock, type Mailer } from "./context";
+import { audit, workspaceClock, type Mailer, type OutgoingEmail } from "./context";
+import { invoicePdf } from "./invoicing";
 
 export interface Actor {
   type: "user" | "agent";
@@ -12,7 +13,7 @@ export interface Actor {
  * Sends one draft. Shared by the run's send step and by a person approving a draft.
  * The numbers check runs again on the exact text being sent, whatever happened before.
  */
-export async function sendDraft(deps: { db: Db; mailer: Mailer }, draftId: string, actor: Actor): Promise<{ ok: boolean; reason?: string }> {
+export async function sendDraft(deps: SendDeps, draftId: string, actor: Actor): Promise<{ ok: boolean; reason?: string }> {
   const { db, mailer } = deps;
   const [d] = await db.select().from(draftAction).where(eq(draftAction.id, draftId));
   if (!d) return { ok: false, reason: "Draft not found." };
@@ -31,20 +32,26 @@ export async function sendDraft(deps: { db: Db; mailer: Mailer }, draftId: strin
 
   const at = workspaceClock(ws);
   const from = ws.settings?.mailboxAddress ?? `no-reply@${ws.emailDomain ?? "example.invalid"}`;
+  // An invoice email carries the invoice, rendered from the records as they are now.
+  const pdf = d.invoiceId && d.template === "T11" ? await invoicePdf(db, ws.id, d.invoiceId) : null;
+  if (d.template === "T11" && !pdf) return { ok: false, reason: "The invoice for this email no longer exists." };
+  const attachments: OutgoingEmail["attachments"] = pdf ? [{ name: pdf.name, contentType: "application/pdf", content: pdf.bytes }] : [];
   await db.update(draftAction).set({ status: "sending" }).where(eq(draftAction.id, d.id));
   let providerId: string | null = null;
   try {
-    providerId = (await mailer.send({ workspaceId: ws.id, from, to: d.toAddress, cc: d.ccAddress, subject: d.subject, body: d.bodyRendered })).messageId;
+    providerId = (await mailer.send({ workspaceId: ws.id, from, to: d.toAddress, cc: d.ccAddress, subject: d.subject, body: d.bodyRendered, attachments })).messageId;
   } catch (err) {
     await db.update(draftAction).set({ status: "failed", rejectedReason: String(err) }).where(eq(draftAction.id, d.id));
     return { ok: false, reason: `Sending failed: ${String(err)}` };
   }
 
   const today = dateInZone(at, ws.timezone);
+  // Keep the exact PDF that went out, next to the message that carried it.
+  const kept = pdf && deps.storage ? await keepFile(db, deps.storage, ws.id, at, pdf.name, pdf.bytes) : null;
   await db.transaction(async (tx) => {
     const [m] = await tx
       .insert(message)
-      .values({ workspaceId: ws.id, direction: "out", fromAddress: from, toAddress: d.toAddress!, subject: d.subject, sentAt: at, bodyText: d.bodyRendered, threadKey: d.subject?.replace(/^(re|fwd?):\s*/gi, "") ?? null, mailboxUid: providerId })
+      .values({ workspaceId: ws.id, direction: "out", fromAddress: from, toAddress: d.toAddress!, subject: d.subject, sentAt: at, bodyText: d.bodyRendered, threadKey: d.subject?.replace(/^(re|fwd?):\s*/gi, "") ?? null, mailboxUid: providerId, documentIds: kept ? [kept] : [] })
       .returning({ id: message.id });
     await tx.update(draftAction).set({ status: "sent", sentAt: at, messageId: m!.id }).where(eq(draftAction.id, d.id));
 
@@ -53,7 +60,10 @@ export async function sendDraft(deps: { db: Db; mailer: Mailer }, draftId: strin
       await tx.insert(invoiceReminder).values({ workspaceId: ws.id, invoiceId: d.invoiceId, stage: Number(stage), sentOn: today, draftActionId: d.id });
     }
     if (d.invoiceId && d.template === "T11") {
-      await tx.update(invoice).set({ status: "sent", sentAt: at }).where(and(eq(invoice.id, d.invoiceId), eq(invoice.status, "draft")));
+      await tx
+        .update(invoice)
+        .set({ status: "sent", sentAt: at, ...(kept ? { pdfDocumentId: kept } : {}) })
+        .where(and(eq(invoice.id, d.invoiceId), eq(invoice.status, "draft")));
     }
     if (d.flagIds.length) {
       const flags = await tx.select().from(flag).where(inArray(flag.id, d.flagIds));
@@ -64,12 +74,32 @@ export async function sendDraft(deps: { db: Db; mailer: Mailer }, draftId: strin
       await tx.update(flag).set({ status: "actioned", updatedAt: new Date() }).where(and(inArray(flag.id, d.flagIds), eq(flag.status, "open")));
     }
   });
-  await audit(db, { workspaceId: ws.id, actorType: actor.type, actorId: actor.id, action: "email.sent", objectType: "draft_action", objectId: d.id, details: { template: d.template, to: d.toAddress, subject: d.subject, mailer: mailer.kind } });
+  await audit(db, { workspaceId: ws.id, actorType: actor.type, actorId: actor.id, action: "email.sent", objectType: "draft_action", objectId: d.id, details: { template: d.template, to: d.toAddress, subject: d.subject, mailer: mailer.kind, attachments: attachments.map((a) => a.name) } });
   return { ok: true };
 }
 
+export interface SendDeps {
+  db: Db;
+  mailer: Mailer;
+  /** Where sent attachments are kept (Object Storage when deployed). Without it they're sent but not kept. */
+  storage?: Storage;
+}
+
+/** Stores a file the workspace sent, as a document that's on file but not for the agent to read. */
+async function keepFile(db: Db, storage: Storage, workspaceId: string, at: Date, name: string, bytes: Uint8Array): Promise<string> {
+  const hash = sha256(bytes);
+  const key = documentKey(workspaceId, hash, "application/pdf");
+  await storage.put(key, bytes, "application/pdf");
+  const [row] = await db
+    .insert(document)
+    .values({ workspaceId, kind: "invoice_pdf", storagePath: key, sha256: hash, originalName: name, mimeType: "application/pdf", sizeBytes: bytes.length, source: "generated", receivedAt: at, parseStatus: "skipped", reviewReasons: [`The copy of ${name} emailed to the client, kept on file. The agent doesn't read what the workspace sends.`] })
+    .onConflictDoUpdate({ target: [document.workspaceId, document.sha256], set: { originalName: name } })
+    .returning({ id: document.id });
+  return row!.id;
+}
+
 /** A person approves a draft; in this build approval sends it straight away. */
-export async function approveAndSend(deps: { db: Db; mailer: Mailer }, draftId: string, userId: string): Promise<{ ok: boolean; reason?: string }> {
+export async function approveAndSend(deps: SendDeps, draftId: string, userId: string): Promise<{ ok: boolean; reason?: string }> {
   const { db } = deps;
   const [d] = await db.select().from(draftAction).where(eq(draftAction.id, draftId));
   if (!d) return { ok: false, reason: "Draft not found." };
