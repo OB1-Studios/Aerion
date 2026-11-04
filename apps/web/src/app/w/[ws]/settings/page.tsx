@@ -1,6 +1,7 @@
 import { AUTOPILOT_DEFAULTS, TEMPLATE_NAMES, type TemplateKey } from "@ebo/core";
-import { getDb, member, receivingAccount, user } from "@ebo/db";
-import { asc, eq } from "drizzle-orm";
+import { getDb, invitation, member, receivingAccount, user } from "@ebo/db";
+import { ROLE_TEXT, ROLES } from "@ebo/engine";
+import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, KeyValues, Notice, PageHeader, Table, cx } from "@/components/ui";
 import { day, ROLE_LABEL } from "@/lib/format";
@@ -8,18 +9,26 @@ import { describeCredit } from "@ebo/vultr";
 import { readerInfo, vultrStatus } from "@/lib/platform";
 import { requireWorkspace } from "@/lib/session";
 import { setAiReading, setPolicy } from "../actions";
+import { inviteAction, revokeInviteAction, setRoleAction } from "../manage-actions";
+import { InviteForm } from "./invite-form";
 
 export const metadata = { title: "Settings" };
 
 const SEND_TEXT = { auto: "sends on its own", delay: "waits, then sends", approve: "always a person" } as const;
 
-export default async function SettingsPage({ params }: { params: Promise<{ ws: string }> }) {
+export default async function SettingsPage({ params, searchParams }: { params: Promise<{ ws: string }>; searchParams: Promise<{ people?: string }> }) {
   const { ws: slug } = await params;
-  const { ws, role } = await requireWorkspace(slug);
+  const q = await searchParams;
+  const { ws, role, user: me } = await requireWorkspace(slug);
   const db = getDb();
-  const [accounts, members] = await Promise.all([
+  const [accounts, members, invites] = await Promise.all([
     db.select().from(receivingAccount).where(eq(receivingAccount.workspaceId, ws.id)).orderBy(asc(receivingAccount.label)),
-    db.select({ name: user.name, email: user.email, anon: user.isAnonymous, role: member.role }).from(member).innerJoin(user, eq(user.id, member.userId)).where(eq(member.workspaceId, ws.id)),
+    db.select({ id: member.id, userId: member.userId, name: user.name, email: user.email, anon: user.isAnonymous, role: member.role }).from(member).innerJoin(user, eq(user.id, member.userId)).where(eq(member.workspaceId, ws.id)).orderBy(asc(user.name)),
+    db
+      .select({ id: invitation.id, email: invitation.email, role: invitation.role, expiresAt: invitation.expiresAt })
+      .from(invitation)
+      .where(and(eq(invitation.workspaceId, ws.id), isNull(invitation.acceptedAt), gt(invitation.expiresAt, new Date())))
+      .orderBy(asc(invitation.email)),
   ]);
   const reader = readerInfo();
   let platform: Awaited<ReturnType<typeof vultrStatus>> = null;
@@ -31,6 +40,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ ws: s
   }
   const policy = ws.approvalPolicy;
   const isOwner = role === "owner";
+  const managePeople = isOwner && !ws.isDemo;
   const s = ws.settings ?? {};
 
   return (
@@ -105,16 +115,72 @@ export default async function SettingsPage({ params }: { params: Promise<{ ws: s
           </ul>
         </Card>
 
-        <Card title="People">
-          <ul className="space-y-1.5 text-sm">
-            {members.map((m, i) => (
-              <li key={i} className="flex justify-between gap-2">
-                <span className="text-ink">{m.anon ? "Visitor (demo)" : `${m.name} · ${m.email}`}</span>
-                <span className="text-xs text-muted">{ROLE_LABEL[m.role]}</span>
+        <Card title={<span id="people">People</span>} className={managePeople ? "xl:col-span-2" : undefined}>
+          {q.people ? <Notice tone="red">{q.people.slice(0, 200)}</Notice> : null}
+          <ul className="divide-y divide-line text-sm">
+            {members.map((m) => (
+              <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span className="min-w-0 text-ink">
+                  {m.anon ? "Visitor (demo)" : `${m.name} · ${m.email}`}
+                  {m.userId === me.id ? <span className="ml-1 text-xs text-muted">(you)</span> : null}
+                </span>
+                {managePeople ? (
+                  <span className="flex flex-wrap items-center gap-2">
+                    <form action={setRoleAction.bind(null, slug, m.id, false)} className="flex items-center gap-2">
+                      <select name="role" defaultValue={m.role} aria-label={`Role for ${m.name}`} className="input py-1 text-xs">
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {ROLE_LABEL[r]}
+                          </option>
+                        ))}
+                      </select>
+                      <SubmitButton variant="secondary" pendingText="Saving…">
+                        Change
+                      </SubmitButton>
+                    </form>
+                    <form action={setRoleAction.bind(null, slug, m.id, true)}>
+                      <SubmitButton variant="secondary" pendingText="Removing…">
+                        {m.userId === me.id ? "Leave" : "Remove"}
+                      </SubmitButton>
+                    </form>
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted">{ROLE_LABEL[m.role]}</span>
+                )}
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-muted">Owners and finance approve and act; accountants and viewers can see everything but change nothing.</p>
+          {invites.length ? (
+            <div className="mt-3 border-t border-line pt-3">
+              <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Invited, not joined yet</h3>
+              <ul className="space-y-1 text-sm">
+                {invites.map((i) => (
+                  <li key={i.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      {i.email} <span className="text-xs text-muted">as {ROLE_LABEL[i.role]}, until {day(i.expiresAt.toISOString().slice(0, 10))}</span>
+                    </span>
+                    {managePeople ? (
+                      <form action={revokeInviteAction.bind(null, slug, i.id)}>
+                        <SubmitButton variant="secondary" pendingText="Revoking…">
+                          Revoke
+                        </SubmitButton>
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {managePeople ? (
+            <div className="mt-4 border-t border-line pt-4">
+              <h3 className="mb-2 text-sm font-medium text-ink">Invite someone</h3>
+              <InviteForm action={inviteAction.bind(null, slug)} roles={ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r]!, text: ROLE_TEXT[r] }))} />
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-muted">
+              Owners and finance approve and act; accountants and viewers can see everything but change nothing.{ws.isDemo ? " People can't be changed in a demo workspace." : isOwner ? "" : " Only an owner can invite people or change roles."}
+            </p>
+          )}
         </Card>
 
         <Card title="Reading documents">

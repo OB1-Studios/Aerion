@@ -6,11 +6,12 @@ import { SubmitButton } from "@/components/submit-button";
 import { FORM_START } from "@/lib/forms";
 import { signUp } from "../actions";
 
-export function SignUpForm() {
+export function SignUpForm({ next, email }: { next?: string; email?: string }) {
   const [state, action] = useActionState(signUp, FORM_START);
-  const v = state.values ?? {};
+  const v = state.values ?? (email ? { email } : {});
   return (
     <form action={action} key={JSON.stringify(state.values)} className="mt-4 space-y-4">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <FormProblems problems={state.problems} title="Not yet:" />
       <Field label="Your name">
         <input name="name" defaultValue={v.name} required maxLength={80} autoComplete="name" className="input w-full" />
