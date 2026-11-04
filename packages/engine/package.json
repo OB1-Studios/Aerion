@@ -13,6 +13,7 @@
     "@ebo/core": "workspace:*",
     "@ebo/db": "workspace:*",
     "drizzle-orm": "^0.45.4",
+    "pdf-lib": "1.17.1",
     "unpdf": "^2.1.0"
   }
 }

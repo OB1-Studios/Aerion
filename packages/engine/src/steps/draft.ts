@@ -106,10 +106,11 @@ export const draftStep: Step = {
       newTasks.push(`Chase the ${what}${inv ? ` for ${inv}` : ""}`);
     }
 
-    // Drafts nobody acted on whose flags have all closed are no longer needed.
+    // Drafts nobody acted on whose flags have all closed are no longer needed. Invoice emails
+    // (T11) come from a person, not a flag, so they stay until someone sends or rejects them.
     const live = new Set(plans.map((p) => p.key));
     const openIds = new Set(flags.map((f) => f.id));
-    const stale = [...drafts.values()].filter((d) => ["draft", "blocked", "scheduled"].includes(d.status) && !live.has(d.key) && !d.flagIds.some((id) => openIds.has(id)));
+    const stale = [...drafts.values()].filter((d) => ["draft", "blocked", "scheduled"].includes(d.status) && d.template !== "T11" && !live.has(d.key) && !d.flagIds.some((id) => openIds.has(id)));
     if (stale.length) await db.update(draftAction).set({ status: "cancelled", rejectedReason: "No longer needed: the problem was resolved." }).where(inArray(draftAction.id, stale.map((d) => d.id)));
 
     await audit(db, [

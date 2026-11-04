@@ -12,3 +12,4 @@ export type { Step, StepContext } from "./steps/types";
 export * from "./demo";
 export { simplePdf } from "./pdf";
 export * from "./uploads";
+export * from "./invoicing";
