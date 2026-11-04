@@ -7,7 +7,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createDb, createPool, document, localStorage, mailboxConnection, message, purgeWorkspace, user, workspace, type Db } from "@ebo/db";
+import { createDb, createPool, document, localStorage, mailboxConnection, message, purgeWorkspace, run, user, workspace, type Db } from "@ebo/db";
 import { and, eq } from "drizzle-orm";
 import {
   connectMailbox,
@@ -17,6 +17,7 @@ import {
   mailboxProblem,
   mailboxSettings,
   openSecret,
+  queueRunsForNewMail,
   runWorkspace,
   saveClient,
   sealSecret,
@@ -184,6 +185,20 @@ describe.skipIf(!dbUp)("a real workspace's mailbox", () => {
       lastSeenUid: "7:43",
       lastError: "The mailbox didn't accept the address and password. Use an app password, not the account's normal password.",
     });
+  });
+
+  it("new mail between Mondays queues one run, not one per check", async () => {
+    const onArrival = async () => (await db.select().from(run).where(and(eq(run.workspaceId, wsId), eq(run.kind, "on_arrival")))).map((r) => r.status);
+    const quiet: MailboxReader = { fetchNew: async () => ({ mail: [], cursor: "", more: false }), waiting: async () => 0 };
+    await queueRunsForNewMail({ db, mailbox: quiet });
+    expect(await onArrival()).toEqual([]);
+    const busy: MailboxReader = { ...quiet, waiting: async (conn) => (conn.workspaceId === wsId ? 2 : 0) };
+    await queueRunsForNewMail({ db, mailbox: busy });
+    await queueRunsForNewMail({ db, mailbox: busy });
+    expect(await onArrival()).toEqual(["queued"]);
+    await db.delete(run).where(and(eq(run.workspaceId, wsId), eq(run.kind, "on_arrival")));
+    // A reader without the cheap check never polls.
+    expect(await queueRunsForNewMail({ db, mailbox: { fetchNew: quiet.fetchNew } })).toEqual({ checked: 0, queued: 0, errors: 0 });
   });
 
   it("sends through the workspace's SMTP login with its attachments; other workspaces only record", async () => {

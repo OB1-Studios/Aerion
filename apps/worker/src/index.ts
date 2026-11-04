@@ -1,15 +1,16 @@
 import { createServer } from "node:http";
 import { getPool, loadLocalEnv, run, sslFor, workspace } from "@ebo/db";
 import { purgeExpiredDemos } from "@ebo/db/seed";
-import { queueRun, runWorkspace } from "@ebo/engine";
+import { queueRun, queueRunsForNewMail, runWorkspace } from "@ebo/engine";
 import { eq } from "drizzle-orm";
 import { PgBoss } from "pg-boss";
 import { depsFromEnv } from "./deps";
 
 /**
  * The worker: runs the workflow for queued runs (the web app queues them), the weekly
- * Monday 09:00 run for every live workspace (pg-boss cron, Pakistan time), and the daily
- * clean-up of expired visitor demos.
+ * Monday 09:00 run for every live workspace (pg-boss cron, Pakistan time), a run whenever a
+ * connected mailbox has new mail (checked every 15 minutes), and the daily clean-up of
+ * expired visitor demos.
  */
 loadLocalEnv();
 const deps = depsFromEnv();
@@ -60,13 +61,18 @@ async function loop() {
 
 async function main() {
   await boss.start();
-  for (const q of ["weekly-runs", "purge-demos"]) await boss.createQueue(q);
+  for (const q of ["weekly-runs", "purge-demos", "mailbox-check"]) await boss.createQueue(q);
   await boss.schedule("weekly-runs", "0 9 * * 1", null, { tz: "Asia/Karachi" });
   await boss.schedule("purge-demos", "30 3 * * *", null, { tz: "Asia/Karachi" });
+  await boss.schedule("mailbox-check", "*/15 * * * *", null, { tz: "Asia/Karachi" });
   await boss.work("weekly-runs", async () => {
     const live = await deps.db.select({ id: workspace.id }).from(workspace).where(eq(workspace.isDemo, false));
     for (const w of live) await queueRun(deps, w.id, { kind: "weekly" });
     console.log(`[cron] queued weekly runs for ${live.length} workspace(s)`);
+  });
+  await boss.work("mailbox-check", async () => {
+    const r = await queueRunsForNewMail(deps);
+    if (r.checked) console.log(`[cron] checked ${r.checked} mailbox(es): ${r.queued} run(s) queued, ${r.errors} error(s)`);
   });
   await boss.work("purge-demos", async () => {
     const n = await purgeExpiredDemos(deps.db, deps.storage);
