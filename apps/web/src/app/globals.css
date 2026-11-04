@@ -32,6 +32,15 @@
   --canvas: #f6f7f9;
   --accent: #0f766e;
   --accent-ink: #ffffff;
+  /* Chart series, validated on the panel surface in each mode (dataviz palette slots 1-2). */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  /* Ordinal ramp for age bands (one hue, light = not due, dark = most late), validated with --ordinal. */
+  --age-1: #86b6ef;
+  --age-2: #5598e7;
+  --age-3: #2a78d6;
+  --age-4: #1c5cab;
+  --age-5: #104281;
   color-scheme: light;
 }
 
@@ -44,6 +53,13 @@
     --canvas: #020617;
     --accent: #14b8a6;
     --accent-ink: #042f2e;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --age-1: #184f95;
+    --age-2: #256abf;
+    --age-3: #3987e5;
+    --age-4: #6da7ec;
+    --age-5: #9ec5f4;
     color-scheme: dark;
   }
 }
@@ -56,6 +72,13 @@
   --canvas: #020617;
   --accent: #14b8a6;
   --accent-ink: #042f2e;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --age-1: #184f95;
+  --age-2: #256abf;
+  --age-3: #3987e5;
+  --age-4: #6da7ec;
+  --age-5: #9ec5f4;
   color-scheme: dark;
 }
 

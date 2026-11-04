@@ -29,6 +29,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   const base = `/w/${slug}`;
   const items = [
     { href: `${base}/inbox`, label: "Inbox", count: drafts + tasks + review + unmatched },
+    { href: `${base}/dashboard`, label: "Dashboard" },
     { href: `${base}/runs`, label: "Runs" },
     { href: `${base}/flags`, label: "Flags", count: flags },
     { href: `${base}/payments`, label: "Payments" },

@@ -9,6 +9,7 @@ import {
   sumDec,
   taxYearOf,
   type ApprovalPolicy,
+  type Decimal,
   type ClientIdentity,
   type DraftContext,
   type FlagSnapshot,
@@ -106,6 +107,18 @@ export async function loadBooks(db: Db, w: WorkspaceContext): Promise<Books> {
 
 export const BANK_ACCOUNT_KINDS = new Set(["pkr_account", "esfca"]);
 
+/**
+ * Export proceeds: credits into the workspace's Pakistani bank accounts this tax year (up to
+ * today), each in PKR as credited, or at the reference rate when it stayed in foreign currency.
+ */
+export function taxYearCredits(b: Books, w: WorkspaceContext): Array<{ t: (typeof b.transactions)[number]; pkr: Decimal }> {
+  const accountKind = new Map(b.accounts.map((a) => [a.id, a.kind]));
+  const year = taxYearOf(w.today, w.ws.fiscalYearStartMonth);
+  return b.transactions
+    .filter((t) => t.kind === "credit" && t.valueDate >= year.start && t.valueDate <= w.today && BANK_ACCOUNT_KINDS.has(accountKind.get(t.receivingAccountId ?? "") ?? "") && t.matchStatus !== "duplicate")
+    .map((t) => ({ t, pkr: dec(t.pkrAmount ?? (t.currency === "PKR" ? t.amount : dec(t.amount).times(w.refRate(t.currency, t.valueDate) ?? 0))) }));
+}
+
 export function identities(b: Books): ClientIdentity[] {
   return b.clients.map((c) => ({ clientId: c.id, name: c.name, aliases: b.aliases.filter((a) => a.clientId === c.id).map((a) => a.alias) }));
 }
@@ -143,11 +156,7 @@ export function flagSnapshot(b: Books, w: WorkspaceContext): FlagSnapshot {
   }
   const bankingShare = events.length ? computeBankingShare(events, w.refRate) : null;
 
-  const proceeds = sumDec(
-    b.transactions
-      .filter((t) => t.kind === "credit" && inYear(t.valueDate) && BANK_ACCOUNT_KINDS.has(accountById.get(t.receivingAccountId ?? "")?.kind ?? "") && t.matchStatus !== "duplicate")
-      .map((t) => t.pkrAmount ?? (t.currency === "PKR" ? t.amount : dec(t.amount).times(w.refRate(t.currency, t.valueDate) ?? 0))),
-  );
+  const proceeds = sumDec(taxYearCredits(b, w).map((c) => c.pkr));
 
   return {
     today: w.today,
