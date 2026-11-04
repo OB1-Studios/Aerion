@@ -1,13 +1,15 @@
 "use server";
 
+import { FIELDS, normalizeExtraction } from "@ebo/ai";
 import { addDays, dateInZone, weekday } from "@ebo/core";
-import { draftAction, flag, getDb, storageFromEnv, task, workspace } from "@ebo/db";
+import { document, draftAction, flag, getDb, receivingAccount, storageFromEnv, task, workspace, type DocumentKind } from "@ebo/db";
 import { resetDemoWorkspace } from "@ebo/db/seed";
-import { advanceDemoClock, approveAndSend, audit, rejectDraft as reject } from "@ebo/engine";
+import { addUpload, advanceDemoClock, approveAndSend, audit, rejectDraft as reject, sampleCreditAdvice, UPLOAD_MAX_FILES, validateCredit } from "@ebo/engine";
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { engineDeps, startRun } from "@/lib/engine";
+import { humanProblem, REVIEW_KINDS, type ReviewState } from "@/lib/review";
 import { canAct, requireWorkspace } from "@/lib/session";
 
 /** The signed-in member, if their role may change things here (owners for settings). */
@@ -179,4 +181,103 @@ export async function setAiReading(slug: string, form: FormData) {
   await getDb().update(workspace).set({ aiReadingEnabled: enabled }).where(eq(workspace.id, ws.id));
   await audit(getDb(), { workspaceId: ws.id, actorType: "user", actorId: user.id, action: "ai_reading.changed", objectType: "workspace", objectId: ws.id, details: { enabled } });
   refresh(slug);
+}
+
+// ---------------------------------------------------------------------------
+// Documents: uploads and the review queue
+// ---------------------------------------------------------------------------
+
+/** Uploaded files wait as "pending"; unless asked not to, a run starts straight away to read them. */
+export async function uploadDocuments(slug: string, form: FormData) {
+  const { user, ws } = await actor(slug);
+  const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  if (!files.length) redirect(`/w/${slug}/documents?upload=none`);
+  if (files.length > UPLOAD_MAX_FILES) redirect(`/w/${slug}/documents?upload=toomany`);
+  const hint = String(form.get("kind") ?? "");
+  const deps = engineDeps();
+  const results = [];
+  for (const f of files) {
+    results.push(await addUpload(deps, ws, { name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }, { kindHint: (hint || null) as DocumentKind | null, userId: user.id }));
+  }
+  const back = new URLSearchParams();
+  const added = results.filter((r) => r.status === "added").length;
+  const dup = results.filter((r) => r.status === "duplicate").length;
+  const rejected = results.flatMap((r) => (r.status === "rejected" ? [`${r.name} ${r.reason}`] : []));
+  back.set("added", String(added));
+  if (dup) back.set("dup", String(dup));
+  if (rejected.length) back.set("rejected", rejected.slice(0, 3).join(" · ").slice(0, 400));
+  if (added && form.get("read") === "on") back.set("run", await startRun(ws.id, "manual", user.id));
+  refresh(slug);
+  redirect(`/w/${slug}/documents?${back}`);
+}
+
+/** Demo help: a SIMULATED credit advice paying the oldest open invoice, uploaded and read at once. */
+export async function uploadSample(slug: string) {
+  const { user, ws } = await actor(slug);
+  const deps = engineDeps();
+  const sample = await sampleCreditAdvice(deps.db, ws.id);
+  if (!sample) redirect(`/w/${slug}/documents?upload=nothing-open`);
+  const r = await addUpload(deps, ws, { name: sample.name, bytes: sample.bytes }, { userId: user.id });
+  const back = new URLSearchParams({ sample: sample.invoiceNumber });
+  if (r.status === "added") back.set("run", await startRun(ws.id, "manual", user.id));
+  else back.set("dup", "1");
+  refresh(slug);
+  redirect(`/w/${slug}/documents?${back}`);
+}
+
+/**
+ * Review queue: a person checks a document's fields. The same checks as the run happen here
+ * first, so a mistake shows straight away; the run then applies the values like any reading.
+ */
+export async function confirmDocument(slug: string, docId: string, kind: DocumentKind, _prev: ReviewState, form: FormData): Promise<ReviewState> {
+  const { user, ws } = await actor(slug);
+  const db = getDb();
+  const [doc] = await db.select().from(document).where(and(eq(document.workspaceId, ws.id), eq(document.id, docId)));
+  if (!doc) notFound();
+  const spec = FIELDS[kind];
+  if (!spec || !REVIEW_KINDS.includes(kind)) return { problems: ["This kind of document can't be confirmed by hand."], values: null };
+  const values = Object.fromEntries(Object.keys(spec).map((k) => [k, String(form.get(`f_${k}`) ?? "").trim()]));
+  const { extraction, problems } = normalizeExtraction(kind, spec, { fields: values, evidence: {} });
+  if (kind !== "eprc") {
+    const accounts = await db.select().from(receivingAccount).where(eq(receivingAccount.workspaceId, ws.id));
+    const ibans = accounts.flatMap((a) => (a.iban ? [a.iban] : []));
+    problems.push(...validateCredit(extraction, { workspaceName: ws.name, legalName: ws.legalName, ibans, receivedOn: dateInZone(doc.receivedAt, ws.timezone) }, "yes"));
+  }
+  if (problems.length) return { problems: problems.map(humanProblem), values };
+
+  const before = ((doc.extracted ?? {}) as { fields?: Record<string, string | null> }).fields ?? {};
+  const changed = Object.keys(extraction.fields).filter((k) => (before[k] ?? null) !== extraction.fields[k]);
+  await db
+    .update(document)
+    .set({
+      parseStatus: "pending",
+      reviewReasons: null,
+      extracted: { ...(doc.extracted ?? {}), confirmed: { kind, fields: extraction.fields, by: user.id, byName: user.name, at: new Date().toISOString() } },
+    })
+    .where(eq(document.id, doc.id));
+  await audit(db, {
+    workspaceId: ws.id,
+    actorType: "user",
+    actorId: user.id,
+    action: "document.confirmed",
+    objectType: "document",
+    objectId: doc.id,
+    details: { kind, changed: Object.fromEntries(changed.map((k) => [k, { from: before[k] ?? null, to: extraction.fields[k] }])) },
+  });
+  const runId = await startRun(ws.id, "manual", user.id);
+  refresh(slug);
+  redirect(`/w/${slug}/documents/${doc.id}?confirmed=1&run=${runId}`);
+}
+
+/** Review queue: not ours, a duplicate, or nothing to do. Kept, but no longer waiting on anyone. */
+export async function setAsideDocument(slug: string, docId: string, form: FormData) {
+  const { user, ws } = await actor(slug);
+  const db = getDb();
+  const reason = String(form.get("reason") ?? "").trim().slice(0, 300) || "nothing to do";
+  const [doc] = await db.select({ id: document.id }).from(document).where(and(eq(document.workspaceId, ws.id), eq(document.id, docId)));
+  if (!doc) notFound();
+  await db.update(document).set({ parseStatus: "skipped", reviewReasons: [`Set aside by ${user.name}: ${reason}`] }).where(eq(document.id, doc.id));
+  await audit(db, { workspaceId: ws.id, actorType: "user", actorId: user.id, action: "document.set_aside", objectType: "document", objectId: doc.id, details: { reason } });
+  refresh(slug);
+  redirect(`/w/${slug}/documents/${doc.id}`);
 }
