@@ -1,7 +1,7 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
-import { mailboxConnection, workspace, type Db } from "@ebo/db";
-import { eq } from "drizzle-orm";
+import { mailboxConnection, run, workspace, type Db } from "@ebo/db";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { ImapFlow } from "imapflow";
 import { simpleParser, type ParsedMail } from "mailparser";
 import nodemailer, { type Transporter } from "nodemailer";
@@ -256,6 +256,8 @@ export interface IncomingMail {
 export interface MailboxReader {
   /** Mail that arrived after the connection's cursor, oldest first, and the cursor to store once it's saved. */
   fetchNew(conn: MailboxRow, opts: { limit: number }): Promise<{ mail: IncomingMail[]; cursor: string; more: boolean }>;
+  /** How many emails are waiting past the cursor, from the mailbox's status alone (nothing is downloaded). */
+  waiting?(conn: MailboxRow): Promise<number>;
 }
 
 const addresses = (a: ParsedMail["to"]) => (Array.isArray(a) ? a.map((x) => x.text).join(", ") : (a?.text ?? ""));
@@ -278,6 +280,20 @@ function toIncoming(key: string, parsed: ParsedMail, fallbackDate: Date): Incomi
 
 export function imapReader(env: Env = process.env): MailboxReader {
   return {
+    async waiting(conn) {
+      const client = await imapClient({ ...conn, password: openSecret(conn.secretEncrypted, env) }, env);
+      await client.connect();
+      try {
+        const status = await client.status("INBOX", { uidNext: true, uidValidity: true });
+        if (!status || status.uidNext == null) return 0;
+        const [validity, lastText] = (conn.lastSeenUid ?? "").split(":");
+        // A renumbered mailbox counts as new mail: the next run resets the cursor.
+        if (validity !== String(status.uidValidity)) return 1;
+        return Math.max(0, status.uidNext - 1 - Number(lastText || 0));
+      } finally {
+        await client.logout().catch(() => client.close());
+      }
+    },
     async fetchNew(conn, { limit }) {
       const client = await imapClient({ ...conn, password: openSecret(conn.secretEncrypted, env) }, env);
       await client.connect();
@@ -338,4 +354,37 @@ export function mailboxMailer(db: Db, env: Env = process.env, transportFor: (con
       return { messageId: (info as { messageId?: string }).messageId ?? null, via: "smtp" as const };
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Between Mondays: a run when mail arrives
+// ---------------------------------------------------------------------------
+
+/**
+ * Checks every connected mailbox and queues an "on arrival" run for each workspace with new
+ * mail and no run already waiting or going. The worker calls this every 15 minutes.
+ */
+export async function queueRunsForNewMail(deps: { db: Db; mailbox?: MailboxReader }): Promise<{ checked: number; queued: number; errors: number }> {
+  const { db, mailbox } = deps;
+  if (!mailbox?.waiting) return { checked: 0, queued: 0, errors: 0 };
+  const rows = await db
+    .select({ conn: mailboxConnection })
+    .from(mailboxConnection)
+    .innerJoin(workspace, eq(workspace.id, mailboxConnection.workspaceId))
+    .where(and(eq(workspace.isDemo, false), ne(mailboxConnection.status, "paused")));
+  let queued = 0;
+  let errors = 0;
+  for (const { conn } of rows) {
+    try {
+      if (!(await mailbox.waiting(conn))) continue;
+      const [busy] = await db.select({ id: run.id }).from(run).where(and(eq(run.workspaceId, conn.workspaceId), inArray(run.status, ["queued", "running"])));
+      if (busy) continue;
+      await db.insert(run).values({ workspaceId: conn.workspaceId, kind: "on_arrival", clockAt: new Date(), status: "queued" });
+      queued++;
+    } catch (err) {
+      errors++;
+      await db.update(mailboxConnection).set({ status: "error", lastError: mailboxProblem(err, conn), lastPolledAt: new Date() }).where(eq(mailboxConnection.id, conn.id));
+    }
+  }
+  return { checked: rows.length, queued, errors };
 }

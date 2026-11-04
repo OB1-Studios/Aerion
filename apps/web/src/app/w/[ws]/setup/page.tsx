@@ -128,7 +128,7 @@ export default async function SetupPage({ params, searchParams }: { params: Prom
                   <Badge tone={mailbox.status === "ok" ? "green" : mailbox.status === "error" ? "red" : "gray"}>{mailbox.status === "ok" ? "connected" : mailbox.status === "error" ? "can't read it" : "paused"}</Badge>
                 </div>
                 <p className="text-muted">
-                  Reads new mail from {mailbox.imapHost} at the start of every run (it doesn&apos;t mark anything as read or move it), and sends approved emails through {mailbox.smtpHost}.{" "}
+                  Reads new mail from {mailbox.imapHost} at the start of every run (it doesn&apos;t mark anything as read or move it), and sends approved emails through {mailbox.smtpHost}. The worker looks for new mail every 15 minutes and starts a run when some arrives.{" "}
                   {mailbox.lastPolledAt ? `Last read ${clock(mailbox.lastPolledAt, ws.timezone)}.` : "Mail that arrives from now on is read at the next run."}
                 </p>
                 {mailbox.lastError ? <Notice tone="red">{mailbox.lastError}</Notice> : null}
