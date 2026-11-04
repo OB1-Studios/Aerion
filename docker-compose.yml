@@ -16,6 +16,8 @@ x-env: &env
   VULTR_INFERENCE_MODEL: ${VULTR_INFERENCE_MODEL:-}
   VULTR_INFERENCE_CLASSIFY_MODEL: ${VULTR_INFERENCE_CLASSIFY_MODEL:-}
   VULTR_INFERENCE_JSON_MODE: ${VULTR_INFERENCE_JSON_MODE:-object}
+  # Seals mailbox app passwords; web connects mailboxes, the worker reads and sends with them.
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY (openssl rand -hex 32)}
 
 services:
   migrate:

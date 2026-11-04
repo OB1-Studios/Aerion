@@ -1,7 +1,7 @@
 import "server-only";
 import { getDb, run, storageFromEnv } from "@ebo/db";
 import { readersFromEnv } from "@ebo/ai";
-import { claimQueuedRun, defaultDeps, offlineReaders, queueRun, runWorkspace, type EngineDeps } from "@ebo/engine";
+import { claimQueuedRun, defaultDeps, imapReader, mailboxMailer, offlineReaders, queueRun, runWorkspace, type EngineDeps } from "@ebo/engine";
 import { eq } from "drizzle-orm";
 import { after } from "next/server";
 
@@ -11,7 +11,8 @@ let deps: EngineDeps | null = null;
 export function engineDeps(): EngineDeps {
   if (!deps) {
     const model = readersFromEnv();
-    deps = defaultDeps({ db: getDb(), storage: storageFromEnv(), readers: model ? { document: model.document, intent: model.intent } : offlineReaders });
+    // Workspaces with a connected mailbox read it over IMAP and send over SMTP; the rest record emails only.
+    deps = defaultDeps({ db: getDb(), storage: storageFromEnv(), readers: model ? { document: model.document, intent: model.intent } : offlineReaders, mailer: mailboxMailer(getDb()), mailbox: imapReader() });
   }
   return deps;
 }

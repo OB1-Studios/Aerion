@@ -38,8 +38,11 @@ export async function sendDraft(deps: SendDeps, draftId: string, actor: Actor): 
   const attachments: OutgoingEmail["attachments"] = pdf ? [{ name: pdf.name, contentType: "application/pdf", content: pdf.bytes }] : [];
   await db.update(draftAction).set({ status: "sending" }).where(eq(draftAction.id, d.id));
   let providerId: string | null = null;
+  let via: string = mailer.kind;
   try {
-    providerId = (await mailer.send({ workspaceId: ws.id, from, to: d.toAddress, cc: d.ccAddress, subject: d.subject, body: d.bodyRendered, attachments })).messageId;
+    const result = await mailer.send({ workspaceId: ws.id, from, fromName: ws.legalName ?? ws.name, to: d.toAddress, cc: d.ccAddress, subject: d.subject, body: d.bodyRendered, attachments });
+    providerId = result.messageId;
+    via = result.via ?? mailer.kind;
   } catch (err) {
     await db.update(draftAction).set({ status: "failed", rejectedReason: String(err) }).where(eq(draftAction.id, d.id));
     return { ok: false, reason: `Sending failed: ${String(err)}` };
@@ -74,7 +77,7 @@ export async function sendDraft(deps: SendDeps, draftId: string, actor: Actor): 
       await tx.update(flag).set({ status: "actioned", updatedAt: new Date() }).where(and(inArray(flag.id, d.flagIds), eq(flag.status, "open")));
     }
   });
-  await audit(db, { workspaceId: ws.id, actorType: actor.type, actorId: actor.id, action: "email.sent", objectType: "draft_action", objectId: d.id, details: { template: d.template, to: d.toAddress, subject: d.subject, mailer: mailer.kind, attachments: attachments.map((a) => a.name) } });
+  await audit(db, { workspaceId: ws.id, actorType: actor.type, actorId: actor.id, action: "email.sent", objectType: "draft_action", objectId: d.id, details: { template: d.template, to: d.toAddress, subject: d.subject, mailer: via, attachments: attachments.map((a) => a.name) } });
   return { ok: true };
 }
 

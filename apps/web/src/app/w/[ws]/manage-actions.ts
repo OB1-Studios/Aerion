@@ -1,7 +1,21 @@
 "use server";
 
 import { getDb } from "@ebo/db";
-import { addReceivingAccount, draftInvoiceEmail, markInvoiceSent, saveBusinessDetails, saveClient, saveInvoice, saveInvoiceSettings, setAccountActive, type AccountInput, type BusinessInput, type ClientInput } from "@ebo/engine";
+import {
+  addReceivingAccount,
+  connectMailbox,
+  disconnectMailbox,
+  draftInvoiceEmail,
+  markInvoiceSent,
+  saveBusinessDetails,
+  saveClient,
+  saveInvoice,
+  saveInvoiceSettings,
+  setAccountActive,
+  type AccountInput,
+  type BusinessInput,
+  type ClientInput,
+} from "@ebo/engine";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { actor } from "@/lib/actor";
@@ -127,4 +141,23 @@ export async function saveInvoiceSettingsAction(slug: string, _prev: FormState, 
   if (!r.ok) return { problems: r.problems, values: v };
   refresh(slug);
   return { problems: [], values: null, saved: Date.now() };
+}
+
+/** Connects the workspace's own mailbox: both logins are tried before anything is saved. */
+export async function connectMailboxAction(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const { user, ws } = await actor(slug, "own");
+  const v = formValues(form);
+  const r = await connectMailbox(getDb(), ws, { provider: field(v, "provider"), address: field(v, "address"), password: String(form.get("password") ?? ""), imapHost: field(v, "imapHost"), imapPort: field(v, "imapPort"), smtpHost: field(v, "smtpHost"), smtpPort: field(v, "smtpPort"), username: field(v, "username") }, user.id);
+  // Never send the password back to the page.
+  const { password: _password, ...typed } = v;
+  if (!r.ok) return { problems: r.problems, values: typed };
+  refresh(slug);
+  return { problems: [], values: null, saved: Date.now() };
+}
+
+export async function disconnectMailboxAction(slug: string) {
+  const { user, ws } = await actor(slug, "own");
+  await disconnectMailbox(getDb(), ws.id, user.id);
+  refresh(slug);
+  redirect(`/w/${slug}/setup#mailbox`);
 }

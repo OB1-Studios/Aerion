@@ -14,3 +14,5 @@ export { simplePdf } from "./pdf";
 export * from "./uploads";
 export * from "./invoicing";
 export * from "./setup";
+export * from "./mailbox";
+export { sealSecret, openSecret } from "./secrets";
