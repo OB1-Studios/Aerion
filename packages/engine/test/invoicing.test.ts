@@ -6,10 +6,10 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { client, createDb, createPool, draftAction, invoice, invoiceLine, localStorage, purgeWorkspace, receivingAccount, workspace, type Db } from "@ebo/db";
+import { client, createDb, createPool, document, draftAction, invoice, invoiceLine, localStorage, message, purgeWorkspace, receivingAccount, workspace, type Db } from "@ebo/db";
 import { seedOffice, seedReferenceData } from "@ebo/db/seed";
 import { and, eq } from "drizzle-orm";
-import { approveAndSend, defaultDeps, documentText, draftInvoiceEmail, invoicePdf, invoiceRoutes, markInvoiceSent, runWorkspace, saveInvoice, type EngineDeps, type InvoiceInput } from "../src/index";
+import { approveAndSend, defaultDeps, documentText, draftInvoiceEmail, invoicePdf, invoiceRoutes, markInvoiceSent, runWorkspace, saveInvoice, type EngineDeps, type InvoiceInput, type OutgoingEmail } from "../src/index";
 
 const url = process.env.DATABASE_URL ?? "postgres://ebo:ebo@localhost:54329/ebo";
 const pool = createPool(url, 4);
@@ -108,8 +108,18 @@ describe.skipIf(!dbUp)("invoices a person writes", () => {
     await runWorkspace(deps, wsId, { kind: "manual" });
     expect((await db.select().from(draftAction).where(eq(draftAction.id, draft!.id)))[0]!.status).toBe("draft");
 
-    expect(await approveAndSend(deps, draft!.id, "test-user")).toEqual({ ok: true });
-    expect((await db.select().from(invoice).where(eq(invoice.id, inv!.id)))[0]).toMatchObject({ status: "sent" });
+    // The email carries the PDF, and the copy that went out is kept on file.
+    const sent: OutgoingEmail[] = [];
+    const capture = { ...deps, mailer: { kind: "demo" as const, send: async (e: OutgoingEmail) => (sent.push(e), { messageId: null }) } };
+    expect(await approveAndSend(capture, draft!.id, "test-user")).toEqual({ ok: true });
+    expect(sent[0]!.attachments?.map((a) => [a.name, a.contentType])).toEqual([["INV-2026-033.pdf", "application/pdf"]]);
+    const after = (await db.select().from(invoice).where(eq(invoice.id, inv!.id)))[0]!;
+    expect(after).toMatchObject({ status: "sent" });
+    const [kept] = await db.select().from(document).where(eq(document.id, after.pdfDocumentId ?? "00000000-0000-0000-0000-000000000000"));
+    expect(kept).toMatchObject({ kind: "invoice_pdf", source: "generated", parseStatus: "skipped", originalName: "INV-2026-033.pdf" });
+    expect(Buffer.from(await storage.get(kept!.storagePath)).equals(Buffer.from(sent[0]!.attachments![0]!.content))).toBe(true);
+    const [out] = await db.select().from(message).where(and(eq(message.workspaceId, wsId), eq(message.subject, draft!.subject!)));
+    expect(out!.documentIds).toEqual([kept!.id]);
     expect(await draftInvoiceEmail(db, wsId, inv!.id, "test-user")).toEqual({ ok: false, reason: "This invoice has already been sent." });
     const change = await saveInvoice(db, await ws(), input({ clientId: inv!.clientId, currency: "GBP", routeChoice: `payoneer:${inv!.receivingAccountId}`, lines: [{ description: "x", quantity: "1", unitPrice: "1" }] }), "test-user", inv!.id);
     expect(change).toEqual({ ok: false, problems: ["Only a draft invoice can be changed; this one has been sent."] });
