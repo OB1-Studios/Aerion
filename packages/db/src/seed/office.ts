@@ -1,9 +1,9 @@
-import { Decimal, dec, MONTH_NAMES, type IsoDate, type Route, type TemplateKey } from "@ebo/core";
+import { Decimal, dec, MONTH_NAMES, type IsoDate, type Route } from "@ebo/core";
 import type { Db } from "../client";
 import type * as s from "../schema";
 import type { Storage } from "../storage";
-import { creditAdviceText, eprcText, fakeUetr, mt103Text, payoneerCsv, transferScreenshotSvg, type AdviceFields, type PayoneerRow } from "./documents";
-import { adviceNo, complianceRows, historyMatch, ibanIsValid, payoneerId, pkt, r2, refRate, Rows, storeFile, uuid, type StoredFile } from "./helpers";
+import { eprcText, fakeUetr, generated, payoneerCsv, type AdviceFields, type PayoneerRow } from "./documents";
+import { adviceNo, complianceRows, historyMatch, ibanIsValid, payoneerId, pkt, r2, refRate, Rows, storeFile, storeInbox, uuid, type InboxSpec } from "./helpers";
 
 /**
  * Ravi Code Works (Pvt) Ltd, the simulated software house (data spec sections 7 to 10).
@@ -298,7 +298,7 @@ export async function seedOffice(db: Db, storage: Storage, opts: SeedWorkspaceOp
   );
   rows.invoiceReminder.push({ workspaceId: ws, invoiceId: invoiceId.get("INV-2026-024")!, stage: 1, sentOn: "2026-10-23" });
 
-  await addInbox(rows, storage, ws);
+  await storeInbox(rows, storage, ws, officeInbox());
   rows.auditEvent.push({ workspaceId: ws, actorType: "system", actorId: "seed", action: "workspace.seeded", objectType: "workspace", objectId: ws, at: new Date(), details: { dataset: "office", note: "All names, numbers and documents are fictional." } });
   await rows.write(db);
   return { workspaceId: ws };
@@ -307,19 +307,6 @@ export async function seedOffice(db: Db, storage: Storage, opts: SeedWorkspaceOp
 // ---------------------------------------------------------------------------
 // The simulated mailbox: demo week and follow-up week
 // ---------------------------------------------------------------------------
-
-type Attachment = { name: string; mimeType: string; content: string; kind?: s.DocumentKind };
-interface InboxSpec {
-  at: Date;
-  channel: "email" | "upload" | "paste";
-  from?: string;
-  to?: string;
-  subject?: string;
-  body?: string;
-  attachments: Attachment[];
-  kindHint?: s.DocumentKind;
-  requires?: TemplateKey;
-}
 
 function advice(a: Omit<AdviceFields, "bankName" | "beneficiary" | "adviceDate"> & { adviceDate?: IsoDate }): AdviceFields {
   return { bankName: BANK, beneficiary: LEGAL, adviceDate: a.adviceDate ?? a.valueDate, ...a };
@@ -333,12 +320,13 @@ function adviceEmail(at: Date, a: AdviceFields, extra: Partial<InboxSpec> = {}):
     to: MAILBOX,
     subject: `${a.corrects ? "Corrected advice" : "Inward remittance credited"}: ${a.adviceNumber}`,
     body: `Dear Customer,\n\n${a.corrects ? "Please find attached the corrected credit advice for the inward remittance below." : "An inward remittance has been credited to your account. The credit advice is attached."}\n\nAdvice No. ${a.adviceNumber}\n\n${BANK} - Trade Services\nThis is an automated message. (SIMULATED)`,
-    attachments: [{ name: `advice-${a.adviceNumber}.txt`, mimeType: "text/plain", content: creditAdviceText(a), kind: "credit_advice" }],
+    attachments: [generated(`advice-${a.adviceNumber}.txt`, { type: "advice", fields: a })],
     ...extra,
   };
 }
 
-async function addInbox(rows: Rows, storage: Storage, ws: string): Promise<void> {
+/** The office's simulated mailbox: the demo week and the follow-up week. Pure, so the answer key can use it too. */
+export function officeInbox(): InboxSpec[] {
   const items: InboxSpec[] = [];
   const day = (d: IsoDate, t: string) => pkt(d, t);
 
@@ -350,7 +338,7 @@ async function addInbox(rows: Rows, storage: Storage, ws: string): Promise<void>
     to: MAILBOX,
     subject: "RE: Invoice INV-2026-032",
     body: "Hi Hamza,\n\nPayment sent today, see attached.\n\nThanks,\nPriya Raman\nAccounts Payable, Brightlane Health LLC",
-    attachments: [{ name: "transfer-confirmation.svg", mimeType: "image/svg+xml", content: transferScreenshotSvg({ amount: "5500.00", currency: "USD", beneficiary: LEGAL, accountTail: IBAN_ESFCA.slice(-4), date: "2026-10-26", reference: "INV-2026-032" }), kind: "screenshot" }],
+    attachments: [generated("transfer-confirmation.svg", { type: "screenshot", fields: { amount: "5500.00", currency: "USD", beneficiary: LEGAL, accountTail: IBAN_ESFCA.slice(-4), date: "2026-10-26", reference: "INV-2026-032" } })],
   });
 
   // Event 1 (Tue Oct 27): Northwind, reference and OUR charges.
@@ -444,7 +432,7 @@ async function addInbox(rows: Rows, storage: Storage, ws: string): Promise<void>
     to: MAILBOX,
     subject: `ePRC issued: ${h1Advice}`,
     body: `Dear Customer,\n\nPlease find attached the ePRC for the inward remittance ${h1Advice}. The withholding certificate will follow separately.\n\nRegards,\nTrade Services, ${BANK} (SIMULATED)`,
-    attachments: [{ name: `ePRC-${h1Advice}.txt`, mimeType: "text/plain", content: eprcText({ bankName: BANK, certificateNumber: "EPRC-26-1104-0233", issueDate: "2026-11-04", exporter: LEGAL, ntn: NTN, psebRegNo: PSEB, adviceNumber: h1Advice, valueDate: "2026-10-06", amount: "7500.00", currency: "USD", purposeCode: "9186" }), kind: "eprc" }],
+    attachments: [generated(`ePRC-${h1Advice}.txt`, { type: "eprc", fields: { bankName: BANK, certificateNumber: "EPRC-26-1104-0233", issueDate: "2026-11-04", exporter: LEGAL, ntn: NTN, psebRegNo: PSEB, adviceNumber: h1Advice, valueDate: "2026-10-06", amount: "7500.00", currency: "USD", purposeCode: "9186" } })],
     requires: "T8",
   });
 
@@ -470,27 +458,12 @@ async function addInbox(rows: Rows, storage: Storage, ws: string): Promise<void>
     to: MAILBOX,
     subject: "RE: INV-2026-032: we haven't received the payment yet",
     body: `Hi Hamza,\n\nOur bank confirmed the wire was held at an intermediary. The MT103 is attached; the UETR is ${uetr}.\n\nThanks,\nPriya`,
-    attachments: [{ name: "MT103-BLH2610260032.txt", mimeType: "text/plain", content: mt103Text({ reference: "BLH2610260032", valueDate: "2026-10-26", currency: "USD", amount: "5500.00", orderingCustomer: "BRIGHTLANE HEALTH LLC", senderSwift: "DEMOUS33", beneficiaryIban: IBAN_ESFCA, beneficiary: LEGAL, remittanceInfo: "INV-2026-032", uetr }), kind: "other" }],
+    attachments: [generated("MT103-BLH2610260032.txt", { type: "mt103", fields: { reference: "BLH2610260032", valueDate: "2026-10-26", currency: "USD", amount: "5500.00", orderingCustomer: "BRIGHTLANE HEALTH LLC", senderSwift: "DEMOUS33", beneficiaryIban: IBAN_ESFCA, beneficiary: LEGAL, remittanceInfo: "INV-2026-032", uetr } })],
     requires: "T4",
   });
   items.push(adviceEmail(day("2026-11-05", "12:00"), advice({ adviceNumber: adviceNo("ESF", "2026-11-05", "INV-2026-032"), valueDate: "2026-11-05", iban: IBAN_ESFCA, amount: "5500.00", currency: "USD", remitter: "BRIGHTLANE HEALTH LLC", remitterBank: "NORTHGATE DEMO BANK, NEW YORK", remitterSwift: "DEMOUS33", reference: "INV-2026-032", chargesCode: "OUR", purposeCode: "9186", uetr }), { requires: "T4" }));
 
-  for (const it of items) {
-    const attachments: StoredFile[] = [];
-    for (const a of it.attachments) attachments.push(await storeFile(storage, ws, a.name, a.mimeType, a.content, a.kind));
-    rows.demoInboxItem.push({
-      workspaceId: ws,
-      deliverAt: it.at,
-      channel: it.channel,
-      fromAddress: it.from ?? null,
-      toAddress: it.to ?? null,
-      subject: it.subject ?? null,
-      bodyText: it.body ?? null,
-      attachments,
-      kindHint: it.kindHint ?? null,
-      requiresSentTemplate: it.requires ?? null,
-    });
-  }
+  return items;
 }
 
-export const OFFICE_FACTS = { legalName: LEGAL, ibanPkr: IBAN_PKR, ibanEsfca: IBAN_ESFCA, mailbox: MAILBOX };
+export const OFFICE_FACTS = { workspaceName: "Ravi Code Works", legalName: LEGAL, ibanPkr: IBAN_PKR, ibanEsfca: IBAN_ESFCA, mailbox: MAILBOX };

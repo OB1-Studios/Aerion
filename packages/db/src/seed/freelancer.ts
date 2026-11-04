@@ -1,9 +1,9 @@
-import { Decimal, dec, MONTH_NAMES, type IsoDate, type Route, type TemplateKey } from "@ebo/core";
+import { Decimal, dec, MONTH_NAMES, type IsoDate, type Route } from "@ebo/core";
 import type { Db } from "../client";
 import type * as s from "../schema";
 import type { Storage } from "../storage";
-import { bankSms, creditAdviceText, marketplaceCsv, payoneerCsv, type AdviceFields, type MarketplaceRow, type PayoneerRow } from "./documents";
-import { adviceNo, complianceRows, historyMatch, ibanIsValid, payoneerId, pkt, r2, refRate, Rows, storeFile, uuid, type StoredFile } from "./helpers";
+import { generated, marketplaceCsv, payoneerCsv, type AdviceFields, type MarketplaceRow, type PayoneerRow } from "./documents";
+import { adviceNo, complianceRows, historyMatch, ibanIsValid, payoneerId, pkt, r2, refRate, Rows, storeInbox, uuid, type InboxSpec } from "./helpers";
 import type { SeedWorkspaceOptions } from "./office";
 
 /**
@@ -171,28 +171,16 @@ export async function seedFreelancer(db: Db, storage: Storage, opts: SeedWorkspa
     rows.complianceItem.push(...complianceRows(ws, cId, end, { status: "on_file", purposeCode: "9186" }, { status: "on_file" }));
   }
 
-  await addInbox(rows, storage, ws);
+  await storeInbox(rows, storage, ws, freelancerInbox());
   rows.auditEvent.push({ workspaceId: ws, actorType: "system", actorId: "seed", action: "workspace.seeded", objectType: "workspace", objectId: ws, at: new Date(), details: { dataset: "freelancer", note: "All names, numbers and documents are fictional." } });
   await rows.write(db);
   return { workspaceId: ws };
 }
 
-type Attachment = { name: string; mimeType: string; content: string; kind?: s.DocumentKind };
-interface InboxSpec {
-  at: Date;
-  channel: "email" | "upload" | "paste";
-  from?: string;
-  to?: string;
-  subject?: string;
-  body?: string;
-  attachments: Attachment[];
-  kindHint?: s.DocumentKind;
-  requires?: TemplateKey;
-}
-
 const advice = (a: Omit<AdviceFields, "bankName" | "beneficiary" | "adviceDate"> & { adviceDate?: IsoDate }): AdviceFields => ({ bankName: BANK, beneficiary: NAME, adviceDate: a.adviceDate ?? a.valueDate, ...a });
 
-async function addInbox(rows: Rows, storage: Storage, ws: string): Promise<void> {
+/** Ayesha's simulated mailbox and uploads. Pure, so the answer key can use it too. */
+export function freelancerInbox(): InboxSpec[] {
   const items: InboxSpec[] = [];
   const rate = r2(dec(refRate("USD", "2026-10-30")).times(PAYONEER_HAIRCUT));
   const pkr = r2(dec("4020.00").times(rate));
@@ -210,7 +198,7 @@ async function addInbox(rows: Rows, storage: Storage, ws: string): Promise<void>
   items.push({
     at: pkt("2026-10-29", "14:05"),
     channel: "paste",
-    attachments: [{ name: "pasted-sms-2026-10-29.txt", mimeType: "text/plain", content: bankSms({ pkrAmount: "196560.00", accountTail: IBAN.slice(-4), payer: "TOBIAS LINDQVIST", via: "WISE", date: "2026-10-29", purposeCode: "9471", bankName: BANK }), kind: "pasted_text" }],
+    attachments: [generated("pasted-sms-2026-10-29.txt", { type: "sms", fields: { pkrAmount: "196560.00", accountTail: IBAN.slice(-4), payer: "TOBIAS LINDQVIST", via: "WISE", date: "2026-10-29", purposeCode: "9471", bankName: BANK } })],
     kindHint: "pasted_text",
   });
 
@@ -223,7 +211,7 @@ async function addInbox(rows: Rows, storage: Storage, ws: string): Promise<void>
     to: MAILBOX,
     subject: `Inward remittance credited: ${withdrawalAdvice.adviceNumber}`,
     body: `Dear Customer,\n\nAn inward remittance has been credited to your account. The credit advice is attached.\n\n${BANK} - Trade Services\nThis is an automated message. (SIMULATED)`,
-    attachments: [{ name: `advice-${withdrawalAdvice.adviceNumber}.txt`, mimeType: "text/plain", content: creditAdviceText(withdrawalAdvice), kind: "credit_advice" }],
+    attachments: [generated(`advice-${withdrawalAdvice.adviceNumber}.txt`, { type: "advice", fields: withdrawalAdvice })],
   });
 
   // F1 + the Upwork payout + the withdrawal, in her Payoneer export.
@@ -243,13 +231,11 @@ async function addInbox(rows: Rows, storage: Storage, ws: string): Promise<void>
     to: MAILBOX,
     subject: "RE: Purpose code correction: inward remittance of 29 October 2026",
     body: `Dear Customer,\n\nAs requested, the purpose code of the remittance has been corrected to 9186. The corrected advice is attached.\n\nRegards,\nTrade Services, ${BANK} (SIMULATED)`,
-    attachments: [{ name: `advice-${corrected.adviceNumber}.txt`, mimeType: "text/plain", content: creditAdviceText(corrected), kind: "credit_advice" }],
+    attachments: [generated(`advice-${corrected.adviceNumber}.txt`, { type: "advice", fields: corrected })],
     requires: "T6",
   });
 
-  for (const it of items) {
-    const attachments: StoredFile[] = [];
-    for (const a of it.attachments) attachments.push(await storeFile(storage, ws, a.name, a.mimeType, a.content, a.kind));
-    rows.demoInboxItem.push({ workspaceId: ws, deliverAt: it.at, channel: it.channel, fromAddress: it.from ?? null, toAddress: it.to ?? null, subject: it.subject ?? null, bodyText: it.body ?? null, attachments, kindHint: it.kindHint ?? null, requiresSentTemplate: it.requires ?? null });
-  }
+  return items;
 }
+
+export const FREELANCER_FACTS = { workspaceName: NAME, legalName: NAME, iban: IBAN, mailbox: MAILBOX };

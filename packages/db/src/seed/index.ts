@@ -13,7 +13,10 @@ import { globalRuleRows } from "./rules";
 export { seedOffice, OFFICE_CLOCK } from "./office";
 export { seedFreelancer, FREELANCER_CLOCK } from "./freelancer";
 export { simulatedRate, BASE_RATES } from "./rates";
-export { creditAdviceText, fakeUetr, type AdviceFields } from "./documents";
+export { creditAdviceText, fakeUetr, generated, type AdviceFields, type Truth } from "./documents";
+export { answerFor, answerKey, pkIban, type AnswerContext, type AnswerDoc, type AnswerKeyOptions } from "./answers";
+export { officeInbox, OFFICE_FACTS } from "./office";
+export { freelancerInbox, FREELANCER_FACTS } from "./freelancer";
 export { adviceNo } from "./helpers";
 
 export const DEMO_SLUGS = { office: "ravi-code-works", freelancer: "ayesha-siddiqui" } as const;

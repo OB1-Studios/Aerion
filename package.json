@@ -17,6 +17,7 @@
     "db:migrate": "pnpm --filter @ebo/db migrate",
     "seed": "pnpm --filter @ebo/db seed",
     "test": "vitest run",
+    "bench": "pnpm --filter @ebo/ai bench",
     "test:watch": "vitest",
     "typecheck": "pnpm -r --no-bail typecheck",
     "build": "pnpm --filter @ebo/web build",
