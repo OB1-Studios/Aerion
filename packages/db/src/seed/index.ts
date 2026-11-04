@@ -13,6 +13,8 @@ import { globalRuleRows } from "./rules";
 export { seedOffice, OFFICE_CLOCK } from "./office";
 export { seedFreelancer, FREELANCER_CLOCK } from "./freelancer";
 export { simulatedRate, BASE_RATES } from "./rates";
+export { creditAdviceText, fakeUetr, type AdviceFields } from "./documents";
+export { adviceNo } from "./helpers";
 
 export const DEMO_SLUGS = { office: "ravi-code-works", freelancer: "ayesha-siddiqui" } as const;
 

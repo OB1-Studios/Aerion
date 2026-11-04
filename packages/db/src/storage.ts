@@ -123,6 +123,7 @@ const EXTENSIONS: Record<string, string> = {
   "text/csv": "csv",
   "image/png": "png",
   "image/jpeg": "jpg",
+  "image/webp": "webp",
   "image/svg+xml": "svg",
   "message/rfc822": "eml",
   "application/json": "json",

@@ -9,6 +9,31 @@ export function textLayer(bytes: Uint8Array, mimeType: string | null): string | 
   return null; // PDF and raster images need the model (OCR) in this build
 }
 
+/** Credit advices and ePRCs are a page or two; a long PDF is read for its first pages only. */
+export const PDF_MAX_PAGES = 10;
+
+/**
+ * Text of a stored document for the readers: text formats as they are, SVG drawings by their
+ * text elements, PDFs by their text layer. Null for scans and photos, which have no text layer.
+ */
+export async function documentText(bytes: Uint8Array, mimeType: string | null): Promise<string | null> {
+  if ((mimeType ?? "").toLowerCase() !== "application/pdf") return textLayer(bytes, mimeType);
+  // Loaded on first use, so processes that never see a PDF don't carry pdf.js.
+  const { getDocumentProxy } = await import("unpdf");
+  const pdf = await getDocumentProxy(new Uint8Array(bytes)); // pdf.js takes over the buffer it's given
+  try {
+    const pages: string[] = [];
+    for (let n = 1; n <= Math.min(pdf.numPages, PDF_MAX_PAGES); n++) {
+      const { items } = await (await pdf.getPage(n)).getTextContent();
+      pages.push(items.map((i) => ("str" in i ? i.str + (i.hasEOL ? "\n" : "") : "")).join(""));
+    }
+    const text = pages.join("\n\n").replace(/[ \t]+\n/g, "\n").trim();
+    return text || null;
+  } finally {
+    await pdf.loadingTask.destroy();
+  }
+}
+
 /** Text drawn in an SVG, one line per <text> element, top to bottom. */
 export function svgText(svg: string): string {
   const out: Array<{ y: number; t: string }> = [];

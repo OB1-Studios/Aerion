@@ -4,8 +4,8 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { audit } from "../context";
 import { loadBooks } from "../books";
 import { MARKETPLACE_HEADER, offlineDocumentReader, PAYONEER_HEADER } from "../readers/offline";
-import { csvRecords, parseAmount, parseDate, quoteFound, textLayer } from "../readers/text";
-import type { DocumentReadResult, Extraction, Intent, IntentReadResult, ModelCallRecord, ReadContext, Readers } from "../readers/types";
+import { csvRecords, documentText, parseAmount, parseDate, quoteFound } from "../readers/text";
+import type { ConfirmedReading, DocumentReadResult, Extraction, Intent, IntentReadResult, ModelCallRecord, ReadContext, Readers } from "../readers/types";
 import { offlineIntentReader } from "../readers/intent";
 import { bump, type StepContext, type Step } from "./types";
 
@@ -86,10 +86,34 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promis
 
 type DocRead = { text: string | null; res: DocumentReadResult } | { error: string };
 
+/**
+ * A document a person checked in the review queue is applied with their values instead of
+ * being read again. The same checks still run on them (the account must be ours, and so on).
+ */
+function confirmedResult(doc: Doc): DocumentReadResult | null {
+  const conf = (doc.extracted as { confirmed?: ConfirmedReading } | null)?.confirmed;
+  if (!conf?.fields) return null;
+  const present = Object.keys(conf.fields).filter((k) => conf.fields[k] != null);
+  return {
+    classification: { kind: conf.kind, confidence: "high", workspaceMatch: "yes", reason: `Checked by ${conf.byName}` },
+    extraction: {
+      kind: conf.kind,
+      fields: conf.fields,
+      evidence: Object.fromEntries(present.map((k) => [k, { quote: "", confidence: "high" as const }])),
+      notes: `Checked and confirmed by ${conf.byName}.`,
+    },
+    model: `checked by ${conf.byName}`,
+    promptVersion: "review",
+    calls: [],
+  };
+}
+
 async function readOne(c: StepContext, readers: Readers, doc: Doc, accounts: Account[]): Promise<DocRead> {
   try {
-    const text = textLayer(await c.deps.storage.get(doc.storagePath), doc.mimeType);
-    const res = await readers.document.read({ id: doc.id, name: doc.originalName, mimeType: doc.mimeType, text, kindHint: doc.kind === "other" ? null : doc.kind }, readContext(c, accounts, doc.receivedAt));
+    const text = await documentText(await c.deps.storage.get(doc.storagePath), doc.mimeType);
+    const res =
+      confirmedResult(doc) ??
+      (await readers.document.read({ id: doc.id, name: doc.originalName, mimeType: doc.mimeType, text, kindHint: doc.kind === "other" ? null : doc.kind }, readContext(c, accounts, doc.receivedAt)));
     return { text, res };
   } catch (err) {
     return { error: String(err) };
@@ -156,7 +180,14 @@ async function readDocument(c: StepContext, doc: Doc, accounts: Account[], read:
     .set({
       kind,
       parseStatus: status,
-      extracted: { classification: res.classification, fields: x?.fields ?? null, evidence: x?.evidence ?? null, notes: x?.notes ?? null, outcome },
+      extracted: {
+        classification: res.classification,
+        fields: x?.fields ?? null,
+        evidence: x?.evidence ?? null,
+        notes: x?.notes ?? null,
+        outcome,
+        ...(doc.extracted?.confirmed ? { confirmed: doc.extracted.confirmed } : {}),
+      },
       fieldConfidence: x ? Object.fromEntries(Object.entries(x.evidence).map(([k, e]) => [k, CONFIDENCE[e.confidence]])) : null,
       reviewReasons: reasons.length ? reasons : null,
       model: res.model,
