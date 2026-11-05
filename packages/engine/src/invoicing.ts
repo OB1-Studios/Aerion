@@ -25,7 +25,8 @@ import {
 } from "@ebo/core";
 import { client, draftAction, invoice, invoiceLine, match, receivingAccount, transaction, workspace, type Db } from "@ebo/db";
 import { and, asc, desc, eq, gt, inArray, like } from "drizzle-orm";
-import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts, type PDFPage } from "pdf-lib";
+import { pdfSafe, wrap } from "./pdf-text";
 import { actorOf, audit, workspaceClock, type AuditActor, type Workspace } from "./context";
 
 /**
@@ -236,26 +237,6 @@ export async function loadInvoiceDocument(db: Db, workspaceId: string, invoiceId
 // ---------------------------------------------------------------------------
 // The A4 PDF
 // ---------------------------------------------------------------------------
-
-/** Standard PDF fonts only cover Windows-1252; anything else becomes "?". */
-const WIN_ANSI_EXTRA = new Set([..."€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ"]);
-const pdfSafe = (s: string) => [...s.replace(/\t/g, " ")].map((ch) => (ch >= " " && ch <= "~") || (ch >= " " && ch <= "ÿ") || WIN_ANSI_EXTRA.has(ch) ? ch : "?").join("");
-
-function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
-  const out: string[] = [];
-  for (const para of pdfSafe(text).split(/\r?\n/)) {
-    let line = "";
-    for (const word of para.split(/\s+/).filter(Boolean)) {
-      const next = line ? `${line} ${word}` : word;
-      if (line && font.widthOfTextAtSize(next, size) > width) {
-        out.push(line);
-        line = word;
-      } else line = next;
-    }
-    out.push(line);
-  }
-  return out;
-}
 
 const countryName = (code: string | null) => {
   if (!code) return null;

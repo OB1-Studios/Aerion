@@ -36,6 +36,8 @@ export default async function WorkspaceLayout({ children, params }: { children: 
     { href: `${base}/invoices`, label: "Invoices" },
     { href: `${base}/clients`, label: "Clients" },
     { href: `${base}/documents`, label: "Documents" },
+    // Month-end close is for offices; a freelancer can still open it from the address.
+    ...(ws.kind === "freelancer" ? [] : [{ href: `${base}/close`, label: "Month-end" }]),
     { href: `${base}/export`, label: "Tax-year file" },
     { href: `${base}/rules`, label: "Rules" },
     { href: `${base}/setup`, label: "Setup", count: !ws.isDemo ? Number(!accounts) + Number(!clients) : 0 },

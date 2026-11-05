@@ -55,6 +55,23 @@ Its **year-end tax pack** is one zip for the accountant. It holds:
 
 Before building it, the page lists what the accountant will ask about, each with a link to sort it out. Each pack is kept in storage (Object Storage in production) and can be downloaded again later. Viewers can download packs; owners, finance and the accountant can build them.
 
+**Month-end close** (offices; under Month-end) has a checklist for each month that's over:
+
+- every credit matched to an invoice or explained as a transfer
+- every certificate the bank owes on file, or on its way
+- each bank account's statement agreeing with the records
+- every flag about the month looked at
+- every document read
+
+Each line is done, waiting on someone outside (the bank, a client), or to do, with a link to where to sort it out. When nothing is left to do, **Close** makes a month-end report PDF for the director: money received, proceeds banked in Pakistan, invoices issued, what was owed at month end by age, the statement balances, the checklist, and what was still waiting. If the month's records change afterwards, the page says so, and the owner can reopen it with a reason.
+
+**Bank statements** (CSV with the bank's columns) are read by code. Every running balance must follow from the line before, or the statement goes to a person. Each credit on the statement is tied to the credit already on record from the bank's advice; a credit the bank shows but no advice did is added, so the run can match it. In the demo, July to September were closed before it begins. October can be closed after the Monday run:
+
+1. Press **Run now**, then approve the six emails in the Inbox.
+2. Mark the task "Check the ePRC for INV-2026-018 with the accountant" done. A finished task, like an approved email, marks its flag as being handled.
+3. On **Month-end → October 2026**, press **Upload sample statements** (SIMULATED, made from the books).
+4. Press **Close October 2026**.
+
 ### Why a business can let it run
 
 - **Code decides, the model reads.** Amounts, dates, currencies and IBANs are validated after extraction. A value that doesn't quote the source text, or doesn't parse, is marked for review instead of being used.

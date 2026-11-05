@@ -20,12 +20,13 @@ export async function taxPackPreview(ws: Workspace, yearStart?: IsoDate) {
 }
 
 /** Packs built for the workspace, newest first, with who built them. */
-export function builtPacks(workspaceId: string) {
-  return getDb()
-    .select({ id: exportJob.id, period: exportJob.period, status: exportJob.status, createdAt: exportJob.createdAt, by: user.name })
+export async function builtPacks(workspaceId: string) {
+  const rows = await getDb()
+    .select({ id: exportJob.id, period: exportJob.period, status: exportJob.status, createdAt: exportJob.createdAt, by: user.name, anon: user.isAnonymous })
     .from(exportJob)
     .leftJoin(user, eq(user.id, exportJob.requestedBy))
     .where(and(eq(exportJob.workspaceId, workspaceId), eq(exportJob.kind, "tax_pack")))
     .orderBy(desc(exportJob.createdAt))
     .limit(12);
+  return rows.map(({ anon, ...r }) => ({ ...r, by: anon ? "Visitor" : r.by }));
 }

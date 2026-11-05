@@ -299,6 +299,13 @@ export async function seedOffice(db: Db, storage: Storage, opts: SeedWorkspaceOp
   rows.invoiceReminder.push({ workspaceId: ws, invoiceId: invoiceId.get("INV-2026-024")!, stage: 1, sentOn: "2026-10-23" });
 
   await storeInbox(rows, storage, ws, officeInbox());
+  // July to September were closed by finance before the demo begins (without the app's report);
+  // October is the month to close after the Monday run.
+  const closer = (opts.members ?? []).find((m) => m.role === "finance")?.userId ?? null;
+  for (const [month, on] of [["2026-07", "2026-08-05"], ["2026-08", "2026-09-03"], ["2026-09", "2026-10-05"]] as const) {
+    const at = pkt(on, "11:00");
+    rows.closePeriod.push({ workspaceId: ws, month, status: "closed", closedBy: closer, createdAt: at, checklist: { closedAt: at.toISOString(), seeded: true, note: "Closed before the demo began, so there's no report from the app." } });
+  }
   rows.auditEvent.push({ workspaceId: ws, actorType: "system", actorId: "seed", action: "workspace.seeded", objectType: "workspace", objectId: ws, at: new Date(), details: { dataset: "office", note: "All names, numbers and documents are fictional." } });
   await rows.write(db);
   return { workspaceId: ws };

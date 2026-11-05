@@ -616,6 +616,8 @@ export type DocumentKind =
   | "contract"
   | "timesheet"
   | "client_tax_form"
+  /** Made by the app, such as the month-end report. */
+  | "report"
   | "other";
 
 export const document = pgTable(

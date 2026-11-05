@@ -125,8 +125,10 @@ export async function completeTask(slug: string, taskId: string, form: FormData)
     .update(task)
     .set({ status: "done", doneNote: note })
     .where(and(eq(task.workspaceId, ws.id), eq(task.id, taskId), eq(task.status, "open")))
-    .returning({ id: task.id, title: task.title });
-  if (done[0]) await audit(getDb(), { workspaceId: ws.id, actorType: "user", actorId: user.id, action: "task.done", objectType: "task", objectId: done[0].id, details: { title: done[0].title, note } });
+    .returning({ id: task.id, title: task.title, flagId: task.flagId });
+  // As with an approved email, the flag behind a finished task is being handled; the next run resolves it once it no longer holds.
+  const handled = done[0]?.flagId ? await getDb().update(flag).set({ status: "actioned", updatedAt: new Date() }).where(and(eq(flag.workspaceId, ws.id), eq(flag.id, done[0].flagId), eq(flag.status, "open"))).returning({ id: flag.id }) : [];
+  if (done[0]) await audit(getDb(), { workspaceId: ws.id, actorType: "user", actorId: user.id, action: "task.done", objectType: "task", objectId: done[0].id, details: { title: done[0].title, note, flagActioned: handled.length > 0 } });
   refresh(slug);
 }
 

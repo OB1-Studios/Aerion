@@ -15,7 +15,7 @@ export async function buildTaxPackAction(slug: string, yearStart: string | null,
   const year = yearStart && isIsoDate(yearStart) ? yearStart : undefined;
   let r: Awaited<ReturnType<typeof buildTaxPack>>;
   try {
-    r = await buildTaxPack(getDb(), storageFromEnv(), ws, { yearStart: year, by: { id: user.id, name: user.name } });
+    r = await buildTaxPack(getDb(), storageFromEnv(), ws, { yearStart: year, by: { id: user.id, name: user.isAnonymous ? "Visitor" : user.name } });
   } catch (err) {
     console.error("tax pack build failed", err);
     return { problems: ["The pack couldn't be saved to storage, so nothing was built. Try again in a minute."], values: null };
