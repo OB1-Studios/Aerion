@@ -1,9 +1,10 @@
 "use server";
 
 import { formatDateLong } from "@ebo/core";
-import { getDb, member } from "@ebo/db";
+import { getDb, member, workspace } from "@ebo/db";
 import {
   addReceivingAccount,
+  audit,
   addRetainer,
   connectMailbox,
   disconnectMailbox,
@@ -25,7 +26,7 @@ import {
   type ClientInput,
 } from "@ebo/engine";
 import type { Role } from "@ebo/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -246,4 +247,23 @@ export async function setRoleAction(slug: string, memberId: string, remove: bool
   // Someone who removed themselves can't see this workspace any more.
   const [still] = await getDb().select({ id: member.id }).from(member).where(and(eq(member.workspaceId, ws.id), eq(member.userId, user.id)));
   redirect(still ? `/w/${slug}/settings#people` : "/workspaces");
+}
+
+/** Owners can require two-factor sign-in for owners and finance; they must have it on themselves first. */
+export async function setTwoFactorRequired(slug: string, form: FormData) {
+  const { user, ws } = await actor(slug, "own");
+  const back = (problem?: string) => redirect(`/w/${slug}/settings${problem ? `?twofactor=${encodeURIComponent(problem)}` : ""}#two-factor`);
+  if (ws.isDemo) back("Demo workspaces can't require two-factor sign-in: visitors sign in without a password.");
+  const required = form.get("required") === "on";
+  if (required && !user.twoFactorEnabled) back("Turn on two-factor sign-in for your own account first, so the requirement can't lock you out.");
+  if (required === !!ws.settings?.requireTwoFactor) back();
+  const db = getDb();
+  // Merged in the database, so a change saved elsewhere at the same moment isn't overwritten.
+  await db
+    .update(workspace)
+    .set({ settings: sql`${workspace.settings} || ${JSON.stringify({ requireTwoFactor: required })}::jsonb` })
+    .where(eq(workspace.id, ws.id));
+  await audit(db, { workspaceId: ws.id, actorType: "user", actorId: user.id, action: "two_factor.requirement_changed", objectType: "workspace", objectId: ws.id, details: { required } });
+  refresh(slug);
+  back();
 }
