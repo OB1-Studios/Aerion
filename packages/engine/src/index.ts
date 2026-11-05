@@ -21,3 +21,6 @@ export * from "./backup";
 export * from "./dashboard";
 export * from "./retainers";
 export * from "./credit-notes";
+export * from "./tax-file";
+export * from "./tax-pack";
+export { zip, unzip, type ZipEntry } from "./zip";

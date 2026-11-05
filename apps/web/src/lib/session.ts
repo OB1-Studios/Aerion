@@ -37,3 +37,5 @@ export async function myWorkspaces(userId: string) {
 
 /** Owners and finance prepare and approve; accountants and viewers read. */
 export const canAct = (role: Role) => role === "owner" || role === "finance";
+/** May build exports such as the tax pack: everyone but viewers (the accountant included). */
+export const canExport = (role: Role) => role !== "viewer";

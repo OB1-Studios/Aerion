@@ -17,9 +17,9 @@ export function PageHeader({ title, sub, actions }: { title: string; sub?: React
   );
 }
 
-export function Card({ title, actions, children, className, pad = true }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; pad?: boolean }) {
+export function Card({ title, actions, children, className, pad = true, id }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; pad?: boolean; id?: string }) {
   return (
-    <section className={cx("rounded-xl border border-line bg-panel shadow-sm", className)}>
+    <section id={id} className={cx("scroll-mt-4 rounded-xl border border-line bg-panel shadow-sm", className)}>
       {title || actions ? (
         <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold text-ink">{title}</h2>
