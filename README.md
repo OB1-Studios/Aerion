@@ -1,16 +1,54 @@
-# IT Export Back Office
+<div align="center">
 
-An agent that runs the weekly finance back office for Pakistani software houses and IT freelancers. It makes sure every payment arrives, is matched to an invoice, and counts as an IT export. It never moves money.
+<img src="assets/banner.svg" alt="IT Export Back Office. A ledger slip shows a credit advice read, matched to an invoice, and an ePRC item opened, stamped MATCHED." width="100%">
+
+<br><br>
+
+<img alt="Agent Rush Challenge 2" src="https://img.shields.io/badge/Agent%20Rush-Challenge%202-DD4B3F?style=flat-square">
+<img alt="Runs on Vultr" src="https://img.shields.io/badge/runs%20on-Vultr-007BFC?style=flat-square&logo=vultr&logoColor=white">
+<img alt="Next.js" src="https://img.shields.io/badge/Next.js-app-14233B?style=flat-square&logo=nextdotjs&logoColor=white">
+<img alt="Node 22+" src="https://img.shields.io/badge/Node-22%2B-1E7F5C?style=flat-square&logo=nodedotjs&logoColor=white">
+<img alt="pnpm 10" src="https://img.shields.io/badge/pnpm-10-4457C8?style=flat-square&logo=pnpm&logoColor=white">
+<img alt="MIT license" src="https://img.shields.io/badge/license-MIT-9A6212?style=flat-square">
+
+<br><br>
+
+[The problem](#the-problem) &nbsp;|&nbsp;
+[What it does](#what-the-agent-does) &nbsp;|&nbsp;
+[Why it's safe](#why-a-business-can-let-it-run) &nbsp;|&nbsp;
+[Set up](#setting-up-your-own-workspace) &nbsp;|&nbsp;
+[Vultr](#how-it-uses-vultr) &nbsp;|&nbsp;
+[Demo](#try-the-demo) &nbsp;|&nbsp;
+[Run locally](#run-it-locally) &nbsp;|&nbsp;
+[Deploy](#deploy-on-vultr)
+
+</div>
+
+<br>
+
+An agent that runs the weekly finance back office for Pakistani software houses and IT freelancers. It makes sure every payment arrives, is matched to an invoice, and counts as an IT export. **It never moves money.**
 
 Built for the lablab.ai × Vultr **Agent Rush** hackathon, Challenge 2 (Finance & Accounting: invoice processing, transaction reconciliation, anomaly flagging, payment follow-ups). It runs entirely on Vultr.
 
+---
+
 ## The problem
+
+<p align="center">
+  <img src="assets/problem.svg" alt="Money arrives by SWIFT wire, Payoneer or Wise. Each payment comes with paperwork: purpose code, ePRC, withholding certificates, PSEB registration and banking-channel share. That paperwork decides how the income is taxed, and today someone checks it by hand every week." width="100%">
+</p>
 
 PayPal and Stripe don't pay out to Pakistan. Exporters get paid by SWIFT wire to a Pakistani bank, through Payoneer, or by Wise into a PKR account. Every payment comes with paperwork that decides how the income is taxed: the purpose code on the remittance, the electronic Proceeds Realization Certificate (ePRC), withholding certificates, PSEB registration, and the share of income that came through banks. Today someone checks all of this by hand, every week, across bank emails, wallet exports and client threads.
 
+---
+
 ## What the agent does
 
-Every Monday at 09:00 Pakistan time (or when someone presses **Run now**), the worker runs one workflow per workspace, from planning to output:
+Every Monday at 09:00 Pakistan time (or when someone presses **Run now**), the worker runs one workflow per workspace, from planning to output.
+
+<p align="center">
+  <img src="assets/workflow.svg" alt="The weekly run in eight steps: plan, pull, read, reconcile, flag, draft, send, follow up. Code decides most steps, a model reads documents, and a person approves what is sent." width="100%">
+</p>
 
 | Step | What happens |
 | --- | --- |
@@ -23,7 +61,11 @@ Every Monday at 09:00 Pakistan time (or when someone presses **Run now**), the w
 | **Send** | Sends what a person approved, or what the policy allows on its own. |
 | **Follow up** | Closes claims and promises that the money settled, and lists what needs a person. |
 
-Each run is recorded step by step, and the run page shows what each step did and why. The **Dashboard** shows, for the tax year so far:
+Each run is recorded step by step, and the run page shows what each step did and why.
+
+### Dashboard
+
+The **Dashboard** shows, for the tax year so far:
 
 - what clients owe, by how late it is, and the most overdue invoices
 - how many days invoices take to get paid
@@ -33,7 +75,9 @@ Each run is recorded step by step, and the run page shows what each step did and
 
 It uses the same books and reference rates as the run. Every chart has its numbers in a table underneath.
 
-On an invoice, a person can record a **credit note**, a **write-off** or a **void**, each with a reason. They are numbered CN-, WO- and VD- per year. The balance and every report follow at once:
+### Credit notes, write-offs and voids
+
+On an invoice, a person can record a **credit note**, a **write-off** or a **void**, each with a reason. They are numbered `CN-`, `WO-` and `VD-` per year. The balance and every report follow at once:
 
 - flags about the invoice that no longer hold are resolved
 - an open dispute is closed by the credit
@@ -41,9 +85,22 @@ On an invoice, a person can record a **credit note**, a **write-off** or a **voi
 
 A void is only possible before any money has come in. Its PDF then says VOID.
 
+### Tax-year file and year-end tax pack
+
 The **Tax-year file** page exports the year's credits and the banking-channel share as CSV for the accountant, for the current tax year or any earlier one.
 
-Its **year-end tax pack** is one zip for the accountant. It holds:
+Its **year-end tax pack** is one zip for the accountant.
+
+<p align="center">
+  <img src="assets/taxpack.svg" alt="The year-end tax pack is one zip with: export proceeds by month, every credit with ePRC and withholding certificate status, the banking-channel share working, invoices issued, credit notes, write-offs and voids, open flags as exceptions, and a README for the accountant." width="100%">
+</p>
+
+Before building it, the page lists what the accountant will ask about, each with a link to sort it out. Each pack is kept in storage (Object Storage in production) and can be downloaded again later. Viewers can download packs; owners, finance and the accountant can build them.
+
+<details>
+<summary><b>Full contents of the pack</b></summary>
+
+<br>
 
 - the year's export proceeds by month, in the currency received and in PKR
 - every credit with its ePRC and withholding certificate status and number, plus copies of the certificates on file
@@ -53,9 +110,26 @@ Its **year-end tax pack** is one zip for the accountant. It holds:
 - the flags still open, as exceptions
 - a README with the year in numbers, the PSEB registration (and whether it lapses before the year ends), and what's missing
 
-Before building it, the page lists what the accountant will ask about, each with a link to sort it out. Each pack is kept in storage (Object Storage in production) and can be downloaded again later. Viewers can download packs; owners, finance and the accountant can build them.
+</details>
 
-### Why a business can let it run
+---
+
+## Why a business can let it run
+
+<p align="center">
+  <img src="assets/trust.svg" alt="Seven safeguards: code decides and the model reads; numbers are checked twice; code decides whose document it is; a policy decides what goes out; a person checks what the agent can't; the workflow survives a model outage; everything is on the record. It never moves money." width="100%">
+</p>
+
+### Who approves what goes out
+
+<p align="center">
+  <img src="assets/approval.svg" alt="Every drafted email has its numbers checked. In supervised mode a person approves every email and numbers are checked again at send time. In autopilot mode routine emails go out on their own, sensitive ones wait 30 minutes so anyone can cancel, and some always need a person, with an optional amount cap." width="100%">
+</p>
+
+<details>
+<summary><b>Read the details behind each safeguard</b></summary>
+
+<br>
 
 - **Code decides, the model reads.** Amounts, dates, currencies and IBANs are validated after extraction. A value that doesn't quote the source text, or doesn't parse, is marked for review instead of being used.
 - **Numbers are checked twice.** Every amount, date and invoice number in an outgoing email must match the records, both when the email is drafted and again at send time. A draft that fails is blocked and never sent.
@@ -65,17 +139,84 @@ Before building it, the page lists what the accountant will ask about, each with
 - **The workflow survives a model outage.** If inference is down or returns something unusable, built-in layout rules read the documents, the run still completes, and the failed calls are recorded.
 - **Everything is on the record.** The audit log records every action by people and by the agent. Each model call is stored with its model, prompt version, tokens and cost. Running twice at the same clock changes nothing.
 
-### Setting up your own workspace
+</details>
 
-- **Create an account**, then a workspace for a software house or a freelancer. It starts empty: nothing in it is simulated. Sign-up records the pilot terms and, separately, whether documents may be read by a model; without that consent the workspace uses the built-in layout rules only.
-- **Setup** takes what goes on invoices (legal name, NTN, PSEB registration and expiry, ATL status, the email signature), the accounts money arrives in (ESFCA, PKR account, Wise, Payoneer; Pakistani IBANs are checked down to the check digits) and the invoice numbering. A checklist shows what is left. Only owners change these.
-- **Clients** holds each client's currency, payment terms, usual payment route and the payer names their money arrives under. The matcher learns more names as it goes.
-- **People:** an owner invites their finance person or outside accountant by email, with a role. The link works once, only for that address, for 7 days, and only a hash of it is stored. Owners can change roles or remove people, and a workspace always keeps at least one owner.
-- **Mailbox:** connect the finance mailbox (Gmail, Google Workspace, Zoho or any IMAP and SMTP host) with an app password. Both logins are tested before anything is saved, and the password is stored encrypted (AES-256-GCM). Each run then reads the mail that arrived since the last one, read-only, and keeps attachments as documents. The worker checks for new mail every 15 minutes and starts an "on arrival" run when some has come in, so the agent doesn't wait for Monday. Approved emails go out through the same mailbox. Bank SMS alerts can be pasted on the Documents page.
-- **Invoices** are written in the app. The editor suggests how the client should pay and says why (for example, that their last bank wire lost USD 25.00 to fees). Numbers continue after the highest one used. The A4 PDF quotes the exact payment instructions and the purpose-of-payment wording the bank needs to report the money as an IT export. Emailing an invoice goes through the approval inbox like every other email: the numbers check runs, the PDF is attached, and the copy that was sent is kept on file.
-- **Retainers:** on a client's page, add the amount they pay each month and the day it's billed. Once that day comes, the next run drafts the month's invoice (dated the billing day, with the suggested route) and the email that sends it, and both wait in the inbox. Each month is drafted once, editing the draft doesn't make a second one, and earlier months are never back-filled. If a month can't be drafted (say, no account takes that currency any more), a task asks a person to fix it and the next run tries again. **Stop** ends the drafts, including a month that's due but not drafted yet.
+---
+
+## Setting up your own workspace
+
+Open any item for the full detail.
+
+<details>
+<summary><b>Create an account</b>: then a workspace. It starts empty.</summary>
+
+<br>
+
+Create an account, then a workspace for a software house or a freelancer. It starts empty: nothing in it is simulated. Sign-up records the pilot terms and, separately, whether documents may be read by a model; without that consent the workspace uses the built-in layout rules only.
+
+</details>
+
+<details>
+<summary><b>Setup</b>: invoice details, receiving accounts, numbering.</summary>
+
+<br>
+
+**Setup** takes what goes on invoices (legal name, NTN, PSEB registration and expiry, ATL status, the email signature), the accounts money arrives in (ESFCA, PKR account, Wise, Payoneer; Pakistani IBANs are checked down to the check digits) and the invoice numbering. A checklist shows what is left. Only owners change these.
+
+</details>
+
+<details>
+<summary><b>Clients</b>: currency, terms, usual route, payer names.</summary>
+
+<br>
+
+**Clients** holds each client's currency, payment terms, usual payment route and the payer names their money arrives under. The matcher learns more names as it goes.
+
+</details>
+
+<details>
+<summary><b>People</b>: invite finance or an outside accountant, by role.</summary>
+
+<br>
+
+An owner invites their finance person or outside accountant by email, with a role. The link works once, only for that address, for 7 days, and only a hash of it is stored. Owners can change roles or remove people, and a workspace always keeps at least one owner.
+
+</details>
+
+<details>
+<summary><b>Mailbox</b>: Gmail, Google Workspace, Zoho or any IMAP and SMTP host.</summary>
+
+<br>
+
+Connect the finance mailbox (Gmail, Google Workspace, Zoho or any IMAP and SMTP host) with an app password. Both logins are tested before anything is saved, and the password is stored encrypted (AES-256-GCM). Each run then reads the mail that arrived since the last one, read-only, and keeps attachments as documents. The worker checks for new mail every 15 minutes and starts an "on arrival" run when some has come in, so the agent doesn't wait for Monday. Approved emails go out through the same mailbox. Bank SMS alerts can be pasted on the Documents page.
+
+</details>
+
+<details>
+<summary><b>Invoices</b>: written in the app, with a payment-route suggestion and a PDF.</summary>
+
+<br>
+
+Invoices are written in the app. The editor suggests how the client should pay and says why (for example, that their last bank wire lost USD 25.00 to fees). Numbers continue after the highest one used. The A4 PDF quotes the exact payment instructions and the purpose-of-payment wording the bank needs to report the money as an IT export. Emailing an invoice goes through the approval inbox like every other email: the numbers check runs, the PDF is attached, and the copy that was sent is kept on file.
+
+</details>
+
+<details>
+<summary><b>Retainers</b>: the month's invoice is drafted once the billing day comes.</summary>
+
+<br>
+
+On a client's page, add the amount they pay each month and the day it's billed. Once that day comes, the next run drafts the month's invoice (dated the billing day, with the suggested route) and the email that sends it, and both wait in the inbox. Each month is drafted once, editing the draft doesn't make a second one, and earlier months are never back-filled. If a month can't be drafted (say, no account takes that currency any more), a task asks a person to fix it and the next run tries again. **Stop** ends the drafts, including a month that's due but not drafted yet.
+
+</details>
+
+---
 
 ## How it uses Vultr
+
+<p align="center">
+  <img src="assets/architecture.svg" alt="A browser reaches the Coolify proxy over HTTPS, which serves the Next.js web app. The web app queues runs for the worker. The proxy, web, worker and a migrate step run inside one Vultr VM. The VM uses Managed PostgreSQL, Object Storage and Serverless Inference." width="100%">
+</p>
 
 | Vultr service | What it does here |
 | --- | --- |
@@ -85,6 +226,11 @@ Before building it, the page lists what the accountant will ask about, each with
 | **Serverless Inference** | Reads documents and emails through the OpenAI-compatible API: it classifies each document, extracts its fields with JSON output and a quote for each value, and reads client replies for promises to pay and claims of payment. |
 | **Vultr API** | `packages/vultr` is a typed client generated from Vultr's OpenAPI document (`openapi-typescript` + `openapi-fetch`). `pnpm infra:plan / apply / status` uses it to create the whole stack. The settings page uses it to show live status: VM, backups, database, storage, and model usage and cost. |
 | **DNS** (optional) | If `DOMAIN` is a Vultr DNS zone, `infra:apply` adds an A record for `app.<domain>`. |
+
+<details>
+<summary><b>Text version of the diagram</b></summary>
+
+<br>
 
 ```
 Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ──── queues runs ───▶ worker (pg-boss cron + run queue)
@@ -98,7 +244,15 @@ Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ───�
   audit log (private VPC host, TLS)           sealed nightly backups               (OpenAI-compatible, JSON)
 ```
 
+</details>
+
+---
+
 ## Reading benchmark
+
+<p align="center">
+  <img src="assets/benchmark.svg" alt="Layout rules with no model read 100% of fields correctly in the demo layout but only 12% in other layouts, and get 19 of 61 documents fully right." width="100%">
+</p>
 
 The model is chosen by measurement. `pnpm bench` has every reader read the answer key: 61 SIMULATED documents, each with the values it should yield, taken from the generator's own inputs so the key can't drift from the files. 16 are in the demo bank's layout. The other 45 show the same facts in layouts the built-in rules were never written for: another bank's advice, a letter, a noisy scan, other SMS wording (one in Roman Urdu), another app's screenshot and a printed MT103. Three advices are addressed to someone else. A field counts when the answer or the reading has a value, so an invented value is a miss.
 
@@ -107,6 +261,8 @@ The model is chosen by measurement. `pnpm bench` has every reader read the answe
 | Layout rules (no model) | 100% | 12% | 19 of 61 | $0 |
 
 The model rows come from `pnpm bench --models candidates`, which needs `VULTR_INFERENCE_API_KEY`. It runs every candidate model the key can use and reports tokens, cost and time per document; add `--out <dir>` to save the report. A test checks that the layout rules read every demo document exactly as the key says, and that a model which can't be reached counts as a miss rather than borrowing the rules' answer.
+
+---
 
 ## Try the demo
 
@@ -117,9 +273,22 @@ All data is fictional and marked SIMULATED: a software house (Ravi Code Works) a
 - On **Documents**, upload your own files (PDF, CSV, text or an image, up to 10 at a time), or press **Upload a sample credit advice**. The sample is a SIMULATED bank advice for the oldest open invoice: the run reads it, matches it and marks the invoice paid. Uploads that fail a check appear under **Need a person**, where you can correct and confirm them.
 - In the software house, the first Monday (2 Nov 2026) produces 6 emails to approve, 9 flags and the tasks for a person. After you approve the emails, the next Monday's replies close four flags and mark the short-paid invoice paid. The bank that didn't send a withholding certificate gets a phone-call task.
 - In the freelancer's workspace, the same Monday matches two payments and leaves two emails to approve: the purpose-code correction to her bank, and the one sending Harbor & Pine's November retainer invoice (USD 2,400, billed on the 1st). The agent drafted that invoice itself because the billing day had come.
-- The shared demo accounts (`pnpm seed`) are `sana@`, `hamza@ravicodeworks.example`, `qureshi@qureshi-associates.example` and `ayesha@ayeshabuilds.example`, with the password set in `DEMO_PASSWORD`. Sana owns the software house, Hamza does its finance, Qureshi is the outside accountant for both workspaces (read-only, except for building tax packs), and Ayesha is the freelancer.
 
-**What's simulated in this build:** in the demo workspaces, the mailbox, bank alerts and wallet exports are sample data that "arrive" as the demo clock moves, and sending only records the email. A workspace you create can connect a real mailbox (IMAP in, SMTP out). There's no live connection to a bank or to Payoneer; their documents come in by email or upload.
+### Shared demo accounts
+
+Created by `pnpm seed`, with the password set in `DEMO_PASSWORD`.
+
+| Account | Role |
+| --- | --- |
+| `sana@` | Owns the software house |
+| `hamza@ravicodeworks.example` | Does the software house's finance |
+| `qureshi@qureshi-associates.example` | Outside accountant for both workspaces (read-only, except for building tax packs) |
+| `ayesha@ayeshabuilds.example` | The freelancer |
+
+> [!NOTE]
+> **What's simulated in this build:** in the demo workspaces, the mailbox, bank alerts and wallet exports are sample data that "arrive" as the demo clock moves, and sending only records the email. A workspace you create can connect a real mailbox (IMAP in, SMTP out). There's no live connection to a bank or to Payoneer; their documents come in by email or upload.
+
+---
 
 ## Run it locally
 
@@ -142,7 +311,16 @@ pnpm test                # unit tests, plus the full workflow against the local 
 pnpm --filter @ebo/worker cli run ravi-code-works   # run one workspace from the terminal
 ```
 
+---
+
 ## Deploy on Vultr
+
+<p align="center">
+  <img src="assets/deploy.svg" alt="Deploy in six steps: settings, plan, apply, Coolify, deploy, check. The apply step creates the whole stack and costs money." width="100%">
+</p>
+
+> [!WARNING]
+> `pnpm infra:apply` creates paid resources. `pnpm infra:plan` is read-only and shows the monthly cost first.
 
 1. **Settings.** Put `VULTR_API_KEY` and `ADMIN_CIDR` (your IP) in `.env`, plus optionally `VULTR_REGION` (default `sgp`), `DOMAIN` and `SSH_PUBLIC_KEY_PATH`.
 2. **Plan.** `pnpm infra:plan` is read-only. It shows what already exists, what would be created, the monthly cost, and how long the account's Vultr credit lasts with the new resources.
@@ -156,9 +334,14 @@ pnpm --filter @ebo/worker cli run ravi-code-works   # run one workspace from the
 5. **Deploy.** The migrations run first; `web` and `worker` start only if they succeed. Load the shared demo from the worker's terminal in Coolify: `pnpm --filter @ebo/worker cli reset-demo`.
 6. **Check.** `pnpm infra:status` shows the credit left and how many days it lasts at this month's spending rate, plus health, backups, model usage and pending charges. The settings page shows the same credit line, in amber when it's under USD 25 or 14 days.
 
+> [!IMPORTANT]
+> Keep a copy of `APP_ENCRYPTION_KEY` off the server. Without it, neither the mailbox app passwords nor the nightly backups can be opened.
+
 Without Object Storage, documents go to a Docker volume shared by `web` and `worker`. The worker runs every queued run. `RUNS_INLINE=1` (run the workflow inside the web process) is for local development and is safe alongside a worker.
 
-**Backups and restore.** The worker backs up the database every night to the backups bucket (`S3_BUCKET_BACKUPS`, from `infra:apply`), on top of the managed database's own daily backups and the VM's. Each backup is one file: every table, read from one consistent snapshot, with each row written by Postgres as JSON. It is gzipped and sealed with AES-256-GCM using a key derived from `APP_ENCRYPTION_KEY`. Values come back exactly, and no `pg_dump` has to match the server's version. From the worker's terminal, or locally (backups go to `./.backups`):
+### Backups and restore
+
+The worker backs up the database every night to the backups bucket (`S3_BUCKET_BACKUPS`, from `infra:apply`), on top of the managed database's own daily backups and the VM's. Each backup is one file: every table, read from one consistent snapshot, with each row written by Postgres as JSON. It is gzipped and sealed with AES-256-GCM using a key derived from `APP_ENCRYPTION_KEY`. Values come back exactly, and no `pg_dump` has to match the server's version. From the worker's terminal, or locally (backups go to `./.backups`):
 
 ```bash
 pnpm backup                                   # back up now, as the nightly job does
@@ -167,6 +350,8 @@ pnpm backup:restore latest postgres://…/new   # into a new database: migrated 
 ```
 
 The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It backs up the whole database, restores it into a new one, and checks that every row came back identical. It also checks that a restore refuses a database with data, one from another release, the wrong key and a damaged file.
+
+---
 
 ## Repository
 
@@ -182,6 +367,8 @@ The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It bac
 | `infra` | `plan`, `apply` and `status` for the Vultr stack |
 
 To regenerate the Vultr client, download Vultr's OpenAPI document to `packages/vultr/openapi.json` (it's gitignored) and run `pnpm vultr:types`.
+
+---
 
 ## License
 
