@@ -1,4 +1,6 @@
+import { eprcStatus } from "@ebo/core";
 import { complianceItem, document, flag, getDb, invoice, match, receivingAccount, transaction, transferLink } from "@ebo/db";
+import { loadRules } from "@ebo/engine";
 import { and, eq, or } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,12 +21,13 @@ export default async function PaymentPage({ params }: { params: Promise<{ ws: st
     .where(and(eq(transaction.workspaceId, ws.id), eq(transaction.id, id)));
   if (!row) notFound();
   const { tx, account } = row;
-  const [matches, items, links, flags, doc] = await Promise.all([
+  const [matches, items, links, flags, doc, rules] = await Promise.all([
     db.select({ m: match, number: invoice.number, invCurrency: invoice.currency }).from(match).innerJoin(invoice, eq(invoice.id, match.invoiceId)).where(and(eq(match.workspaceId, ws.id), eq(match.transactionId, tx.id))),
     db.select().from(complianceItem).where(and(eq(complianceItem.workspaceId, ws.id), eq(complianceItem.transactionId, tx.id))),
     db.select().from(transferLink).where(and(eq(transferLink.workspaceId, ws.id), or(eq(transferLink.fromTransactionId, tx.id), eq(transferLink.toTransactionId, tx.id)))),
     db.select().from(flag).where(and(eq(flag.workspaceId, ws.id), eq(flag.subjectType, "transaction"), eq(flag.subjectId, tx.id))),
     tx.sourceDocumentId ? db.select({ id: document.id, name: document.originalName, kind: document.kind }).from(document).where(and(eq(document.workspaceId, ws.id), eq(document.id, tx.sourceDocumentId))) : Promise.resolve([]),
+    loadRules(db, ws.id),
   ]);
   const base = `/w/${slug}`;
   const isWallet = account?.kind === "payoneer" || account?.kind === "platform";
@@ -113,11 +116,11 @@ export default async function PaymentPage({ params }: { params: Promise<{ ws: st
           <Card title="Documents the bank owes us" pad={false}>
             {items.length ? (
               <ul className="divide-y divide-line text-sm">
-                {items.map((c) => (
+                {items.map((i) => ({ ...i, status: i.kind === "eprc" ? eprcStatus(i, rules) : i.status })).map((c) => (
                   <li key={c.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
                     <span>{c.kind === "eprc" ? "ePRC" : "Withholding certificate"}</span>
                     <span className="flex items-center gap-2 text-xs text-muted">
-                      {c.status === "on_file" && c.documentId ? (
+                      {(c.status === "on_file" || c.status === "wrong_code") && c.documentId ? (
                         <Link href={`${base}/documents/${c.documentId}`} className="link">
                           view
                         </Link>

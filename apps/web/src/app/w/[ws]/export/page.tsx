@@ -1,42 +1,182 @@
-import { Badge, Card, Empty, PageHeader, Stat, Table } from "@/components/ui";
-import { day, money } from "@/lib/format";
-import { requireWorkspace } from "@/lib/session";
-import { taxYearFile } from "@/lib/tax-file";
+import { addDays, isIsoDate, taxYearOf } from "@ebo/core";
+import { workspaceToday } from "@ebo/engine";
+import Link from "next/link";
+import { Badge, Card, Empty, KeyValues, Notice, PageHeader, Stat, Table, cx } from "@/components/ui";
+import { clock, day, money } from "@/lib/format";
+import { canExport, requireWorkspace } from "@/lib/session";
+import { builtPacks, taxPackPreview } from "@/lib/tax-file";
+import { buildTaxPackAction } from "./actions";
+import { PackForm } from "./pack-form";
 
 export const metadata = { title: "Tax-year file" };
 
 const COUNTS_LABEL = { numerator_and_denominator: "banked", denominator_only: "received in wallet", not_proceeds: "spent from wallet" } as const;
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-export default async function ExportPage({ params }: { params: Promise<{ ws: string }> }) {
+export default async function ExportPage({ params, searchParams }: { params: Promise<{ ws: string }>; searchParams: Promise<{ year?: string; built?: string }> }) {
   const { ws: slug } = await params;
-  const { ws } = await requireWorkspace(slug);
-  const f = await taxYearFile(ws);
+  const q = await searchParams;
+  const { ws, role } = await requireWorkspace(slug);
+  const asked = q.year && isIsoDate(q.year) ? q.year : undefined;
+  const [{ file: f, summary: s }, packs] = await Promise.all([taxPackPreview(ws, asked), builtPacks(ws.id)]);
   const share = f.share;
   const missing = f.lines.filter((l) => !l.ownTransfer && (l.eprc === "missing" || l.eprc === "requested")).length;
+  const base = `/w/${slug}`;
   const csv = `/api/w/${slug}/export`;
+
+  // Tax years with anything in them, newest first; the current one is "so far".
+  const startMonth = ws.fiscalYearStartMonth;
+  const current = taxYearOf(workspaceToday(ws), startMonth);
+  const isCurrent = f.year.start === current.start;
+  const firstDate = [...f.books.invoices.map((i) => i.issuedOn), ...f.books.transactions.map((t) => t.valueDate)].sort()[0];
+  const first = taxYearOf([firstDate ?? current.start, f.year.start].sort()[0]!, startMonth);
+  const years = [current];
+  while (years.length < 6 && years.at(-1)!.start > first.start) years.push(taxYearOf(addDays(years.at(-1)!.start, -1), startMonth));
+  const yearStart = isCurrent ? null : f.year.start;
+  const yq = yearStart ? `year=${yearStart}` : "";
+
+  // What the accountant will ask about: each with where to sort it out.
+  const itCode = f.rules["purpose_code.it_services"][0] ?? "9186";
+  const gaps: Array<{ text: string; href: string; cta: string }> = [];
+  if (s.eprc.missing) gaps.push({ text: `${plural(s.eprc.missing, "ePRC")} not on file yet. Banks issue them after each credit; ask for any that are late.`, href: "#credits", cta: "See which" });
+  if (s.eprc.wrongCode) gaps.push({ text: `${plural(s.eprc.wrongCode, "ePRC")} issued with a non-IT purpose code. Ask the bank to reissue ${s.eprc.wrongCode === 1 ? "it" : "them"} under ${itCode}.`, href: "#credits", cta: "See which" });
+  if (s.wht.missing) gaps.push({ text: `${plural(s.wht.missing, "withholding certificate")} not on file yet.`, href: "#credits", cta: "See which" });
+  if (s.sharePct != null && Number(s.sharePct) < Number(s.minSharePct)) gaps.push({ text: `The banking-channel share is ${s.sharePct}%, under the ${s.minSharePct}% rule.`, href: "#share", cta: "See the working" });
+  if (s.pseb.lapsesInYear) gaps.push({ text: `PSEB registration lapses on ${day(s.pseb.validUntil)}, before the tax year ends.`, href: `${base}/settings`, cta: "Update it" });
+  if (s.exceptions) gaps.push({ text: `${plural(s.exceptions, "open flag")} will go in as exceptions.`, href: `${base}/flags`, cta: "Review them" });
+  const empty = !s.credits && !s.invoices;
+  const built = q.built ? packs.find((p) => p.id === q.built && p.status === "done") : undefined;
 
   return (
     <>
       <PageHeader
         title={`Tax-year file ${f.year.label}`}
-        sub={`${day(f.year.start)} to ${day(f.year.end)}, as of ${day(f.today)}. What an accountant needs at year end: every export credit with its paperwork, and the banking-channel working.`}
+        sub={`${day(f.year.start)} to ${day(f.year.end)}${isCurrent ? `, as of ${day(f.today)}` : ""}. What an accountant needs at year end: every export credit with its paperwork, and the banking-channel working.`}
         actions={
           <>
-            <a href={csv} className="btn btn-primary">
-              Download credits (CSV)
+            <a href={yq ? `${csv}?${yq}` : csv} className="btn btn-secondary">
+              Credits (CSV)
             </a>
-            <a href={`${csv}?part=share`} className="btn btn-secondary">
+            <a href={`${csv}?part=share${yq ? `&${yq}` : ""}`} className="btn btn-secondary">
               Share working (CSV)
             </a>
           </>
         }
       />
+      {years.length > 1 ? (
+        <nav aria-label="Tax year" className="-mt-2 mb-5 flex flex-wrap gap-2">
+          {years.map((y) => {
+            const on = y.start === f.year.start;
+            return (
+              <Link
+                key={y.start}
+                href={y.start === current.start ? `${base}/export` : `${base}/export?year=${y.start}`}
+                aria-current={on ? "page" : undefined}
+                className={cx("rounded-full border px-3 py-1 text-sm tabular-nums", on ? "border-accent bg-accent/10 font-medium text-ink" : "border-line text-muted hover:border-ink/30 hover:text-ink")}
+              >
+                {y.label}
+                {y.start === current.start ? " (so far)" : ""}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
+      {built ? (
+        <Notice>
+          Built the {built.period} tax pack.{" "}
+          <a href={`/api/w/${slug}/tax-pack/${built.id}`} className="font-medium underline underline-offset-2">
+            Download it
+          </a>
+          .
+        </Notice>
+      ) : null}
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Banking-channel share" value={share ? `${share.sharePct}%` : "—"} hint={`minimum ${f.rules["banking_share.min_pct"]}% (rule unverified)`} tone={share ? (Number(share.sharePct) >= Number(f.rules["banking_share.warn_pct"]) ? "good" : "warn") : undefined} />
         <Stat label="Export credits" value={f.lines.filter((l) => !l.ownTransfer).length} hint={`${f.lines.filter((l) => l.ownTransfer).length} more from our own wallet`} />
         <Stat label="ePRCs outstanding" value={missing} tone={missing ? "warn" : "good"} hint="missing or requested" />
         <Stat label="Wallet money not yet banked" value={share ? `USD ${share.walletHeldUsd}` : "—"} hint={share && share.walletSpentUsd !== "0.00" ? `USD ${share.walletSpentUsd} spent by card` : "at reference rates"} />
       </div>
+
+      <Card title={`Year-end tax pack ${f.year.label}`} className="mb-6">
+        <p className="max-w-prose text-sm text-muted">
+          One zip for your accountant: the year&apos;s export proceeds by month, every credit with its ePRC and withholding certificate, the banking-share working, invoices, credit notes and open flags, with copies of the certificates on file.
+        </p>
+        {empty ? (
+          <p className="mt-4 text-sm text-ink">Nothing to pack for {f.year.label} yet: no export credits or invoices in that tax year.</p>
+        ) : (
+          <>
+            <div className="mt-4 grid gap-6 lg:grid-cols-2">
+              <div>
+                <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">In the pack{isCurrent ? ", so far" : ""}</h3>
+                <KeyValues
+                  rows={[
+                    ["Proceeds banked", `${money(s.proceedsPkr ?? "0", "PKR")} from ${plural(s.credits, "credit")}`],
+                    ["ePRCs", `${s.eprc.onFile} of ${s.eprc.needed} on file`],
+                    ["Withholding certificates", `${s.wht.onFile} of ${s.wht.needed} on file`],
+                    ["Certificate copies", plural(s.files, "file")],
+                    ["Invoices", `${s.invoices} issued; ${plural(s.creditNotes, "credit note, write-off or void", "credit notes, write-offs or voids")}`],
+                    ["Open flags", `${s.exceptions}, listed as exceptions`],
+                  ]}
+                />
+              </div>
+              <div>
+                <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">Before you send it</h3>
+                {gaps.length ? (
+                  <ul className="space-y-2 text-sm text-ink">
+                    {gaps.map((g) => (
+                      <li key={g.text} className="flex gap-2">
+                        <span aria-hidden className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-amber-500" />
+                        <span>
+                          {g.text}{" "}
+                          <Link href={g.href} className="link whitespace-nowrap">
+                            {g.cta}
+                          </Link>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-ink">Nothing missing: every credit has its certificates on file, and no flags are open.</p>
+                )}
+              </div>
+            </div>
+            <div className="mt-5 border-t border-line pt-4">
+              {canExport(role) ? (
+                <PackForm
+                  action={buildTaxPackAction.bind(null, slug, yearStart)}
+                  label={`Build the ${f.year.label} pack`}
+                  hint={isCurrent ? "From the records as they stand today. Build it again after anything changes; earlier packs are kept." : "From the records for that year. Earlier packs are kept."}
+                />
+              ) : (
+                <p className="text-xs text-muted">Your role can download packs. An owner, finance or the accountant builds them.</p>
+              )}
+            </div>
+          </>
+        )}
+      </Card>
+
+      {packs.length ? (
+        <Card title="Built packs" pad={false} className="mb-6" id="packs">
+          <Table dense head={["Tax year", "Built", "By", ""]}>
+            {packs.map((p) => (
+              <tr key={p.id} className={cx(p.id === built?.id && "bg-accent/5")}>
+                <td className="tabular-nums">{p.period}</td>
+                <td className="whitespace-nowrap text-muted">{clock(p.createdAt, ws.timezone)}</td>
+                <td>{p.by ?? "—"}</td>
+                <td className="text-right">
+                  {p.status === "done" ? (
+                    <a href={`/api/w/${slug}/tax-pack/${p.id}`} className="link whitespace-nowrap">
+                      Download .zip
+                    </a>
+                  ) : (
+                    <Badge tone={p.status === "failed" ? "red" : "blue"}>{p.status === "failed" ? "failed" : "building"}</Badge>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </Card>
+      ) : null}
 
       {f.estimate ? (
         <Card title="PSEB registration: what it would save" className="mb-6">
@@ -48,7 +188,7 @@ export default async function ExportPage({ params }: { params: Promise<{ ws: str
         </Card>
       ) : null}
 
-      <Card title="Export credits into Pakistani banks" pad={false} className="mb-6">
+      <Card title="Export credits into Pakistani banks" pad={false} className="mb-6" id="credits">
         {f.lines.length ? (
           <Table head={["Date", "Payer", "Amount", "PKR", "Code", "Invoices", "ePRC", "WHT cert."]}>
             {f.lines.map((l) => (
@@ -73,13 +213,13 @@ export default async function ExportPage({ params }: { params: Promise<{ ws: str
           </Table>
         ) : (
           <div className="p-4">
-            <Empty>No credits this tax year yet.</Empty>
+            <Empty>No credits in this tax year.</Empty>
           </div>
         )}
       </Card>
 
       {share ? (
-        <Card title="Banking-channel share: the working" pad={false}>
+        <Card title="Banking-channel share: the working" pad={false} id="share">
           <div className="grid gap-3 border-b border-line p-4 text-sm sm:grid-cols-3">
             <div>
               <div className="text-muted">Banked (numerator)</div>

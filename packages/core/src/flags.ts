@@ -106,6 +106,14 @@ const routeFamily = (route: Route): "swift" | "payoneer" | "wise" =>
 
 const BANK_ACCOUNTS = new Set(["pkr_account", "esfca"]);
 
+/**
+ * Where an ePRC stands, counting one on file with a non-IT purpose code (read off the
+ * certificate) as the wrong code. The flags, the tax-year file and the tax pack all use this.
+ */
+export function eprcStatus(c: { status: FlagSnapshot["compliance"][number]["status"]; purposeCodeOnDocument?: string | null }, r: Pick<Rules, "purpose_code.non_it">): FlagSnapshot["compliance"][number]["status"] {
+  return c.status === "on_file" && !!c.purposeCodeOnDocument && r["purpose_code.non_it"].includes(c.purposeCodeOnDocument) ? "wrong_code" : c.status;
+}
+
 export function evaluateFlags(s: FlagSnapshot): FlagCandidate[] {
   const out: FlagCandidate[] = [];
   const r = s.rules;
@@ -177,8 +185,7 @@ export function evaluateFlags(s: FlagSnapshot): FlagCandidate[] {
   }
   for (const c of s.compliance) {
     if (c.kind !== "eprc") continue;
-    const wrong = c.status === "wrong_code" || (c.status === "on_file" && !!c.purposeCodeOnDocument && nonIt.has(c.purposeCodeOnDocument));
-    if (!wrong) continue;
+    if (eprcStatus(c, r) !== "wrong_code") continue;
     const t = txById.get(c.transactionId);
     const inv = invoiceById.get((matchesByTx.get(c.transactionId) ?? [])[0]?.invoiceId ?? "");
     out.push({

@@ -41,7 +41,19 @@ On an invoice, a person can record a **credit note**, a **write-off** or a **voi
 
 A void is only possible before any money has come in. Its PDF then says VOID.
 
-The **Tax-year file** page exports the year's credits and the banking-channel share as CSV for the accountant.
+The **Tax-year file** page exports the year's credits and the banking-channel share as CSV for the accountant, for the current tax year or any earlier one.
+
+Its **year-end tax pack** is one zip for the accountant. It holds:
+
+- the year's export proceeds by month, in the currency received and in PKR
+- every credit with its ePRC and withholding certificate status and number, plus copies of the certificates on file
+- the banking-channel share working
+- the invoices issued in the year, with what came in and what was credited
+- the credit notes, write-offs and voids, with their reasons
+- the flags still open, as exceptions
+- a README with the year in numbers, the PSEB registration (and whether it lapses before the year ends), and what's missing
+
+Before building it, the page lists what the accountant will ask about, each with a link to sort it out. Each pack is kept in storage (Object Storage in production) and can be downloaded again later. Viewers can download packs; owners, finance and the accountant can build them.
 
 ### Why a business can let it run
 
