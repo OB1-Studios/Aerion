@@ -1,4 +1,5 @@
 import { client, document, draftAction, flag, getDb, receivingAccount, task, transaction } from "@ebo/db";
+import { syncNotifications } from "@ebo/engine";
 import { and, count, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -26,9 +27,18 @@ export default async function WorkspaceLayout({ children, params }: { children: 
     db.select({ n: count() }).from(receivingAccount).where(and(eq(receivingAccount.workspaceId, ws.id), eq(receivingAccount.active, true))).then(n),
     db.select({ n: count() }).from(client).where(eq(client.workspaceId, ws.id)).then(n),
   ]);
+  // A failure here shouldn't take the page down: the count is only a pointer.
+  const unread = await syncNotifications(db, ws, user.id, role).then(
+    (r) => r.unread,
+    (err) => {
+      console.error("[notifications]", err instanceof Error ? err.message : "failed");
+      return 0;
+    },
+  );
   const base = `/w/${slug}`;
   const items = [
     { href: `${base}/inbox`, label: "Inbox", count: drafts + tasks + review + unmatched },
+    { href: `${base}/notifications`, label: "Notifications", count: unread },
     { href: `${base}/dashboard`, label: "Dashboard" },
     { href: `${base}/runs`, label: "Runs" },
     { href: `${base}/flags`, label: "Flags", count: flags },

@@ -64,6 +64,13 @@
       "when": 1793856348620,
       "tag": "0008_invoice_import_job",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793869695946,
+      "tag": "0009_notifications",
+      "breakpoints": true
     }
   ]
 }

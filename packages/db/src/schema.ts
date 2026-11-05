@@ -844,15 +844,51 @@ export const mailboxConnection = pgTable("mailbox_connection", {
   createdAt: createdAt(),
 });
 
-export const notification = pgTable("notification", {
-  id: id(),
-  workspaceId: wsId(),
-  userId: text("user_id").notNull(),
-  kind: text("kind").notNull(),
-  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
-  readAt: ts("read_at"),
-  createdAt: createdAt(),
-});
+/** What needs someone, as they've seen it: one row per person and item, so read state is theirs (W31). */
+export const notification = pgTable(
+  "notification",
+  {
+    id: id(),
+    workspaceId: wsId(),
+    userId: text("user_id").notNull(),
+    kind: text("kind").$type<NotificationKind>().notNull(),
+    /** The item it's about, like `draft:<id>`, so one item notifies a person once. */
+    key: text("key").notNull(),
+    payload: jsonb("payload").$type<NotificationPayload>().notNull(),
+    readAt: ts("read_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("notification_ws_user_key").on(t.workspaceId, t.userId, t.key), index("notification_user_idx").on(t.workspaceId, t.userId, t.readAt)],
+);
+
+export type NotificationKind = "approval" | "task" | "flag" | "review" | "payment";
+export interface NotificationPayload {
+  title: string;
+  detail?: string;
+  /** Path inside the app. */
+  href: string;
+  severity?: "high" | "medium" | "info";
+  /** When the item itself appeared. */
+  at: string;
+}
+
+/** A person's email digest for one workspace. No row means the default for their role. */
+export const notificationPref = pgTable(
+  "notification_pref",
+  {
+    id: id(),
+    workspaceId: wsId(),
+    userId: text("user_id").notNull(),
+    digest: text("digest").$type<DigestFrequency>().notNull(),
+    /** The workspace's local day of the last scheduled digest. */
+    lastDigestOn: day("last_digest_on"),
+    lastSentAt: ts("last_sent_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("notification_pref_ws_user").on(t.workspaceId, t.userId)],
+);
+
+export type DigestFrequency = "daily" | "weekly" | "off";
 
 export const consent = pgTable("consent", {
   id: id(),
