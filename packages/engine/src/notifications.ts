@@ -200,6 +200,8 @@ export interface DigestRunDeps {
   db: Db;
   mailer: Mailer;
   env?: Record<string, string | undefined>;
+  /** Limits the sweep to these workspaces. The worker leaves it out and covers them all. */
+  workspaceIds?: string[];
 }
 
 /**
@@ -214,7 +216,7 @@ export async function sendDueDigests(deps: DigestRunDeps, now: Date = new Date()
     .select({ ws: workspace })
     .from(workspace)
     .innerJoin(mailboxConnection, eq(mailboxConnection.workspaceId, workspace.id))
-    .where(and(eq(workspace.isDemo, false), inArray(mailboxConnection.status, ["ok", "error"])));
+    .where(and(eq(workspace.isDemo, false), inArray(mailboxConnection.status, ["ok", "error"]), deps.workspaceIds ? inArray(workspace.id, deps.workspaceIds) : undefined));
   for (const { ws } of live) {
     if (localHour(now, ws.timezone) < DIGEST_HOUR) continue;
     const today = dateInZone(now, ws.timezone);

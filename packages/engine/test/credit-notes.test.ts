@@ -144,13 +144,15 @@ describe.skipIf(!dbUp)("credit notes, write-offs and voids", () => {
 
   it("keeps a numbered record of each, in the audit log too, and the dashboard follows", async () => {
     const notes = await db.select().from(creditNote).where(eq(creditNote.workspaceId, wsId)).orderBy(asc(creditNote.number));
-    expect(notes.map((n) => [n.number, n.kind, n.amount, n.approvedBy])).toEqual([
+    // Either side can win the race above, and its number decides where it sorts.
+    const raced = notes.filter((n) => n.amount === "800.00");
+    expect(raced.map((n) => [n.number, n.kind, n.approvedBy])).toEqual([[raced[0]!.kind === "credit" ? "CN-2026-002" : "WO-2026-003", raced[0]!.kind, userId]]);
+    expect(notes.filter((n) => n.amount !== "800.00").map((n) => [n.number, n.kind, n.amount, n.approvedBy])).toEqual([
       ["CN-2026-001", "credit", "400.00", userId],
       ["VD-2026-001", "void", "5500.00", userId],
       ["VD-2026-002", "void", "1200.00", userId],
       ["WO-2026-001", "write_off", "2500.00", userId],
       ["WO-2026-002", "write_off", "750.00", userId],
-      [expect.stringMatching(/^(CN|WO)-2026-00[23]$/), expect.any(String), "800.00", userId],
     ]);
     expect(notes[0]!.createdAt.toISOString()).toBe("2026-11-02T04:00:00.000Z"); // the demo clock, Mon 2 Nov 09:00 PKT
 

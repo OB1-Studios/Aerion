@@ -151,14 +151,14 @@ describe.skipIf(!dbUp)("notifications (W31)", () => {
   it("emails owners and finance by default, once a day, from 9 o'clock", async () => {
     await clearPrefs();
     const { sent, mailer } = recording();
-    expect(await sendDueDigests({ db, mailer }, MON_08)).toEqual({ sent: 0, empty: 0, errors: 0 });
-    const r = await sendDueDigests({ db, mailer }, MON_10);
+    expect(await sendDueDigests({ db, workspaceIds: [wsId], mailer }, MON_08)).toEqual({ sent: 0, empty: 0, errors: 0 });
+    const r = await sendDueDigests({ db, workspaceIds: [wsId], mailer }, MON_10);
     expect(r.sent).toBe(2);
     expect(sent.map((s) => s.to).sort()).toEqual([email(finance), email(owner)].sort());
     expect(sent[0]!.subject).toMatch(/to approve/);
-    await sendDueDigests({ db, mailer }, MON_10);
+    await sendDueDigests({ db, workspaceIds: [wsId], mailer }, MON_10);
     expect(sent).toHaveLength(2);
-    await sendDueDigests({ db, mailer }, TUE_10);
+    await sendDueDigests({ db, workspaceIds: [wsId], mailer }, TUE_10);
     expect(sent).toHaveLength(4);
   });
 
@@ -168,20 +168,20 @@ describe.skipIf(!dbUp)("notifications (W31)", () => {
     await setDigest(db, wsId, finance.id, "weekly");
     await setDigest(db, wsId, accountant.id, "daily");
     const { sent, mailer } = recording();
-    await sendDueDigests({ db, mailer }, WED_10);
+    await sendDueDigests({ db, workspaceIds: [wsId], mailer }, WED_10);
     expect(sent).toHaveLength(0); // the accountant has nothing to act on, the owner is off, finance waits for Monday
-    await sendDueDigests({ db, mailer }, MON_10);
+    await sendDueDigests({ db, workspaceIds: [wsId], mailer }, MON_10);
     expect(sent.map((s) => s.to)).toEqual([email(finance)]);
   });
 
   it("tries again next hour when sending fails, and doesn't count an unsent email", async () => {
     await clearPrefs();
     const broken = recording("smtp", true);
-    expect((await sendDueDigests({ db, mailer: broken.mailer }, MON_10)).errors).toBe(2);
+    expect((await sendDueDigests({ db, workspaceIds: [wsId], mailer: broken.mailer }, MON_10)).errors).toBe(2);
     const recorded = recording("recorded");
-    expect((await sendDueDigests({ db, mailer: recorded.mailer }, MON_10)).errors).toBe(2);
+    expect((await sendDueDigests({ db, workspaceIds: [wsId], mailer: recorded.mailer }, MON_10)).errors).toBe(2);
     const { sent, mailer } = recording();
-    expect((await sendDueDigests({ db, mailer }, MON_10)).sent).toBe(2);
+    expect((await sendDueDigests({ db, workspaceIds: [wsId], mailer }, MON_10)).sent).toBe(2);
     expect(sent).toHaveLength(2);
   });
 
@@ -189,10 +189,10 @@ describe.skipIf(!dbUp)("notifications (W31)", () => {
     await clearPrefs();
     const { sent, mailer } = recording();
     await db.update(workspace).set({ isDemo: true }).where(eq(workspace.id, wsId));
-    await sendDueDigests({ db, mailer }, MON_10);
+    await sendDueDigests({ db, workspaceIds: [wsId], mailer }, MON_10);
     await db.update(workspace).set({ isDemo: false }).where(eq(workspace.id, wsId));
     await db.update(mailboxConnection).set({ status: "paused" }).where(eq(mailboxConnection.workspaceId, wsId));
-    await sendDueDigests({ db, mailer }, MON_10);
+    await sendDueDigests({ db, workspaceIds: [wsId], mailer }, MON_10);
     await db.update(mailboxConnection).set({ status: "ok" }).where(eq(mailboxConnection.workspaceId, wsId));
     expect(sent).toHaveLength(0);
   });
