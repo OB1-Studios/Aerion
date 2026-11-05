@@ -47,7 +47,17 @@ export default async function SettingsPage({ params, searchParams }: { params: P
 
   return (
     <>
-      <PageHeader title="Settings" sub="How this workspace sends, who signs, where money arrives, and what it runs on." />
+      <PageHeader
+        title="Settings"
+        sub="How this workspace sends, who signs, where money arrives, and what it runs on."
+        actions={
+          isOwner ? (
+            <Link href={`/w/${slug}/settings/data`} className="btn btn-secondary">
+              Export or delete
+            </Link>
+          ) : undefined
+        }
+      />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card title="Who approves outgoing email" className="xl:col-span-2">
           <form action={setPolicy.bind(null, slug)} className="grid gap-3 md:grid-cols-2">
