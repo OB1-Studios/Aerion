@@ -40,7 +40,9 @@ describe("sealed secrets", () => {
     expect(sealSecret("same", env)).not.toBe(sealSecret("same", env));
     expect(() => openSecret(sealed, { APP_ENCRYPTION_KEY: "another-key-entirely-0123456789" })).toThrow();
     const [v, iv, tag, body] = sealed.split(".");
-    expect(() => openSecret([v, iv, tag, `${body!.slice(0, -2)}AA`].join("."), env)).toThrow();
+    const bytes = Buffer.from(body!, "base64url");
+    bytes.writeUInt8(bytes.readUInt8(bytes.length - 1) ^ 1, bytes.length - 1); // one flipped bit always changes it
+    expect(() => openSecret([v, iv, tag, bytes.toString("base64url")].join("."), env)).toThrow();
     expect(() => sealSecret("x", {})).toThrow(/APP_ENCRYPTION_KEY/);
   });
 });
