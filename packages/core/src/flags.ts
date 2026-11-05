@@ -249,7 +249,7 @@ export function evaluateFlags(s: FlagSnapshot): FlagCandidate[] {
       kind: "overdue",
       severity: days >= 30 ? "high" : "medium",
       subject: { type: "invoice", id: inv.id },
-      summary: `${inv.number} (${clientName(inv.clientId)}) is ${days} business days overdue; reminder ${stage} is due${lastSent ? `, reminder ${lastSent} was sent` : ""}.`,
+      summary: `${inv.number} (${clientName(inv.clientId)}) is ${days} business days overdue; ${lastSent >= stage ? `reminder ${lastSent} has been sent` : `reminder ${stage} is due${lastSent ? ` (reminder ${lastSent} was sent)` : ""}`}.`,
       evidence: {
         "client.name": ev.text(clientName(inv.clientId)),
         "invoice.number": ev.text(inv.number),
