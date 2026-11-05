@@ -3,6 +3,7 @@ import { invoicePdf } from "@ebo/engine";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { twoFactorRefusal } from "@/lib/two-factor";
 
 /**
  * The invoice as an A4 PDF. Once it has been emailed, this is the exact copy that went out
@@ -14,11 +15,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ ws: stri
   if (!session) return new Response("Sign in first.", { status: 401 });
   const db = getDb();
   const [row] = await db
-    .select({ id: workspace.id })
+    .select({ id: workspace.id, role: member.role, settings: workspace.settings, isDemo: workspace.isDemo })
     .from(workspace)
     .innerJoin(member, and(eq(member.workspaceId, workspace.id), eq(member.userId, session.user.id)))
     .where(eq(workspace.slug, slug));
   if (!row || !/^[0-9a-f-]{36}$/i.test(id)) return new Response("Not found.", { status: 404 });
+  const refused = twoFactorRefusal(row, row.role, session.user);
+  if (refused) return refused;
   const [sent] = await db
     .select({ number: invoice.number, path: document.storagePath })
     .from(invoice)
