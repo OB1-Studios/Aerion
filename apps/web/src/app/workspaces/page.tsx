@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Badge, Empty } from "@/components/ui";
+import { Badge, Empty, Notice } from "@/components/ui";
 import { ROLE_LABEL } from "@/lib/format";
 import { myWorkspaces, requireUser } from "@/lib/session";
 import { signOut } from "../actions";
 
 export const metadata = { title: "Workspaces" };
 
-export default async function WorkspacesPage() {
+export default async function WorkspacesPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+  const { deleted } = await searchParams;
   const user = await requireUser();
   const list = await myWorkspaces(user.id);
-  if (list.length === 1) redirect(`/w/${list[0]!.slug}/inbox`);
-  if (!list.length && !user.isAnonymous) redirect("/workspaces/new");
+  // Straight into the only workspace, or to making one, unless there's a deletion to confirm first.
+  if (!deleted && list.length === 1) redirect(`/w/${list[0]!.slug}/inbox`);
+  if (!deleted && !list.length && !user.isAnonymous) redirect("/workspaces/new");
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between">
@@ -36,6 +38,7 @@ export default async function WorkspacesPage() {
           </form>
         </div>
       </div>
+      {deleted ? <Notice>The workspace was deleted, with everything in it.</Notice> : null}
       {list.length ? (
         <ul className="space-y-2">
           {list.map((w) => (
