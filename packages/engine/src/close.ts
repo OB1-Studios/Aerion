@@ -304,7 +304,7 @@ export function buildCloseView(b: Books, w: WorkspaceContext, month: string, x: 
   const owedMap = new Map<string, { currency: string; amount: Decimal; invoices: number; bands: Record<AgeBand, Decimal> }>();
   for (const i of b.invoices) {
     if (i.status === "draft" || i.issuedOn > end) continue;
-    const open = dec(i.amount).minus(applied.get(i.id) ?? 0);
+    const open = dec(i.amount).minus(i.paidBeforeImport).minus(applied.get(i.id) ?? 0);
     if (open.lte(tol)) continue;
     const late = daysBetween(i.dueOn, end);
     const band: AgeBand = late <= 0 ? "current" : late <= 30 ? "1-30" : late <= 60 ? "31-60" : late <= 90 ? "61-90" : "90+";
@@ -356,10 +356,10 @@ export interface MonthSummary {
   changedSinceClose: boolean;
 }
 
-/** Every month from the first with any activity to the current one, newest first. */
+/** Every month from the first with any activity to the current one, newest first. Invoices imported from a spreadsheet don't start it. */
 export async function closeOverview(db: Db, w: WorkspaceContext): Promise<MonthSummary[]> {
   const [b, x] = await Promise.all([loadBooks(db, w), loadExtras(db, w, null)]);
-  const first = [...b.invoices.filter((i) => i.status !== "draft").map((i) => i.issuedOn), ...b.transactions.map((t) => t.valueDate)].sort()[0];
+  const first = [...b.invoices.filter((i) => i.status !== "draft" && !i.importJobId).map((i) => i.issuedOn), ...b.transactions.map((t) => t.valueDate)].sort()[0];
   const current = w.today.slice(0, 7);
   if (!first) return [];
   const months: string[] = [];

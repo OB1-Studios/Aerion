@@ -5,6 +5,7 @@ import {
   dec,
   emailDomain,
   fixed2,
+  periodLabel,
   referenceMentionsInvoice,
   sumDec,
   taxYearOf,
@@ -14,6 +15,7 @@ import {
   type DraftContext,
   type FlagSnapshot,
   type InvoiceForMatching,
+  type IsoDate,
   type ShareEvent,
 } from "@ebo/core";
 import {
@@ -28,11 +30,13 @@ import {
   match,
   member,
   message,
+  openingBalance,
   promiseToPay,
   receivingAccount,
   transaction,
   transferLink,
   type Db,
+  type OpeningChannel,
 } from "@ebo/db";
 import { and, eq, gte } from "drizzle-orm";
 import type { WorkspaceContext } from "./context";
@@ -54,13 +58,15 @@ export interface Books {
   reminders: Array<typeof invoiceReminder.$inferSelect>;
   disputes: Array<typeof dispute.$inferSelect>;
   transfers: Array<typeof transferLink.$inferSelect>;
+  /** Proceeds from before the records began, imported from a spreadsheet (W4). */
+  openings: Array<typeof openingBalance.$inferSelect>;
   inbound: Array<typeof message.$inferSelect>;
   owners: string[];
 }
 
 export async function loadBooks(db: Db, w: WorkspaceContext): Promise<Books> {
   const id = w.ws.id;
-  const [clients, aliases, invoices, matches, transactions, accounts, compliance, claims, promises, reminders, disputes, transfers, credits, inbound, owners] = await Promise.all([
+  const [clients, aliases, invoices, matches, transactions, accounts, compliance, claims, promises, reminders, disputes, transfers, credits, inbound, owners, openings] = await Promise.all([
     db.select().from(client).where(eq(client.workspaceId, id)),
     db.select().from(clientAlias).where(eq(clientAlias.workspaceId, id)),
     db.select().from(invoice).where(eq(invoice.workspaceId, id)),
@@ -79,6 +85,7 @@ export async function loadBooks(db: Db, w: WorkspaceContext): Promise<Books> {
       .from(message)
       .where(and(eq(message.workspaceId, id), eq(message.direction, "in"), gte(message.sentAt, new Date(w.clock.getTime() - 45 * 86_400_000)))),
     db.select({ userId: member.userId }).from(member).where(and(eq(member.workspaceId, id), eq(member.role, "owner"))),
+    db.select().from(openingBalance).where(eq(openingBalance.workspaceId, id)),
   ]);
   const applied = new Map<string, ReturnType<typeof dec>>();
   for (const m of matches) applied.set(m.invoiceId, (applied.get(m.invoiceId) ?? dec(0)).plus(m.appliedAmount));
@@ -89,7 +96,7 @@ export async function loadBooks(db: Db, w: WorkspaceContext): Promise<Books> {
     aliases,
     invoices: invoices.map((i) => {
       const a = applied.get(i.id) ?? dec(0);
-      return { ...i, appliedTotal: fixed2(a), balance: fixed2(dec(i.amount).minus(a).minus(credited.get(i.id) ?? 0)) };
+      return { ...i, appliedTotal: fixed2(a), balance: fixed2(dec(i.amount).minus(i.paidBeforeImport).minus(a).minus(credited.get(i.id) ?? 0)) };
     }),
     matches,
     transactions,
@@ -100,6 +107,7 @@ export async function loadBooks(db: Db, w: WorkspaceContext): Promise<Books> {
     reminders,
     disputes,
     transfers,
+    openings,
     inbound: inbound.filter((m) => m.sentAt <= w.clock),
     owners: owners.map((o) => o.userId),
   };
@@ -117,6 +125,69 @@ export function taxYearCredits(b: Books, w: WorkspaceContext): Array<{ t: (typeo
   return b.transactions
     .filter((t) => t.kind === "credit" && t.valueDate >= year.start && t.valueDate <= w.today && BANK_ACCOUNT_KINDS.has(accountKind.get(t.receivingAccountId ?? "") ?? "") && t.matchStatus !== "duplicate")
     .map((t) => ({ t, pkr: dec(t.pkrAmount ?? (t.currency === "PKR" ? t.amount : dec(t.amount).times(w.refRate(t.currency, t.valueDate) ?? 0))) }));
+}
+
+export const OPENING_CHANNEL_LABELS: Record<OpeningChannel, string> = {
+  bank: "Into a Pakistani bank account",
+  payoneer_withdrawn: "Through Payoneer, withdrawn to a Pakistani bank",
+  payoneer_held: "Kept in Payoneer",
+  platform: "Left on a marketplace",
+  other: "Some other way, outside Pakistani banks",
+};
+
+export interface OpeningLine {
+  id: string;
+  month: string;
+  channel: OpeningChannel;
+  currency: string;
+  amount: string;
+  /** In PKR: as credited, or at the reference rate (then `pkrEstimated`). Null when no rate is known. */
+  pkr: Decimal | null;
+  pkrEstimated: boolean;
+  /** Reached a Pakistani bank (directly or withdrawn from Payoneer), so it's export proceeds banked here. */
+  banked: boolean;
+  /** The day it's valued on: the 15th of its month, or today in the current month. */
+  date: IsoDate;
+  eprcOnFile: boolean | null;
+}
+
+/**
+ * Imported opening balances in this tax year (up to today), each valued in PKR. They count in the
+ * proceeds and the banking-channel share like recorded money, so every total stays the same one.
+ */
+export function taxYearOpenings(b: Books, w: WorkspaceContext): OpeningLine[] {
+  const year = taxYearOf(w.today, w.ws.fiscalYearStartMonth);
+  return b.openings
+    .filter((o) => `${o.month}-01` >= year.start && `${o.month}-01` <= w.today)
+    .sort((x, y) => x.month.localeCompare(y.month) || x.channel.localeCompare(y.channel) || x.currency.localeCompare(y.currency))
+    .map((o) => {
+      const mid = `${o.month}-15` as IsoDate;
+      const date = mid < w.today ? mid : w.today;
+      const rate = o.currency === "PKR" ? "1" : w.refRate(o.currency, date);
+      const pkr = o.pkrAmount ? dec(o.pkrAmount) : rate ? dec(o.amount).times(rate) : null;
+      return { id: o.id, month: o.month, channel: o.channel, currency: o.currency, amount: o.amount, pkr, pkrEstimated: !o.pkrAmount && o.currency !== "PKR", banked: o.channel === "bank" || o.channel === "payoneer_withdrawn", date, eprcOnFile: o.eprcOnFile };
+    });
+}
+
+/** An opening balance as the banking-channel share sees it: Payoneer money shares the wallet's queue. */
+function openingEvents(o: OpeningLine): ShareEvent[] {
+  const label = `Opening balance for ${periodLabel(o.month)}`;
+  const base = { id: `opening:${o.id}`, date: o.date, currency: o.currency, amount: o.amount };
+  switch (o.channel) {
+    case "bank":
+      return [{ ...base, kind: "bank_credit", note: `${label}: received into a Pakistani bank account` }];
+    case "payoneer_withdrawn":
+      return [
+        { ...base, kind: "wallet_receipt", wallet: "Payoneer", note: `${label}: received into Payoneer` },
+        { ...base, id: `opening:${o.id}:withdrawn`, kind: "wallet_withdrawal", wallet: "Payoneer", note: `${label}: withdrawn from Payoneer to a Pakistani bank` },
+      ];
+    case "payoneer_held":
+      return [{ ...base, kind: "wallet_receipt", wallet: "Payoneer", note: `${label}: kept in Payoneer; counts as banked only when withdrawn` }];
+    case "platform":
+      return [{ ...base, kind: "wallet_receipt", wallet: "Marketplace (opening balance)", note: `${label}: left on a marketplace, not banked in Pakistan` }];
+    default:
+      return [{ ...base, kind: "wallet_receipt", wallet: "Other (opening balance)", note: `${label}: received outside Pakistani banks` }];
+  }
 }
 
 export function identities(b: Books): ClientIdentity[] {
@@ -154,9 +225,11 @@ export function flagSnapshot(b: Books, w: WorkspaceContext): FlagSnapshot {
       events.push({ kind: "wallet_spend", id: t.id, wallet: "Payoneer", date: t.valueDate, currency: t.currency, amount: t.amount });
     }
   }
+  const openings = taxYearOpenings(b, w);
+  for (const o of openings) events.push(...openingEvents(o));
   const bankingShare = events.length ? computeBankingShare(events, w.refRate) : null;
 
-  const proceeds = sumDec(taxYearCredits(b, w).map((c) => c.pkr));
+  const proceeds = sumDec([...taxYearCredits(b, w).map((c) => c.pkr), ...openings.flatMap((o) => (o.banked && o.pkr ? [o.pkr] : []))]);
 
   return {
     today: w.today,

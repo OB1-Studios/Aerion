@@ -1,5 +1,5 @@
 import { daysBetween, dec, fixed2, MONTH_NAMES, ROUTE_LABELS, taxYearOf, type Decimal, type IsoDate, type Route } from "@ebo/core";
-import { flagSnapshot, taxYearCredits, type Books } from "./books";
+import { flagSnapshot, taxYearCredits, taxYearOpenings, type Books } from "./books";
 import type { WorkspaceContext } from "./context";
 
 /**
@@ -62,7 +62,7 @@ export interface Dashboard {
   };
   daysToPay: { invoices: number; medianDays: number | null; medianLate: number | null };
   cost: { total: CostLine; byRoute: CostLine[] };
-  proceeds: { totalPkr: string; months: Array<{ month: string; label: string; pkr: string; credits: number; future: boolean }>; sharePct: string | null };
+  proceeds: { totalPkr: string; months: Array<{ month: string; label: string; pkr: string; credits: number; future: boolean; /** The part from imported opening balances. */ openingPkr: string }>; sharePct: string | null };
   clients: ClientLine[];
 }
 
@@ -200,7 +200,7 @@ export function dashboard(b: Books, w: WorkspaceContext): Dashboard {
   // Export proceeds by month, the same credits the PSEB estimate and the share use.
   const months: Dashboard["proceeds"]["months"] = [];
   for (let m = year.start.slice(0, 7); m <= year.end.slice(0, 7); m = nextMonth(m)) {
-    months.push({ month: m, label: MONTH_NAMES[Number(m.slice(5, 7)) - 1]!.slice(0, 3), pkr: "0.00", credits: 0, future: `${m}-01` > today });
+    months.push({ month: m, label: MONTH_NAMES[Number(m.slice(5, 7)) - 1]!.slice(0, 3), pkr: "0.00", credits: 0, future: `${m}-01` > today, openingPkr: "0.00" });
   }
   let proceeds = dec(0);
   for (const { t, pkr } of taxYearCredits(b, w)) {
@@ -209,6 +209,14 @@ export function dashboard(b: Books, w: WorkspaceContext): Dashboard {
     month.pkr = fixed2(dec(month.pkr).plus(pkr));
     month.credits++;
     proceeds = proceeds.plus(pkr);
+  }
+  // Opening balances imported for months before the records began count the same way.
+  for (const o of taxYearOpenings(b, w)) {
+    const month = months.find((x) => x.month === o.month);
+    if (!month || !o.banked || !o.pkr) continue;
+    month.pkr = fixed2(dec(month.pkr).plus(o.pkr));
+    month.openingPkr = fixed2(dec(month.openingPkr).plus(o.pkr));
+    proceeds = proceeds.plus(o.pkr);
   }
   const share = flagSnapshot(b, w).bankingShare;
 

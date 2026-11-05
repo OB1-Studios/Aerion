@@ -152,7 +152,7 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
                 <td className="text-xs text-muted">{d.source}</td>
                 <td className="text-xs text-muted">{d.model ?? "—"}</td>
                 <td>
-                  <Status value={d.parseStatus} label={d.source === "generated" ? (d.kind === "report" ? "made by the app" : "sent, on file") : d.parseStatus === "needs_review" ? "needs a person" : d.reviewReasons?.[0]?.startsWith("Set aside by") ? "set aside" : undefined} />
+                  <Status value={d.parseStatus} label={d.kind === "import" ? "imported spreadsheet" : d.source === "generated" ? (d.kind === "report" ? "made by the app" : "sent, on file") : d.parseStatus === "needs_review" ? "needs a person" : d.reviewReasons?.[0]?.startsWith("Set aside by") ? "set aside" : undefined} />
                 </td>
               </tr>
             ))}

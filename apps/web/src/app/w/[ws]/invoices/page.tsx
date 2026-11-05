@@ -40,9 +40,14 @@ export default async function InvoicesPage({ params, searchParams }: { params: P
         sub="What clients owe, what has arrived against each invoice, and what is overdue."
         actions={
           canAct(role) ? (
-            <Link href={`${base}/invoices/new`} className="btn btn-primary">
-              New invoice
-            </Link>
+            <>
+              <Link href={`${base}/import#invoices`} className="btn btn-secondary">
+                Import
+              </Link>
+              <Link href={`${base}/invoices/new`} className="btn btn-primary">
+                New invoice
+              </Link>
+            </>
           ) : null
         }
       />
@@ -57,7 +62,7 @@ export default async function InvoicesPage({ params, searchParams }: { params: P
         {rows.length ? (
           <Table head={["Invoice", "Client", "Amount", "Received", "Balance", "Due", "Status"]}>
             {rows.map(({ inv, client: name, applied, credited }) => {
-              const balance = dec(inv.amount).minus(applied).minus(credited);
+              const balance = dec(inv.amount).minus(inv.paidBeforeImport).minus(applied).minus(credited);
               const overdue = (inv.status === "sent" || inv.status === "part_paid") && inv.dueOn < today && balance.gt(0);
               return (
                 <tr key={inv.id} className="hover:bg-canvas">

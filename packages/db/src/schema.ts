@@ -286,6 +286,8 @@ export const invoice = pgTable(
       .references(() => client.id),
     currency: char("currency", { length: 3 }).notNull(),
     amount: money("amount").notNull(),
+    /** Received before the workspace's records began (an imported open invoice, W4): part of the amount, settled outside these books. */
+    paidBeforeImport: money("paid_before_import").notNull().default("0"),
     issuedOn: day("issued_on").notNull(),
     dueOn: day("due_on").notNull(),
     route: text("route").$type<Route>().notNull(),
@@ -294,6 +296,8 @@ export const invoice = pgTable(
     status: text("status").$type<InvoiceStatus>().notNull().default("draft"),
     pdfDocumentId: uuid("pdf_document_id"),
     sentAt: ts("sent_at"),
+    /** Set when the invoice came from a spreadsheet (W4); its months before the records began aren't closed here. */
+    importJobId: uuid("import_job_id"),
     createdAt: createdAt(),
   },
   (t) => [unique("invoice_ws_number").on(t.workspaceId, t.number), index("invoice_ws_status_idx").on(t.workspaceId, t.status)],
@@ -620,6 +624,8 @@ export type DocumentKind =
   | "client_tax_form"
   /** Made by the app, such as the month-end report. */
   | "report"
+  /** A spreadsheet a person imported (W4), kept as the record of where the rows came from; never read by a run. */
+  | "import"
   | "other";
 
 export const document = pgTable(
@@ -864,10 +870,51 @@ export const importJob = pgTable("import_job", {
   kind: text("kind").$type<"clients" | "invoices" | "opening_balances" | "timesheet" | "marketplace">().notNull(),
   documentId: uuid("document_id"),
   status: text("status").$type<"pending" | "validated" | "applied" | "failed">().notNull().default("pending"),
-  rowErrors: jsonb("row_errors").$type<Array<{ row: number; error: string }>>().notNull().default([]),
+  /** Every problem found, by line of the file (1 is the heading row) and column. */
+  rowErrors: jsonb("row_errors").$type<Array<{ row: number; column?: string; error: string }>>().notNull().default([]),
+  summary: jsonb("summary").$type<ImportSummary>().notNull().default({}),
   createdBy: text("created_by"),
   createdAt: createdAt(),
 });
+
+export interface ImportSummary {
+  /** Data rows in the file. */
+  rows?: number;
+  /** How each heading in the file was read: its heading, then the template's column. */
+  columns?: Array<[string, string]>;
+  /** Headings that aren't in the template, left out. */
+  ignored?: string[];
+  appliedAt?: string;
+  appliedBy?: string;
+  /** What applying it did, such as { created: 12 } or { replaced: 4, created: 6 }. */
+  result?: Record<string, number>;
+}
+
+export type OpeningChannel = "bank" | "payoneer_withdrawn" | "payoneer_held" | "platform" | "other";
+
+/**
+ * Export proceeds from earlier in the tax year, before the workspace's own records began (W4),
+ * one row per month, channel and currency. They count in the banking-channel share and the
+ * PSEB estimate as if the money had been recorded.
+ */
+export const openingBalance = pgTable(
+  "opening_balance",
+  {
+    id: id(),
+    workspaceId: wsId(),
+    /** "2026-08" */
+    month: text("month").notNull(),
+    channel: text("channel").$type<OpeningChannel>().notNull(),
+    currency: char("currency", { length: 3 }).notNull(),
+    amount: money("amount").notNull(),
+    /** As the bank credited it; when empty, worked out at the reference rate and shown as estimated. */
+    pkrAmount: money("pkr_amount"),
+    eprcOnFile: boolean("eprc_on_file"),
+    importJobId: uuid("import_job_id"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("opening_balance_unique").on(t.workspaceId, t.month, t.channel, t.currency)],
+);
 
 export const exportJob = pgTable("export_job", {
   id: id(),
