@@ -2,6 +2,7 @@ import { document, getDb, member, storageFromEnv, workspace } from "@ebo/db";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { twoFactorRefusal } from "@/lib/two-factor";
 
 /**
  * Serves a stored document to members of its workspace only. Files come from outside
@@ -13,12 +14,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ws: str
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Sign in first.", { status: 401 });
   const [row] = await getDb()
-    .select({ doc: document })
+    .select({ doc: document, role: member.role, settings: workspace.settings, isDemo: workspace.isDemo })
     .from(document)
     .innerJoin(workspace, eq(workspace.id, document.workspaceId))
     .innerJoin(member, and(eq(member.workspaceId, workspace.id), eq(member.userId, session.user.id)))
     .where(and(eq(workspace.slug, slug), eq(document.id, id)));
   if (!row) return new Response("Not found.", { status: 404 });
+  const refused = twoFactorRefusal(row, row.role, session.user);
+  if (refused) return refused;
   const { doc } = row;
   const body = await storageFromEnv().get(doc.storagePath);
   const stored = doc.mimeType ?? "application/octet-stream";

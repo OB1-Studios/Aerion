@@ -3,6 +3,7 @@ import { sampleCreditAdvice } from "@ebo/engine";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { twoFactorRefusal } from "@/lib/two-factor";
 
 /**
  * A SIMULATED credit advice (PDF) paying this workspace's oldest open wire-paid invoice, for
@@ -13,11 +14,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ws: str
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Sign in first.", { status: 401 });
   const [row] = await getDb()
-    .select({ id: workspace.id })
+    .select({ id: workspace.id, role: member.role, settings: workspace.settings, isDemo: workspace.isDemo })
     .from(workspace)
     .innerJoin(member, and(eq(member.workspaceId, workspace.id), eq(member.userId, session.user.id)))
     .where(eq(workspace.slug, slug));
   if (!row) return new Response("Not found.", { status: 404 });
+  const refused = twoFactorRefusal(row, row.role, session.user);
+  if (refused) return refused;
   const sample = await sampleCreditAdvice(getDb(), row.id);
   if (!sample) return new Response("Every invoice paid by bank wire is settled; there's nothing for a sample to pay.", { status: 404 });
   return new Response(Buffer.from(sample.bytes), {

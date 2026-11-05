@@ -3,6 +3,7 @@ import { taxPackKey } from "@ebo/engine";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { twoFactorRefusal } from "@/lib/two-factor";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -13,12 +14,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ws: str
   if (!session) return new Response("Sign in first.", { status: 401 });
   if (!UUID.test(id)) return new Response("Not found.", { status: 404 });
   const [row] = await getDb()
-    .select({ job: exportJob, slug: workspace.slug })
+    .select({ job: exportJob, slug: workspace.slug, role: member.role, settings: workspace.settings, isDemo: workspace.isDemo })
     .from(exportJob)
     .innerJoin(workspace, eq(workspace.id, exportJob.workspaceId))
     .innerJoin(member, and(eq(member.workspaceId, workspace.id), eq(member.userId, session.user.id)))
     .where(and(eq(workspace.slug, slug), eq(exportJob.id, id), eq(exportJob.kind, "tax_pack"), eq(exportJob.status, "done")));
   if (!row) return new Response("Not found.", { status: 404 });
+  const refused = twoFactorRefusal(row, row.role, session.user);
+  if (refused) return refused;
   let body: Uint8Array;
   try {
     body = await storageFromEnv().get(taxPackKey(row.job.workspaceId, row.job.id));

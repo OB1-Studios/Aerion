@@ -23,8 +23,13 @@ export function twoFactorUnavailable(p: Person): string | null {
 }
 
 /** The workspace requires two-factor sign-in for this person's role, and they haven't set it up. */
-export function mustSetUpTwoFactor(ws: Workspace, role: Role, p: Person): boolean {
+export function mustSetUpTwoFactor(ws: Pick<Workspace, "settings" | "isDemo">, role: Role, p: Person): boolean {
   return !!ws.settings?.requireTwoFactor && !ws.isDemo && TWO_FACTOR_ROLES.includes(role) && !p.twoFactorEnabled && !p.isAnonymous;
+}
+
+/** File routes don't go through requireWorkspace: the same rule, as a refusal to send the file. */
+export function twoFactorRefusal(ws: Pick<Workspace, "settings" | "isDemo">, role: Role, p: Person): Response | null {
+  return mustSetUpTwoFactor(ws, role, p) ? new Response("This workspace requires two-factor sign-in for your role. Set it up under Your account, then try again.", { status: 403 }) : null;
 }
 
 /** Names of the workspaces that require this person to keep two-factor sign-in on. */

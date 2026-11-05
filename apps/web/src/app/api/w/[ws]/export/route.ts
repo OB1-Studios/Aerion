@@ -2,6 +2,7 @@ import { getDb, member, workspace } from "@ebo/db";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { twoFactorRefusal } from "@/lib/two-factor";
 import { isIsoDate } from "@ebo/core";
 import { creditsCsv, shareCsv, taxYearFile } from "@/lib/tax-file";
 
@@ -11,11 +12,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ ws: stri
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return new Response("Sign in first.", { status: 401 });
   const [row] = await getDb()
-    .select({ ws: workspace })
+    .select({ ws: workspace, role: member.role, settings: workspace.settings, isDemo: workspace.isDemo })
     .from(workspace)
     .innerJoin(member, and(eq(member.workspaceId, workspace.id), eq(member.userId, session.user.id)))
     .where(eq(workspace.slug, slug));
   if (!row) return new Response("Not found.", { status: 404 });
+  const refused = twoFactorRefusal(row, row.role, session.user);
+  if (refused) return refused;
 
   const q = new URL(req.url).searchParams;
   const year = q.get("year");
