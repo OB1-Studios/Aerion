@@ -37,6 +37,7 @@ describe("the Monday run's flags (data spec section 9, expected summary)", () =>
     expect(f.evidence["days.overdue"]).toEqual({ type: "int", value: 8 });
     expect(f.evidence["reminder.stage"]).toEqual({ type: "int", value: 2 });
     expect(f.evidence["reminder.last_sent_stage"]).toEqual({ type: "int", value: 1 });
+    expect(f.summary).toBe("INV-2026-024 (Thames Ledger Ltd) is 8 business days overdue; reminder 2 is due (reminder 1 was sent).");
   });
 
   it("missing ePRC for H1 is 27 days old; the new credits are still inside the 14-day wait", () => {
