@@ -298,6 +298,13 @@ export async function seedOffice(db: Db, storage: Storage, opts: SeedWorkspaceOp
   );
   rows.invoiceReminder.push({ workspaceId: ws, invoiceId: invoiceId.get("INV-2026-024")!, stage: 1, sentOn: "2026-10-23" });
 
+  // Two conversions from the ESFCA, in months already closed (W14). Rates sit a little under the reference.
+  for (const [on, amount, ratePct, ref] of [["2026-08-12", "8000.00", "0.990", "FXC-0812-0041"], ["2026-09-16", "10000.00", "0.980", "FXC-0916-0057"]] as const) {
+    const fxRate = dec(refRate("USD", on)).times(ratePct).toFixed(4);
+    const pkrAmount = dec(amount).times(fxRate).toFixed(2);
+    rows.transaction.push({ workspaceId: ws, kind: "fx_conversion", receivingAccountId: acc.esfca, valueDate: on, amount, currency: "USD", pkrAmount, fxRateApplied: fxRate, adviceNumber: ref, dedupeKey: `conversion:${acc.esfca}:${on}:${amount}:${pkrAmount}`, matchStatus: "ignored", createdAt: pkt(on, "12:00") });
+  }
+
   await storeInbox(rows, storage, ws, officeInbox());
   // July to September were closed by finance before the demo begins (without the app's report);
   // October is the month to close after the Monday run.

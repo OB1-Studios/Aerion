@@ -16,7 +16,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   const { user, ws, role } = await requireWorkspace(slug);
   const db = getDb();
   const n = (rows: Array<{ n: number }>) => Number(rows[0]?.n ?? 0);
-  const [drafts, tasks, review, unmatched, flags, scheduled, mine, accounts, clients] = await Promise.all([
+  const [drafts, tasks, review, unmatched, flags, scheduled, mine, accounts, clients, esfcas] = await Promise.all([
     db.select({ n: count() }).from(draftAction).where(and(eq(draftAction.workspaceId, ws.id), inArray(draftAction.status, ["draft", "blocked"]))).then(n),
     db.select({ n: count() }).from(task).where(and(eq(task.workspaceId, ws.id), eq(task.status, "open"))).then(n),
     db.select({ n: count() }).from(document).where(and(eq(document.workspaceId, ws.id), eq(document.parseStatus, "needs_review"))).then(n),
@@ -26,6 +26,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
     myWorkspaces(user.id),
     db.select({ n: count() }).from(receivingAccount).where(and(eq(receivingAccount.workspaceId, ws.id), eq(receivingAccount.active, true))).then(n),
     db.select({ n: count() }).from(client).where(eq(client.workspaceId, ws.id)).then(n),
+    db.select({ n: count() }).from(receivingAccount).where(and(eq(receivingAccount.workspaceId, ws.id), eq(receivingAccount.kind, "esfca"), eq(receivingAccount.active, true))).then(n),
   ]);
   // A failure here shouldn't take the page down: the count is only a pointer.
   const unread = await syncNotifications(db, ws, user.id, role).then(
@@ -43,6 +44,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
     { href: `${base}/runs`, label: "Runs" },
     { href: `${base}/flags`, label: "Flags", count: flags },
     { href: `${base}/payments`, label: "Payments" },
+    ...(esfcas ? [{ href: `${base}/accounts/esfca`, label: "ESFCA" }] : []),
     { href: `${base}/invoices`, label: "Invoices" },
     { href: `${base}/clients`, label: "Clients" },
     { href: `${base}/documents`, label: "Documents" },

@@ -1,8 +1,9 @@
 import { addDays, Decimal, dec, formatMoney, normalizeRef, weekday, type IsoDate } from "@ebo/core";
-import { receivingAccount, transaction, type Db, type document } from "@ebo/db";
-import { and, eq } from "drizzle-orm";
+import { receivingAccount, transaction, transferLink, type Db, type document } from "@ebo/db";
+import { and, eq, ne } from "drizzle-orm";
 import { workspaceToday } from "./invoicing";
 import type { Workspace } from "./context";
+import { isConversionRupees } from "./esfca";
 import { STATEMENT_HEADER } from "./readers/offline";
 import { csvRecords, parseAmount, parseDate } from "./readers/text";
 
@@ -167,15 +168,25 @@ export async function importStatement(db: Db, workspaceId: string, doc: Doc, tex
   const recorded = forAccount(acc);
   const { pairs, unmatched } = tieCredits(s.rows, recorded, s.currency);
 
+  // Rupees from a conversion we've recorded aren't new money. See esfca.ts.
+  const conversions =
+    s.currency === "PKR"
+      ? await db.select().from(transaction).where(and(eq(transaction.workspaceId, workspaceId), eq(transaction.kind, "fx_conversion"), ne(transaction.currency, "PKR")))
+      : [];
+  const linked = new Set(
+    conversions.length ? (await db.select({ from: transferLink.fromTransactionId }).from(transferLink).where(eq(transferLink.workspaceId, workspaceId))).map((l) => l.from) : [],
+  );
+
   const onStatement = [...pairs.values()].map((t) => t.id);
   let created = 0;
   for (const row of unmatched) {
     const key = `statement:${acc.id}:${row.valueDate}:${row.credit.toFixed(2)}:${normalizeRef(row.reference ?? row.narration).slice(0, 40)}`;
+    const conversion = conversions.find((c) => !linked.has(c.id) && isConversionRupees(c, row.valueDate, row.credit));
     const [row0] = await db
       .insert(transaction)
       .values({
         workspaceId,
-        kind: "credit",
+        kind: conversion ? "fx_conversion" : "credit",
         receivingAccountId: acc.id,
         valueDate: row.valueDate,
         amount: row.credit.toFixed(2),
@@ -187,12 +198,15 @@ export async function importStatement(db: Db, workspaceId: string, doc: Doc, tex
         sourceDocumentId: doc.id,
         sourceLocator: { document: doc.originalName, row: row.line },
         dedupeKey: key,
-        matchStatus: "pending",
+        matchStatus: conversion ? "ignored" : "pending",
       })
       .onConflictDoNothing({ target: [transaction.workspaceId, transaction.dedupeKey] })
       .returning({ id: transaction.id });
     if (row0) {
-      created++;
+      if (conversion) {
+        linked.add(conversion.id);
+        await db.insert(transferLink).values({ workspaceId, fromTransactionId: conversion.id, toTransactionId: row0.id });
+      } else created++;
       onStatement.push(row0.id);
     } else {
       const [again] = await db.select({ id: transaction.id }).from(transaction).where(and(eq(transaction.workspaceId, workspaceId), eq(transaction.dedupeKey, key)));
@@ -239,6 +253,7 @@ export async function sampleStatements(db: Db, ws: Workspace): Promise<Array<{ n
   const end = lastDay(month);
   const accounts = (await db.select().from(receivingAccount).where(eq(receivingAccount.workspaceId, ws.id))).filter((a) => a.active && STATEMENT_ACCOUNT_KINDS.has(a.kind));
   const credits = await db.select().from(transaction).where(and(eq(transaction.workspaceId, ws.id), eq(transaction.kind, "credit")));
+  const moved = (await db.select().from(transaction).where(and(eq(transaction.workspaceId, ws.id), eq(transaction.kind, "fx_conversion")))).filter((c) => c.currency !== "PKR");
   const out: Array<{ name: string; bytes: Uint8Array; month: string; account: string }> = [];
   const label = monthName(month).toUpperCase();
   for (const a of accounts) {
@@ -255,6 +270,11 @@ export async function sampleStatements(db: Db, ws: Workspace): Promise<Array<{ n
       credit: amountInAccount(t, a.currency)!,
     }));
     const debit = (on: IsoDate, narration: string, amount: string) => lines.push({ on: businessDay(on, on === end), narration, reference: "", debit: dec(amount), credit: dec(0) });
+    for (const c of moved.filter((c) => c.valueDate >= start && c.valueDate <= end)) {
+      const ref = c.adviceNumber ?? "";
+      if (a.currency === "PKR") lines.push({ on: c.valueDate, narration: "FX CONVERSION PROCEEDS FROM ESFCA", reference: ref, debit: dec(0), credit: dec(c.pkrAmount ?? "0") });
+      else if (c.receivingAccountId === a.id) lines.push({ on: c.valueDate, narration: "FX CONVERSION TO PKR", reference: ref, debit: dec(c.amount), credit: dec(0) });
+    }
     if (a.currency === "PKR") {
       debit(start, `SALARY TRANSFER ${label} PAYROLL`, "2350000.00");
       debit(`${month}-05`, `OFFICE RENT ${label}`, "380000.00");
