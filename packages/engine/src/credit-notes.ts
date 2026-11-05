@@ -35,7 +35,7 @@ export async function issueCredit(db: Db, ws: Workspace, invoiceId: string, inpu
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`credit_note:${ws.id}`}))`);
     const [received] = await tx.select({ total: sql<string>`coalesce(sum(${match.appliedAmount}), 0)::text` }).from(match).where(eq(match.invoiceId, inv.id));
     const earlier = await tx.select({ amount: creditNote.amount }).from(creditNote).where(eq(creditNote.invoiceId, inv.id));
-    const applied = fixed2(received?.total ?? "0");
+    const applied = fixed2(dec(received?.total ?? "0").plus(inv.paidBeforeImport));
     const target = { number: inv.number, status: inv.status, currency: inv.currency, applied, balance: fixed2(dec(inv.amount).minus(applied).minus(sumDec(earlier.map((c) => c.amount)))) };
     const { problems, value } = checkCredit(input, target);
     if (!value) return { ok: false as const, problems };

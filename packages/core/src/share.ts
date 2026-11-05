@@ -12,11 +12,15 @@ import type { RefRate } from "./matching";
  * (verify how the 80% rule is actually measured: data spec open item 4)
  */
 
-export type ShareEvent =
+export type ShareEvent = (
   | { kind: "bank_credit"; id: string; date: IsoDate; currency: string; amount: string }
   | { kind: "wallet_receipt"; id: string; wallet: string; date: IsoDate; currency: string; amount: string }
   | { kind: "wallet_withdrawal"; id: string; wallet: string; date: IsoDate; currency: string; amount: string }
-  | { kind: "wallet_spend"; id: string; wallet: string; date: IsoDate; currency: string; amount: string };
+  | { kind: "wallet_spend"; id: string; wallet: string; date: IsoDate; currency: string; amount: string }
+) & {
+  /** Replaces the line's usual note, as for an opening balance a person imported. */
+  note?: string;
+};
 
 export interface ShareLine {
   id: string;
@@ -77,12 +81,12 @@ export function computeBankingShare(events: ShareEvent[], refRate: RefRate): Ban
       const usd = amount.times(rate);
       if (e.kind === "bank_credit") {
         direct = direct.plus(usd);
-        lines.push({ id: e.id, date: e.date, kind: e.kind, currency: e.currency, amount: fixed2(amount), usd: fixed2(usd), counts: "numerator_and_denominator", note: "Received into a Pakistani bank account" });
+        lines.push({ id: e.id, date: e.date, kind: e.kind, currency: e.currency, amount: fixed2(amount), usd: fixed2(usd), counts: "numerator_and_denominator", note: e.note ?? "Received into a Pakistani bank account" });
       } else {
         walletReceived = walletReceived.plus(usd);
         const key = `${e.wallet}|${e.currency}`;
         lots.set(key, [...(lots.get(key) ?? []), { amount, usdPerUnit: rate }]);
-        lines.push({ id: e.id, date: e.date, kind: e.kind, currency: e.currency, amount: fixed2(amount), usd: fixed2(usd), counts: "denominator_only", note: `Received into ${e.wallet}; counts as banked only when withdrawn` });
+        lines.push({ id: e.id, date: e.date, kind: e.kind, currency: e.currency, amount: fixed2(amount), usd: fixed2(usd), counts: "denominator_only", note: e.note ?? `Received into ${e.wallet}; counts as banked only when withdrawn` });
       }
       continue;
     }
@@ -103,10 +107,10 @@ export function computeBankingShare(events: ShareEvent[], refRate: RefRate): Ban
     lots.set(key, queue);
     if (e.kind === "wallet_withdrawal") {
       walletWithdrawn = walletWithdrawn.plus(usd);
-      lines.push({ id: e.id, date: e.date, kind: e.kind, currency: e.currency, amount: fixed2(amount), usd: fixed2(usd), counts: "numerator_and_denominator", note: `Withdrawn from ${e.wallet} to a Pakistani bank` });
+      lines.push({ id: e.id, date: e.date, kind: e.kind, currency: e.currency, amount: fixed2(amount), usd: fixed2(usd), counts: "numerator_and_denominator", note: e.note ?? `Withdrawn from ${e.wallet} to a Pakistani bank` });
     } else {
       walletSpent = walletSpent.plus(usd);
-      lines.push({ id: e.id, date: e.date, kind: e.kind, currency: e.currency, amount: fixed2(amount), usd: fixed2(usd), counts: "not_proceeds", note: `Spent from ${e.wallet}; never reaches a Pakistani bank` });
+      lines.push({ id: e.id, date: e.date, kind: e.kind, currency: e.currency, amount: fixed2(amount), usd: fixed2(usd), counts: "not_proceeds", note: e.note ?? `Spent from ${e.wallet}; never reaches a Pakistani bank` });
     }
   }
 

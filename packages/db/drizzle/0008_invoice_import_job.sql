@@ -1,0 +1,1 @@
+ALTER TABLE "invoice" ADD COLUMN "import_job_id" uuid;

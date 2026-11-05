@@ -1,9 +1,9 @@
-import { addDays, isIsoDate, taxYearOf } from "@ebo/core";
-import { workspaceToday } from "@ebo/engine";
+import { addDays, isIsoDate, periodLabel, taxYearOf } from "@ebo/core";
+import { OPENING_CHANNEL_LABELS, taxYearOpenings, workspaceToday } from "@ebo/engine";
 import Link from "next/link";
 import { Badge, Card, Empty, KeyValues, Notice, PageHeader, Stat, Table, cx } from "@/components/ui";
 import { clock, day, money } from "@/lib/format";
-import { canExport, requireWorkspace } from "@/lib/session";
+import { canAct, canExport, requireWorkspace } from "@/lib/session";
 import { builtPacks, taxPackPreview } from "@/lib/tax-file";
 import { buildTaxPackAction } from "./actions";
 import { ActionForm } from "@/components/action-form";
@@ -20,6 +20,7 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
   const asked = q.year && isIsoDate(q.year) ? q.year : undefined;
   const [{ file: f, summary: s }, packs] = await Promise.all([taxPackPreview(ws, asked), builtPacks(ws.id)]);
   const share = f.share;
+  const openings = taxYearOpenings(f.books, f.context);
   const missing = f.lines.filter((l) => !l.ownTransfer && (l.eprc === "missing" || l.eprc === "requested")).length;
   const base = `/w/${slug}`;
   const csv = `/api/w/${slug}/export`;
@@ -219,6 +220,42 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
           </div>
         )}
       </Card>
+
+      {openings.length ? (
+        <Card title="Opening balances" pad={false} className="mb-6" id="opening">
+          <p className="px-4 pt-3 text-sm text-muted">Proceeds from before the records here began, imported from a spreadsheet. They count in the share and the PSEB estimate above.</p>
+          <Table head={["Month", "How it came in", "Amount", "PKR", "ePRC"]}>
+            {openings.map((o) => (
+              <tr key={o.id}>
+                <td className="whitespace-nowrap">{periodLabel(o.month)}</td>
+                <td>{OPENING_CHANNEL_LABELS[o.channel]}</td>
+                <td className="whitespace-nowrap text-right tabular-nums">{money(o.amount, o.currency)}</td>
+                <td className="whitespace-nowrap text-right tabular-nums text-muted">
+                  {o.currency === "PKR" || !o.pkr ? "" : money(o.pkr.toFixed(2), "PKR")}
+                  {o.pkrEstimated && o.pkr ? " est." : ""}
+                </td>
+                <td>{o.eprcOnFile == null ? "—" : o.eprcOnFile ? "on file" : "not on file"}</td>
+              </tr>
+            ))}
+          </Table>
+          {canAct(role) && isCurrent ? (
+            <p className="px-4 py-3 text-sm">
+              <Link href={`${base}/import#opening_balances`} className="link">
+                Import them again
+              </Link>{" "}
+              <span className="text-muted">(a new file replaces these)</span>
+            </p>
+          ) : null}
+        </Card>
+      ) : canAct(role) && isCurrent ? (
+        <p className="mb-6 text-sm text-muted">
+          Started here partway through the tax year?{" "}
+          <Link href={`${base}/import#opening_balances`} className="link">
+            Import opening balances
+          </Link>{" "}
+          so the share and the PSEB estimate cover the whole year.
+        </p>
+      ) : null}
 
       {share ? (
         <Card title="Banking-channel share: the working" pad={false} id="share">

@@ -32,11 +32,11 @@ export default async function SetupPage({ params, searchParams }: { params: Prom
   const owner = role === "owner";
   const base = `/w/${slug}`;
   const s = ws.settings ?? {};
-  const steps: Array<{ done: boolean; title: string; text: string; href: string; cta: string }> = [
+  const steps: Array<{ done: boolean; title: string; text: string; href: string; cta: string; alt?: { href: string; cta: string } }> = [
     { done: !!ws.legalName && !!ws.ntn, title: "Your business details", text: "Legal name and NTN go on every invoice; the PSEB expiry and ATL status decide which reminders you get.", href: "#business", cta: "Fill in" },
     { done: accounts.some((a) => a.active), title: "Where money arrives", text: "Your ESFCA, PKR account or Payoneer. Invoices quote the exact details, and the agent knows where to look for payments.", href: "#accounts", cta: "Add an account" },
-    { done: clients > 0, title: "Your clients", text: "Who you invoice, their currency and terms, and the names their payments arrive under.", href: `${base}/clients/new`, cta: "Add a client" },
-    { done: invoices > 0, title: "Your first invoice", text: "Write it here, download the PDF, and send it after approval. The agent then watches for the payment.", href: `${base}/invoices/new`, cta: "New invoice" },
+    { done: clients > 0, title: "Your clients", text: "Who you invoice, their currency and terms, and the names their payments arrive under.", href: `${base}/clients/new`, cta: "Add a client", alt: { href: `${base}/import#clients`, cta: "import a spreadsheet" } },
+    { done: invoices > 0, title: "Your first invoice", text: "Write it here, download the PDF, and send it after approval. The agent then watches for the payment.", href: `${base}/invoices/new`, cta: "New invoice", alt: { href: `${base}/import#invoices`, cta: "import open invoices" } },
     { done: !!mailbox, title: "The finance mailbox (optional)", text: "Connect the mailbox bank advices and client replies arrive in. Each run reads the new mail, and approved emails go out from it.", href: "#mailbox", cta: "Connect" },
     { done: documents > 0, title: "Bank documents", text: "Upload credit advices, PRCs or a bank statement export, and the agent reads them and matches the money to invoices.", href: `${base}/documents`, cta: "Upload" },
   ];
@@ -179,6 +179,14 @@ export default async function SetupPage({ params, searchParams }: { params: Prom
                         <Link href={x.href} className="mt-1 inline-block text-xs font-medium text-accent hover:underline">
                           {x.cta} →
                         </Link>
+                        {x.alt ? (
+                          <>
+                            <span className="text-xs text-muted"> or </span>
+                            <Link href={x.alt.href} className="text-xs font-medium text-accent hover:underline">
+                              {x.alt.cta} →
+                            </Link>
+                          </>
+                        ) : null}
                       </>
                     ) : null}
                   </span>

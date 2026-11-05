@@ -140,8 +140,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
       value: Number(m.pkr),
       future: m.future,
       capLabel: i === best || (nowToo && i === now) ? compact(Number(m.pkr), g) : undefined,
-      aria: m.future ? `${periodLabel(m.month)}: still to come` : `${when}: ${rupees(m.pkr, g)} from ${plural(m.credits, "credit")}`,
-      tip: { value: rupees(m.pkr, g), lines: [when, plural(m.credits, "credit")] },
+      aria: m.future ? `${periodLabel(m.month)}: still to come` : `${when}: ${rupees(m.pkr, g)} from ${plural(m.credits, "credit")}${Number(m.openingPkr) > 0 ? " and an opening balance" : ""}`,
+      tip: { value: rupees(m.pkr, g), lines: [when, `${plural(m.credits, "credit")}${Number(m.openingPkr) > 0 ? `, plus ${rupees(m.openingPkr, g)} opening balance` : ""}`] },
     };
   });
 
@@ -298,7 +298,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
                           {periodLabel(m.month)}
                           {m.month === thisMonth ? <span className="text-muted"> so far</span> : null}
                         </td>
-                        <td className="tabular-nums">{m.credits}</td>
+                        <td className="tabular-nums">
+                          {m.credits}
+                          {Number(m.openingPkr) > 0 ? <span className="text-muted"> + opening balance</span> : null}
+                        </td>
                         <td className="whitespace-nowrap tabular-nums">{rupees(m.pkr, g)}</td>
                       </tr>
                     ))}

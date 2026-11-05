@@ -46,9 +46,12 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   ]);
   const applied = sumDec(matches.map(({ m }) => m.appliedAmount));
   const credited = sumDec(credits.map(({ c }) => c.amount));
-  const balance = dec(inv.amount).minus(applied).minus(credited);
+  // Money that came in before the records began (an imported invoice) counts as received.
+  const before = dec(inv.paidBeforeImport);
+  const received = applied.plus(before);
+  const balance = dec(inv.amount).minus(received).minus(credited);
   const owed = (balance.gt(0) ? balance : dec(0)).toFixed(2);
-  const kinds = creditKindsAllowed({ status: inv.status, applied: applied.toFixed(2), balance: owed });
+  const kinds = creditKindsAllowed({ status: inv.status, applied: received.toFixed(2), balance: owed });
   const voided = inv.status === "void" ? credits.find(({ c }) => c.kind === "void")?.c : undefined;
   const recorded = q.credited ? credits.find(({ c }) => c.number === q.credited)?.c : undefined;
   const count = (n: string | undefined, one: string) => (Number(n) > 0 ? `${n} ${one}${n === "1" ? "" : "s"}` : "");
@@ -159,8 +162,16 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
             </Card>
           ) : null}
           <Card title="Money received against it" pad={false}>
-            {matches.length ? (
+            {matches.length || before.gt(0) ? (
               <Table head={["Date", "Payment", "Settles", "Explanation"]}>
+                {before.gt(0) ? (
+                  <tr>
+                    <td className="whitespace-nowrap text-muted">Earlier</td>
+                    <td className="whitespace-nowrap">Before the records began</td>
+                    <td className="whitespace-nowrap tabular-nums">{money(inv.paidBeforeImport, inv.currency)}</td>
+                    <td className="text-xs text-muted">Already paid when the invoice was imported from a spreadsheet.</td>
+                  </tr>
+                ) : null}
                 {matches.map(({ m, tx }) => (
                   <tr key={m.id}>
                     <td className="whitespace-nowrap tabular-nums text-muted">{tx.valueDate}</td>
@@ -181,7 +192,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
             )}
             <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 border-t border-line px-4 py-3 text-sm">
               <span className="text-muted">
-                Received <b className="tabular-nums text-ink">{money(applied.toFixed(2), inv.currency)}</b>
+                Received <b className="tabular-nums text-ink">{money(received.toFixed(2), inv.currency)}</b>
               </span>
               {credits.length ? (
                 <span className="text-muted">

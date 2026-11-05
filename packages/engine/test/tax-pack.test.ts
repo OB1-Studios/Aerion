@@ -78,8 +78,8 @@ describe.skipIf(!dbUp)("tax pack", () => {
     const snap = flagSnapshot(await loadBooks(db, w), w);
     const income = rows(csv("income-by-month.csv"));
     const credits = income.slice(0, -1).reduce((s, l) => s + Number(l.split(",")[2]), 0);
-    expect(income.slice(0, -1).every((l) => /^2026-(0[7-9]|1[01]),[A-Z]{3},\d+,\d+\.\d\d,\d+\.\d\d$/.test(l))).toBe(true);
-    expect(income.at(-1)).toBe(`total,PKR,${credits},,${snap.taxYearProceedsPkr}`);
+    expect(income.slice(0, -1).every((l) => /^2026-(0[7-9]|1[01]),[A-Z]{3},\d+,\d+\.\d\d,\d+\.\d\d,records$/.test(l))).toBe(true);
+    expect(income.at(-1)).toBe(`total,PKR,${credits},,${snap.taxYearProceedsPkr},`);
     expect(r.summary).toMatchObject({ year: { label: "2026-27" }, asOf: "2026-11-02", proceedsPkr: snap.taxYearProceedsPkr, sharePct: snap.bankingShare!.sharePct, minSharePct: "80" });
 
     // Each credit's certificates, with the files on record in documents/.

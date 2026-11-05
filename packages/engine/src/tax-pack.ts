@@ -1,7 +1,7 @@
 import { dateInZone, dec, eprcStatus, fixed2, formatDateLong, formatMoney, sumDec, type IsoDate } from "@ebo/core";
 import { complianceItem, creditNote, document, exportJob, flag, invoice, workspacePrefix, type Db, type Storage } from "@ebo/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { taxYearCredits } from "./books";
+import { taxYearCredits, taxYearOpenings } from "./books";
 import { audit, loadContext, workspaceClock, type Workspace, type WorkspaceContext } from "./context";
 import { creditsCsv, shareCsv, taxYearFile, toCsv, type TaxYearFile } from "./tax-file";
 import { zip, type ZipEntry } from "./zip";
@@ -60,16 +60,26 @@ export async function gatherTaxPack(db: Db, storage: Storage | null, w0: Workspa
   const g = { grouping: ws.numberGrouping };
 
   // Export proceeds banked in Pakistan by month and currency: the same credits as the share and the PSEB estimate.
-  const byMonth = new Map<string, { month: string; currency: string; credits: number; amount: ReturnType<typeof dec>; pkr: ReturnType<typeof dec> }>();
+  // Opening balances imported for months before the records began are rows of their own.
+  type IncomeRow = { month: string; currency: string; credits: number; amount: ReturnType<typeof dec>; pkr: ReturnType<typeof dec>; source: string };
+  const byMonth = new Map<string, IncomeRow>();
   for (const { t, pkr } of taxYearCredits(books, w)) {
     const k = `${t.valueDate.slice(0, 7)} ${t.currency}`;
-    const row = byMonth.get(k) ?? { month: t.valueDate.slice(0, 7), currency: t.currency, credits: 0, amount: dec(0), pkr: dec(0) };
+    const row = byMonth.get(k) ?? { month: t.valueDate.slice(0, 7), currency: t.currency, credits: 0, amount: dec(0), pkr: dec(0), source: "records" };
     row.credits++;
     row.amount = row.amount.plus(t.amount);
     row.pkr = row.pkr.plus(pkr);
     byMonth.set(k, row);
   }
-  const income = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month) || a.currency.localeCompare(b.currency));
+  for (const o of taxYearOpenings(books, w)) {
+    if (!o.banked || !o.pkr) continue;
+    const k = `${o.month} ${o.currency} opening ${o.pkrEstimated}`;
+    const row = byMonth.get(k) ?? { month: o.month, currency: o.currency, credits: 0, amount: dec(0), pkr: dec(0), source: o.pkrEstimated ? "opening balance (PKR estimated)" : "opening balance" };
+    row.amount = row.amount.plus(o.amount);
+    row.pkr = row.pkr.plus(o.pkr);
+    byMonth.set(k, row);
+  }
+  const income = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month) || a.currency.localeCompare(b.currency) || a.source.localeCompare(b.source));
 
   // Paperwork for each credit in the year, and the files on record.
   const lineById = new Map(file.lines.map((l) => [l.id, l]));
@@ -124,7 +134,7 @@ export async function gatherTaxPack(db: Db, storage: Storage | null, w0: Workspa
   entries.unshift(
     {
       name: "income-by-month.csv",
-      data: toCsv([["month", "currency", "credits", "amount", "pkr"], ...income.map((r) => [r.month, r.currency, r.credits, fixed2(r.amount), fixed2(r.pkr)]), ["total", "PKR", income.reduce((s, r) => s + r.credits, 0), "", fixed2(sumDec(income.map((r) => r.pkr)))]]),
+      data: toCsv([["month", "currency", "credits", "amount", "pkr", "source"], ...income.map((r) => [r.month, r.currency, r.credits, fixed2(r.amount), fixed2(r.pkr), r.source]), ["total", "PKR", income.reduce((s, r) => s + r.credits, 0), "", fixed2(sumDec(income.map((r) => r.pkr))), ""]]),
     },
     { name: "export-credits.csv", data: creditsCsv(file) },
     { name: "banking-share.csv", data: shareCsv(file) },
@@ -133,8 +143,8 @@ export async function gatherTaxPack(db: Db, storage: Storage | null, w0: Workspa
     {
       name: "invoices.csv",
       data: toCsv([
-        ["number", "client", "issued_on", "due_on", "currency", "amount", "received", "credited", "balance", "status"],
-        ...invoices.map((i) => [i.number, clientName.get(i.clientId), i.issuedOn, i.dueOn, i.currency, i.amount, i.appliedTotal, fixed2(dec(i.amount).minus(i.appliedTotal).minus(i.balance)), i.balance, i.status.replace(/_/g, " ")]),
+        ["number", "client", "issued_on", "due_on", "currency", "amount", "received_before_import", "received", "credited", "balance", "status"],
+        ...invoices.map((i) => [i.number, clientName.get(i.clientId), i.issuedOn, i.dueOn, i.currency, i.amount, i.paidBeforeImport, i.appliedTotal, fixed2(dec(i.amount).minus(i.paidBeforeImport).minus(i.appliedTotal).minus(i.balance)), i.balance, i.status.replace(/_/g, " ")]),
       ]),
     },
     { name: "credit-notes.csv", data: toCsv([["number", "kind", "invoice", "recorded_on", "currency", "amount", "reason"], ...notes.map((n) => [n.c.number, n.c.kind.replace(/_/g, " "), n.number, n.on, n.currency, n.c.amount, n.c.reason])]) },
@@ -177,7 +187,7 @@ export async function gatherTaxPack(db: Db, storage: Storage | null, w0: Workspa
       ...(unreadable.length ? [`- Couldn't read from storage, so not included: ${unreadable.join(", ")}`] : []),
       "",
       "What's in it",
-      "- income-by-month.csv: export proceeds banked in Pakistan, by month and currency, in the currency received and in PKR",
+      "- income-by-month.csv: export proceeds banked in Pakistan, by month and currency, in the currency received and in PKR; opening balances imported for months before the records began are rows of their own",
       "- export-credits.csv: every credit into a Pakistani bank account, with its ePRC and withholding certificate status",
       "- banking-share.csv: the banking-channel share working, at reference rates",
       "- eprc-list.csv and wht-certificates.csv: each credit's certificate, its number, and its file under documents/",

@@ -50,6 +50,20 @@
       "when": 1793806607872,
       "tag": "0006_credit_note_number",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793856255623,
+      "tag": "0007_imports",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793856348620,
+      "tag": "0008_invoice_import_job",
+      "breakpoints": true
     }
   ]
 }
