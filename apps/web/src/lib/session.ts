@@ -5,13 +5,14 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { auth } from "./auth";
+import { mustSetUpTwoFactor } from "./two-factor";
 
 export const getSession = cache(async () => auth.api.getSession({ headers: await headers() }));
 
 export async function requireUser() {
   const s = await getSession();
   if (!s) redirect("/login");
-  return s.user as typeof s.user & { isAnonymous?: boolean | null };
+  return s.user as typeof s.user & { isAnonymous?: boolean | null; twoFactorEnabled?: boolean | null };
 }
 
 /** The workspace by slug, only if the signed-in user is a member. */
@@ -23,6 +24,8 @@ export const requireWorkspace = cache(async (slug: string) => {
     .innerJoin(member, and(eq(member.workspaceId, workspace.id), eq(member.userId, user.id)))
     .where(eq(workspace.slug, slug));
   if (!row) notFound();
+  // A workspace that requires two-factor sign-in sends owners and finance without it to set it up first.
+  if (mustSetUpTwoFactor(row.ws, row.role, user)) redirect(`/account?required=${encodeURIComponent(slug)}`);
   return { user, ws: row.ws, role: row.role };
 });
 

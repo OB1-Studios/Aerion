@@ -2,6 +2,7 @@ import { AUTOPILOT_DEFAULTS, TEMPLATE_NAMES, type TemplateKey } from "@ebo/core"
 import { getDb, invitation, member, receivingAccount, user } from "@ebo/db";
 import { ROLE_TEXT, ROLES } from "@ebo/engine";
 import { and, asc, eq, gt, isNull } from "drizzle-orm";
+import Link from "next/link";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, KeyValues, Notice, PageHeader, Table, cx } from "@/components/ui";
 import { day, ROLE_LABEL } from "@/lib/format";
@@ -9,21 +10,21 @@ import { describeCredit } from "@ebo/vultr";
 import { readerInfo, vultrStatus } from "@/lib/platform";
 import { requireWorkspace } from "@/lib/session";
 import { setAiReading, setPolicy } from "../actions";
-import { inviteAction, revokeInviteAction, setRoleAction } from "../manage-actions";
+import { inviteAction, revokeInviteAction, setRoleAction, setTwoFactorRequired } from "../manage-actions";
 import { InviteForm } from "./invite-form";
 
 export const metadata = { title: "Settings" };
 
 const SEND_TEXT = { auto: "sends on its own", delay: "waits, then sends", approve: "always a person" } as const;
 
-export default async function SettingsPage({ params, searchParams }: { params: Promise<{ ws: string }>; searchParams: Promise<{ people?: string }> }) {
+export default async function SettingsPage({ params, searchParams }: { params: Promise<{ ws: string }>; searchParams: Promise<{ people?: string; twofactor?: string }> }) {
   const { ws: slug } = await params;
   const q = await searchParams;
   const { ws, role, user: me } = await requireWorkspace(slug);
   const db = getDb();
   const [accounts, members, invites] = await Promise.all([
     db.select().from(receivingAccount).where(eq(receivingAccount.workspaceId, ws.id)).orderBy(asc(receivingAccount.label)),
-    db.select({ id: member.id, userId: member.userId, name: user.name, email: user.email, anon: user.isAnonymous, role: member.role }).from(member).innerJoin(user, eq(user.id, member.userId)).where(eq(member.workspaceId, ws.id)).orderBy(asc(user.name)),
+    db.select({ id: member.id, userId: member.userId, name: user.name, email: user.email, anon: user.isAnonymous, twoFactor: user.twoFactorEnabled, role: member.role }).from(member).innerJoin(user, eq(user.id, member.userId)).where(eq(member.workspaceId, ws.id)).orderBy(asc(user.name)),
     db
       .select({ id: invitation.id, email: invitation.email, role: invitation.role, expiresAt: invitation.expiresAt })
       .from(invitation)
@@ -42,6 +43,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   const isOwner = role === "owner";
   const managePeople = isOwner && !ws.isDemo;
   const s = ws.settings ?? {};
+  const approvers = members.filter((m) => m.role === "owner" || m.role === "finance");
 
   return (
     <>
@@ -181,6 +183,40 @@ export default async function SettingsPage({ params, searchParams }: { params: P
               Owners and finance approve and act; accountants and viewers can see everything but change nothing.{ws.isDemo ? " People can't be changed in a demo workspace." : isOwner ? "" : " Only an owner can invite people or change roles."}
             </p>
           )}
+        </Card>
+
+        <Card id="two-factor" title="Two-factor sign-in">
+          {q.twofactor ? <Notice tone="red">{q.twofactor.slice(0, 200)}</Notice> : null}
+          <p className="text-sm">Owners and finance approve the emails that go to clients and banks. When this workspace requires two-factor sign-in, a stolen password alone can&apos;t do that: signing in also takes a code from the person&apos;s phone.</p>
+          <ul className="mt-3 divide-y divide-line text-sm">
+            {approvers.map((m) => (
+              <li key={m.id} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="min-w-0 truncate text-ink">
+                  {m.anon ? "Visitor (demo)" : m.name} <span className="text-xs text-muted">{ROLE_LABEL[m.role]}</span>
+                </span>
+                <Badge tone={m.twoFactor ? "green" : "gray"}>{m.twoFactor ? "On" : "Off"}</Badge>
+              </li>
+            ))}
+          </ul>
+          {isOwner && !ws.isDemo ? (
+            <form action={setTwoFactorRequired.bind(null, slug)} className="mt-3 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="required" defaultChecked={!!s.requireTwoFactor} className="accent-[var(--accent)]" />
+                Require it for owners and finance
+              </label>
+              <SubmitButton variant="secondary" pendingText="Saving…">
+                Save
+              </SubmitButton>
+            </form>
+          ) : (
+            <p className="mt-3 text-sm text-muted">{ws.isDemo ? "Demo workspaces can't require it: visitors sign in without a password." : s.requireTwoFactor ? "Required for owners and finance." : "Not required."}</p>
+          )}
+          {s.requireTwoFactor && approvers.some((m) => !m.twoFactor) ? <p className="mt-2 text-xs text-muted">Anyone marked Off is asked to set it up the next time they open this workspace.</p> : null}
+          <p className="mt-2 text-xs">
+            <Link href="/account#two-factor" className="link">
+              Your own two-factor sign-in
+            </Link>
+          </p>
         </Card>
 
         <Card title="Reading documents">

@@ -119,9 +119,14 @@ export default async function WorkspaceLayout({ children, params }: { children: 
                     Create an account
                   </Link>
                 ) : (
-                  <Link href="/workspaces/new" className="block rounded px-2 py-1.5 hover:bg-canvas">
-                    New workspace
-                  </Link>
+                  <>
+                    <Link href="/account" className="block rounded px-2 py-1.5 hover:bg-canvas">
+                      Your account and sign-in
+                    </Link>
+                    <Link href="/workspaces/new" className="block rounded px-2 py-1.5 hover:bg-canvas">
+                      New workspace
+                    </Link>
+                  </>
                 )}
                 <form action={signOut}>
                   <button className="w-full rounded px-2 py-1.5 text-left hover:bg-canvas">Sign out</button>

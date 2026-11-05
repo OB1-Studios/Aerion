@@ -131,6 +131,8 @@ export interface WorkspaceSettings {
   mailboxAddress?: string;
   /** Default "purpose of payment" wording on invoices. */
   purposeWording?: string;
+  /** Owners and finance must sign in with a code from an authenticator app as well as their password. */
+  requireTwoFactor?: boolean;
 }
 export type Role = "owner" | "finance" | "accountant" | "viewer";
 

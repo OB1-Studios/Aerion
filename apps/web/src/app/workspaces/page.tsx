@@ -22,9 +22,14 @@ export default async function WorkspacesPage() {
               Create an account
             </Link>
           ) : (
-            <Link href="/workspaces/new" className="btn btn-primary">
-              New workspace
-            </Link>
+            <>
+              <Link href="/workspaces/new" className="btn btn-primary">
+                New workspace
+              </Link>
+              <Link href="/account" className="btn btn-secondary">
+                Your account
+              </Link>
+            </>
           )}
           <form action={signOut}>
             <button className="btn btn-secondary">Sign out</button>

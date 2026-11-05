@@ -8,7 +8,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { formValues, type FormState } from "@/lib/forms";
+import { clearFailures, limited, recordFailure, TOO_MANY } from "@/lib/limits";
 import { getSession, myWorkspaces, requireUser } from "@/lib/session";
+import { authProblem, signInMustRestart } from "@/lib/two-factor";
 
 /** The version of the pilot terms and AI-processing wording a person agrees to at sign-up. */
 const CONSENT_VERSION = "2026-11-04";
@@ -41,10 +43,42 @@ export async function startDemo() {
 export async function signInWithPassword(_: { error?: string } | undefined, form: FormData): Promise<{ error?: string }> {
   const email = String(form.get("email") ?? "").trim();
   const password = String(form.get("password") ?? "");
+  const h = await headers();
+  // Per address and source together, so nobody can lock a shared demo account for everyone else.
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
+  const keys = [`signin:${email.toLowerCase()}|${ip}`, `signin-ip:${ip}`] as const;
+  if (limited(keys[0], 10) || limited(keys[1], 50)) return { error: TOO_MANY };
+  let res: unknown;
   try {
-    await auth.api.signInEmail({ body: { email, password }, headers: await headers() });
+    res = await auth.api.signInEmail({ body: { email, password }, headers: h });
   } catch {
+    recordFailure(...keys);
     return { error: "Email or password is wrong." };
+  }
+  clearFailures(keys[0]);
+  const next = nextPath(form.get("next"));
+  // With two-factor sign-in on, there's no session yet: the auth library waits for the code.
+  if ((res as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) redirect(`/login/code${next ? `?${new URLSearchParams({ next })}` : ""}`);
+  redirect(next ?? "/workspaces");
+}
+
+/** The second step of signing in: a code from the authenticator app, or one of the backup codes. */
+export async function verifySignInCode(_: { error?: string; restart?: boolean } | undefined, form: FormData): Promise<{ error?: string; restart?: boolean }> {
+  const backup = form.get("mode") === "backup";
+  let code = String(form.get("code") ?? "").replace(/\s+/g, "");
+  const trustDevice = form.get("trust") === "on";
+  if (backup) {
+    if (/^[A-Za-z0-9]{10}$/.test(code)) code = `${code.slice(0, 5)}-${code.slice(5)}`;
+    if (!/^[A-Za-z0-9]{5}-[A-Za-z0-9]{5}$/.test(code)) return { error: "A backup code is ten letters and digits, written like ab12C-3dE45." };
+  } else if (!/^\d{6}$/.test(code)) {
+    return { error: "Enter the six digits from your authenticator app." };
+  }
+  try {
+    const h = await headers();
+    if (backup) await auth.api.verifyBackupCode({ body: { code, trustDevice }, headers: h });
+    else await auth.api.verifyTOTP({ body: { code, trustDevice }, headers: h });
+  } catch (err) {
+    return { error: authProblem(err), restart: signInMustRestart(err) };
   }
   redirect(nextPath(form.get("next")) ?? "/workspaces");
 }
