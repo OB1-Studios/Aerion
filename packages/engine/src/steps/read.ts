@@ -7,6 +7,7 @@ import { MARKETPLACE_HEADER, offlineDocumentReader, PAYONEER_HEADER } from "../r
 import { csvRecords, documentText, parseAmount, parseDate, quoteFound } from "../readers/text";
 import type { ConfirmedReading, DocumentReadResult, Extraction, Intent, IntentReadResult, ModelCallRecord, ReadContext, Readers } from "../readers/types";
 import { offlineIntentReader } from "../readers/intent";
+import { importStatement } from "../statements";
 import { bump, type StepContext, type Step } from "./types";
 
 type Account = typeof receivingAccount.$inferSelect;
@@ -149,6 +150,18 @@ async function readDocument(c: StepContext, doc: Doc, accounts: Account[], read:
     case "marketplace_export":
       outcome = await importMarketplace(c, doc, text ?? "", accounts);
       break;
+    case "statement": {
+      const r = await importStatement(db, c.w.ws.id, doc, text ?? "", accounts);
+      outcome = { ...r };
+      if ("action" in r) {
+        bump(c, "transactions", r.created);
+        const missing = r.notOnStatement.length;
+        c.report.push(
+          `Statement for the ${r.account} (${formatDateLong(r.from)} to ${formatDateLong(r.to)}): ${r.linked} credit${r.linked === 1 ? "" : "s"} tied to the bank's advices${r.created ? `, ${r.created} added that came without an advice` : ""}${missing ? `; ${missing} on record but not on the statement` : ""}.`,
+        );
+      }
+      break;
+    }
     case "credit_advice":
     case "pasted_text":
       if (!x) reasons.push("The fields could not be read.");

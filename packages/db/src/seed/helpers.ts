@@ -55,6 +55,7 @@ export class Rows {
   demoInboxItem: (typeof s.demoInboxItem.$inferInsert)[] = [];
   member: (typeof s.member.$inferInsert)[] = [];
   auditEvent: (typeof s.auditEvent.$inferInsert)[] = [];
+  closePeriod: (typeof s.closePeriod.$inferInsert)[] = [];
 
   async write(db: Db): Promise<void> {
     await db.transaction(async (tx) => {
@@ -76,6 +77,7 @@ export class Rows {
         [s.demoInboxItem, this.demoInboxItem],
         [s.member, this.member],
         [s.auditEvent, this.auditEvent],
+        [s.closePeriod, this.closePeriod],
       ] as const;
       for (const [table, rows] of order) {
         for (let i = 0; i < rows.length; i += 500) {

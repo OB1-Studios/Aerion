@@ -6,7 +6,7 @@ import { clock, day, money } from "@/lib/format";
 import { canExport, requireWorkspace } from "@/lib/session";
 import { builtPacks, taxPackPreview } from "@/lib/tax-file";
 import { buildTaxPackAction } from "./actions";
-import { PackForm } from "./pack-form";
+import { ActionForm } from "@/components/action-form";
 
 export const metadata = { title: "Tax-year file" };
 
@@ -142,8 +142,10 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
             </div>
             <div className="mt-5 border-t border-line pt-4">
               {canExport(role) ? (
-                <PackForm
+                <ActionForm
                   action={buildTaxPackAction.bind(null, slug, yearStart)}
+                  title="Not built:"
+                  pendingText="Building the pack…"
                   label={`Build the ${f.year.label} pack`}
                   hint={isCurrent ? "From the records as they stand today. Build it again after anything changes; earlier packs are kept." : "From the records for that year. Earlier packs are kept."}
                 />
