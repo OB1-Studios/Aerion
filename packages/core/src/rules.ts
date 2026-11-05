@@ -7,6 +7,8 @@ export const DEFAULT_RULES = {
   "tolerance.abs": "1.00",
   "fee.max_unstated": { USD: "50", GBP: "40", EUR: "45" } as Record<string, string>,
   "fx.spread_warn_pct": "1.5",
+  /** Rule 9: an ESFCA may keep the greater of this many USD a month or this share of the month's export proceeds. */
+  "esfca.retention": { min_usd: "5000", pct: "50" } as { min_usd: string; pct: string },
   /** Proposed: how far a PKR-only credit may sit from balance x reference rate and still be a full payment. */
   "fx.window_pct": "3",
   "purpose_code.it_services": ["9186"] as string[],

@@ -10,6 +10,8 @@ import {
   disconnectMailbox,
   inviteMember,
   issueCredit,
+  recordConversion,
+  removeConversion,
   revokeInvitation,
   setMemberRole,
   draftInvoiceEmail,
@@ -140,6 +142,24 @@ export async function creditAction(slug: string, invoiceId: string, _prev: FormS
   refresh(slug);
   const q = new URLSearchParams({ credited: r.number, closed: String(r.flagsResolved), held: String(r.draftsHeld), cancelled: String(r.draftsCancelled) });
   redirect(`/w/${slug}/invoices/${invoiceId}?${q}`);
+}
+
+/** Records a conversion the bank has already made (W14). */
+export async function recordConversionAction(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const { user, ws } = await actor(slug);
+  const v = formValues(form);
+  const r = await recordConversion(getDb(), ws, { accountId: field(v, "accountId"), on: field(v, "on"), amount: field(v, "amount"), pkr: field(v, "pkr"), reference: field(v, "reference") }, user.id);
+  if (!r.ok) return { problems: r.problems, values: v };
+  refresh(slug);
+  redirect(`/w/${slug}/accounts/esfca?recorded=${r.tiedToStatement ? "tied" : "1"}`);
+}
+
+export async function removeConversionAction(slug: string, id: string, _prev: FormState, _form: FormData): Promise<FormState> {
+  const { user, ws } = await actor(slug);
+  const r = await removeConversion(getDb(), ws, id, user.id);
+  if (!r.ok) return { problems: [r.problem], values: null };
+  refresh(slug);
+  redirect(`/w/${slug}/accounts/esfca?removed=1`);
 }
 
 // ---------------------------------------------------------------------------

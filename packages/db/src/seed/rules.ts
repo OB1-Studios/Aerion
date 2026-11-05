@@ -11,6 +11,7 @@ export const RULE_DESCRIPTIONS: Record<RuleKey, { description: string; sourceTit
   "fee.max_unstated": { description: "Largest gap treated as a probable intermediary fee when the advice states no charges, per currency.", sourceTitle: "Data spec section 4" },
   "fx.spread_warn_pct": { description: "Report a conversion when the bank's rate is this far below the reference rate.", sourceTitle: "Data spec section 4" },
   "fx.window_pct": { description: "How far a PKR-only credit may sit from balance x reference rate and still be a full payment (Proposed).", sourceTitle: "Data spec section 4" },
+  "esfca.retention": { description: "An ESFCA may keep the greater of this many USD a month or this percent of the month's export proceeds (verify, and verify how it is measured).", sourceTitle: `${MAIN_DOC}, rule 9; SBP FECL6 annex` },
   "purpose_code.it_services": { description: "Purpose codes that mark a remittance as payment for exported IT services.", sourceTitle: `${MAIN_DOC}; find the current SBP list` },
   "purpose_code.non_it": { description: "Purpose codes that should not appear on payments for our invoices (home remittance and similar).", sourceTitle: `${MAIN_DOC}; find the current SBP list` },
   "eprc.wait_days": { description: "Days after a credit before a missing ePRC is flagged (guess; open question 5).", sourceTitle: "Interview answers pending" },
