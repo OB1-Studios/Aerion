@@ -38,3 +38,53 @@ jobs:
       - run: pnpm build
         env:
           BETTER_AUTH_SECRET: ci-build-placeholder-0123456789abcdef
+
+  # Builds the real images and starts the stack the way Coolify does: migrate, then web and worker.
+  image:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://ebo:ebo@db:5432/ebo?sslmode=disable
+      APP_ENCRYPTION_KEY: ci-only-0123456789abcdef0123456789abcdef0123456789abcdef01234567
+      BETTER_AUTH_SECRET: ci-only-0123456789abcdef0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:3000
+      DEMO_PASSWORD: ci-only-demo-password
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add a database for this run
+        run: |
+          cat > compose.ci.yml <<'YAML'
+          services:
+            db:
+              image: postgres:17
+              environment: { POSTGRES_USER: ebo, POSTGRES_PASSWORD: ebo, POSTGRES_DB: ebo }
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U ebo"]
+                interval: 2s
+                timeout: 5s
+                retries: 30
+            migrate:
+              depends_on:
+                db: { condition: service_healthy }
+          YAML
+      - name: Build and start
+        run: docker compose -f docker-compose.yml -f compose.ci.yml up -d --build
+      - name: Wait for web and worker to be healthy
+        run: |
+          for service in web worker; do
+            id=$(docker compose -f docker-compose.yml -f compose.ci.yml ps -q "$service")
+            for i in $(seq 1 60); do
+              state=$(docker inspect -f '{{.State.Health.Status}}' "$id")
+              [ "$state" = healthy ] && break
+              sleep 2
+            done
+            echo "$service: $state"
+            [ "$state" = healthy ]
+          done
+      - name: Load the demo and check a demo user can sign in
+        run: |
+          compose="docker compose -f docker-compose.yml -f compose.ci.yml"
+          $compose exec -T worker pnpm --filter @ebo/worker cli reset-demo
+          $compose exec -T worker node -e "fetch('http://web:3000/api/auth/sign-in/email',{method:'POST',headers:{'content-type':'application/json',origin:'http://localhost:3000'},body:JSON.stringify({email:'sana@ravicodeworks.example',password:process.env.DEMO_PASSWORD})}).then(r=>{console.log('sign-in',r.status);process.exit(r.ok?0:1)})"
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f compose.ci.yml logs --no-color --tail=100

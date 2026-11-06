@@ -15,7 +15,7 @@ x-env: &env
   BACKUP_KEEP: ${BACKUP_KEEP:-14}
   # Without Object Storage, documents and backups go to this volume (shared by web and worker).
   STORAGE_DIR: /data/storage
-  BACKUP_DIR: /data/backups
+  BACKUP_DIR: /data/storage/backups
   VULTR_INFERENCE_API_KEY: ${VULTR_INFERENCE_API_KEY:-}
   VULTR_INFERENCE_MODEL: ${VULTR_INFERENCE_MODEL:-}
   VULTR_INFERENCE_CLASSIFY_MODEL: ${VULTR_INFERENCE_CLASSIFY_MODEL:-}
