@@ -124,7 +124,7 @@ export default async function Inbox({ params, searchParams }: { params: Promise<
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                           <span>{templateName(d.template)}</span>
                           {sev ? <Badge tone={severityTone(sev)}>{sev}</Badge> : null}
-                          {d.status === "blocked" ? <Status value="blocked" label={d.rejectedReason ? "held: the invoice changed" : "blocked by the numbers check"} /> : d.numbersCheck?.ok ? <Badge tone="green">✓ {d.numbersCheck.found.length} numbers checked</Badge> : null}
+                          {d.status === "blocked" ? <Status value="blocked" label={d.rejectedReason ? "held: the invoice changed" : "blocked by the numbers check"} /> : d.numbersCheck?.ok ? <Badge tone="green">✓ {d.numbersCheck.found.length} {d.numbersCheck.found.length === 1 ? "number" : "numbers"} checked</Badge> : null}
                         </div>
                         <Link href={`${base}/drafts/${d.id}`} className="mt-1 block font-medium text-ink hover:text-accent">
                           {d.subject}
