@@ -1,0 +1,64 @@
+name: Deploy project site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - name: Build static project site
+        run: |
+          mkdir -p site
+          cp -R assets site/assets
+          python3 - <<'PY'
+          from html import escape
+          from pathlib import Path
+
+          readme = Path("README.md").read_text()
+          page = f"""<!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>IT Export Back Office</title>
+              <style>
+                :root {{ color-scheme: light dark; }}
+                body {{ max-width:  min(960px, 92vw); margin: 3rem auto; font: 1rem/1.6 system-ui, sans-serif; }}
+                pre {{ white-space: pre-wrap; overflow-wrap: anywhere; }}
+              </style>
+            </head>
+            <body><pre>{escape(readme)}</pre></body>
+          </html>
+          """
+          Path("site/index.html").write_text(page)
+          PY
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
