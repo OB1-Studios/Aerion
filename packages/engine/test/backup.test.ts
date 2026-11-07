@@ -46,6 +46,7 @@ describe.skipIf(!dbUp)("backups", () => {
   });
 
   it("keeps the newest backups, and one restores every row exactly into a new database", async () => {
+    await pool.query("insert into workspace (slug, name, kind) values ($1, $2, $3) on conflict (slug) do nothing", [`backup-test-${tag}`, "Backup test workspace", "company"]);
     const first = await createBackup(pool, storage, { env, keep: 2, now: new Date("2026-11-05T21:30:00Z") });
     await createBackup(pool, storage, { env, keep: 2, now: new Date("2026-11-06T21:30:00Z") });
     const latest = await createBackup(pool, storage, { env, keep: 2, now: new Date("2026-11-07T21:30:00Z") });

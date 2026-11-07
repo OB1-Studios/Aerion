@@ -59,6 +59,10 @@ describe.skipIf(!dbUp)("month-end close", () => {
   const october = async () => closeView(db, await loadContext(db, wsId), "2026-10");
   const item = (v: Awaited<ReturnType<typeof october>>, key: string) => v.items.find((i) => i.key === key)!;
 
+  it("can seed shared reference data concurrently", async () => {
+    await expect(Promise.all(Array.from({ length: 4 }, () => seedReferenceData(db)))).resolves.toHaveLength(4);
+  });
+
   it("lists the months: July to September closed before the demo, October to do", async () => {
     const months = await closeOverview(db, await loadContext(db, wsId));
     expect(months.map((m) => [m.month, m.status])).toEqual([
