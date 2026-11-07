@@ -13,12 +13,16 @@
 
 <br><br>
 
-[The problem](#the-problem) &nbsp;|&nbsp;
-[What it does](#what-the-agent-does) &nbsp;|&nbsp;
+**[Open the live demo](https://45-76-150-156.sslip.io)** and press **Try the demo**: no sign-up, a private copy for 7 days.
+
+<br>
+
+[How it works](#how-it-works-in-short) &nbsp;|&nbsp;
+[See it work](#see-it-work) &nbsp;|&nbsp;
 [Why it's safe](#why-a-business-can-let-it-run) &nbsp;|&nbsp;
-[Set up](#setting-up-your-own-workspace) &nbsp;|&nbsp;
 [Vultr](#how-it-uses-vultr) &nbsp;|&nbsp;
-[Demo](#try-the-demo) &nbsp;|&nbsp;
+[Benchmark](#reading-benchmark) &nbsp;|&nbsp;
+[Set up](#setting-up-your-own-workspace) &nbsp;|&nbsp;
 [Run locally](#run-it-locally) &nbsp;|&nbsp;
 [Deploy](#deploy-on-vultr)
 
@@ -28,7 +32,17 @@
 
 An agent that runs the weekly finance back office for Pakistani software houses and IT freelancers. It makes sure every payment arrives, is matched to an invoice, and counts as an IT export. **It never moves money.**
 
-Built for the lablab.ai × Vultr **Agent Rush** hackathon, Challenge 2 (Finance & Accounting: invoice processing, transaction reconciliation, anomaly flagging, payment follow-ups). It runs entirely on Vultr.
+Built for the lablab.ai × Vultr **Agent Rush** hackathon, Challenge 2 (Finance & Accounting: invoice processing, transaction reconciliation, anomaly flagging, payment follow-ups). It runs entirely on Vultr, live at **https://45-76-150-156.sslip.io**.
+
+---
+
+## How it works, in short
+
+- **Who it's for.** Software houses and freelancers in Pakistan, who are paid by SWIFT wire, Payoneer or Wise because PayPal and Stripe don't pay out there. Each payment brings paperwork that decides how the income is taxed.
+- **What it does.** Every Monday at 09:00 Pakistan time, and whenever new mail arrives, a worker runs one workflow per workspace. It reads the bank advices, wallet exports and client emails, matches the money to invoices, re-checks every rule, drafts the follow-up emails and tasks, and lists what needs a person.
+- **Who decides.** Code makes every decision. A model only reads: minimax-m3.1-flash on Vultr Serverless Inference classifies documents and extracts their fields, and every value must quote its source text. Every number in an outgoing email is checked against the records twice.
+- **What a person does.** Approves the emails (supervised is the default; autopilot is a setting), and does what software can't, like calling a client to confirm the bank details really haven't changed.
+- **Where it runs.** On Vultr: Cloud Compute for the web app and the worker, Managed PostgreSQL for the records and the run queue, Object Storage for documents and backups, and Serverless Inference for reading. One command creates all of it through the Vultr API.
 
 ---
 
@@ -44,10 +58,10 @@ PayPal and Stripe don't pay out to Pakistan. Exporters get paid by SWIFT wire to
 
 ## What the agent does
 
-Every Monday at 09:00 Pakistan time (or when someone presses **Run now**), the worker runs one workflow per workspace, from planning to output.
+Every Monday at 09:00 Pakistan time (or when someone presses **Run now**), the worker runs one workflow per workspace, from planning to output. Each card shows what that step did in the demo's first Monday run.
 
 <p align="center">
-  <img src="assets/workflow.svg" alt="The weekly run in eight steps: plan, pull, read, reconcile, flag, draft, send, follow up. Code decides most steps, a model reads documents, and a person approves what is sent." width="100%">
+  <img src="assets/workflow.svg" alt="The weekly run in eight steps: plan, pull, read, reconcile, flag, draft, send, follow up. Code decides most steps, a model reads documents, and a person approves what is sent. In the demo's first Monday: 10 new items, 9 documents and 9 emails read in 17.8 seconds, 7 payments matched, 9 flags opened (4 high), 6 emails and 3 tasks drafted, 6 emails waiting for a person; a week later 4 flags close on their own." width="100%">
 </p>
 
 | Step | What happens |
@@ -62,6 +76,48 @@ Every Monday at 09:00 Pakistan time (or when someone presses **Run now**), the w
 | **Follow up** | Closes claims and promises that the money settled, and lists what needs a person. |
 
 Each run is recorded step by step, and the run page shows what each step did and why.
+
+---
+
+## See it work
+
+These are the live demo's own screens, drawn from the deployed app on 2026-11-07. Everything in them is fictional and marked SIMULATED.
+
+### Monday morning: the inbox
+
+<p align="center">
+  <img src="assets/screen-inbox.svg" alt="The Inbox of the demo software house, Ravi Code Works, after the first Monday run. Tiles show 6 emails to approve, 9 open flags (4 high), 3 tasks and checks, and a 99.20% banking-channel share. Five of the six drafted emails are listed with their risk and how many numbers were checked, each with Review and Approve and send buttons. The last run's summary is on the right." width="100%">
+</p>
+
+After its first Monday run (the demo clock says Mon 2 Nov 2026, 09:00), the software house has six emails waiting for approval. Each shows its risk and how many of its numbers were checked against the records. Nine flags are open, four of them high, and three tasks wait for a person.
+
+### Every step on the record
+
+<p align="center">
+  <img src="assets/screen-run.svg" alt="The page for one run: eight steps from Plan to Follow up, each with its time, status and what it did, such as the emails pulled in, the documents parsed, a payment matched to INV-2026-025 at tier A, two high flags and an email to approve. On the right, the model calls to Vultr Serverless Inference with their tokens and milliseconds, and the run's counts." width="100%">
+</p>
+
+Each run has its own page: what every step did and how long it took, and every model call with its tokens and time. Here the Read step took 17.8 seconds, because Serverless Inference read nine documents and nine emails. Every other step took milliseconds.
+
+### Every number traced
+
+<p align="center">
+  <img src="assets/screen-draft.svg" alt="A drafted short-payment email to Al Noor Trading for INV-2026-029. Every number in it is highlighted, and the Numbers check panel traces each one to a record: 28 October 2026 is the value date, 6,750.00 was received, 7,500.00 is the invoice amount, 0.00 is the fee and 750.00 is unexplained. The email needs a person because the workspace approves every outgoing message." width="100%">
+</p>
+
+In a draft, every number is highlighted and traced to a record: the value date, the amount received, the invoice amount, the fee and the unexplained difference. Approving runs the check again on the exact text, and holds the email back if anything in the records has changed.
+
+### Next Monday, flags close on their own
+
+<p align="center">
+  <img src="assets/screen-flags.svg" alt="The Flags page after the first Monday: 9 open flags, 4 high. A last column shows the next Monday: the short payment, the wrong purpose code, the unconfirmed payment claim and the missing ePRC are resolved because the rest was paid, the bank corrected the code, the money arrived and the ePRC arrived. The lookalike-domain warning and four medium flags stay open." width="100%">
+</p>
+
+Once the emails have gone out, **Next Monday →** lets that week's replies arrive and runs again. The rest of Al Noor's payment comes in, the bank corrects the purpose code, Brightlane's money lands and the missing ePRC arrives, so four flags close on their own. The lookalike-domain warning stays open, with a task for a person to call the client.
+
+---
+
+## More than the Monday run
 
 ### Dashboard
 
@@ -112,6 +168,8 @@ Before building it, the page lists what the accountant will ask about, each with
 
 </details>
 
+### Month-end close
+
 **Month-end close** (offices; under Month-end) has a checklist for each month that's over:
 
 - every credit matched to an invoice or explained as a transfer
@@ -153,7 +211,7 @@ Each line is done, waiting on someone outside (the bank, a client), or to do, wi
 - **Code decides whose document it is.** A document only counts for a workspace if its IBAN or legal name matches. The model can lower that match, never raise it.
 - **A policy decides what goes out.** In *supervised* mode (the default), a person approves every email. In *autopilot* mode, routine emails go out on their own, sensitive ones wait 30 minutes so anyone can cancel them, some always need a person, and there is an optional amount cap.
 - **A person checks what the agent can't.** A document that fails a check (an account that isn't the workspace's, an amount that doesn't parse, a date after the document arrived, a scan with no text) goes to the review queue. A person corrects the fields beside the document and confirms, or sets it aside with a reason. The confirmed values go through the same checks as anything the model reads, and the audit log records who changed which field.
-- **The workflow survives a model outage.** If inference is down or returns something unusable, built-in layout rules read the documents, the run still completes, and the failed calls are recorded.
+- **The workflow survives a model outage.** Calls that hit a rate limit or a server error are retried with backoff, and an unusable reply gets one more try that says what was wrong. After that, the reader falls back to the built-in layout rules. The run still completes, and the failed calls are recorded on its page.
 - **Everything is on the record.** The audit log records every action by people and by the agent. Each model call is stored with its model, prompt version, tokens and cost. Running twice at the same clock changes nothing.
 
 </details>
@@ -277,17 +335,19 @@ On a client's page, add the amount they pay each month and the day it's billed. 
 ## How it uses Vultr
 
 <p align="center">
-  <img src="assets/architecture.svg" alt="A browser reaches the Coolify proxy over HTTPS, which serves the Next.js web app. The web app queues runs for the worker. The proxy, web, worker and a migrate step run inside one Vultr VM. The VM uses Managed PostgreSQL, Object Storage and Serverless Inference." width="100%">
+  <img src="assets/architecture.svg" alt="A browser reaches the Coolify proxy over HTTPS at 45-76-150-156.sslip.io, which serves the Next.js web app. The web app queues runs for the worker. The proxy, web, worker and a migrate step run in one Vultr Cloud Compute VM in Singapore, behind a firewall group. The VM uses Managed PostgreSQL 17, Object Storage and Serverless Inference, where minimax-m3.1-flash reads documents and emails." width="100%">
 </p>
+
+The live demo runs on this stack in Singapore (`sgp`), created by `pnpm infra:apply` and deployed by Coolify from this repository.
 
 | Vultr service | What it does here |
 | --- | --- |
-| **Cloud Compute** (Coolify marketplace image) | Runs the app as three containers from `docker-compose.yml`: `migrate` runs the migrations before every deploy, `web` serves the Next.js app, and `worker` runs the workflow and the schedules. A firewall group opens 80/443 to everyone, and SSH and the Coolify dashboard only to your IP. Daily VM backups run at 02:00 PKT. |
-| **Managed Databases for PostgreSQL** | Holds all records: invoices, transactions, matches, flags, drafts, the audit log, sign-in sessions, the run queue and the cron schedules (pg-boss). It's reached over the VPC's private hostname, only from the VPC, with TLS (verified when `DATABASE_CA_CERT` is set), and backed up daily. |
+| **Cloud Compute** (Coolify marketplace image) | One VM (`vc2-2c-4gb` in the live demo) runs the app as three containers from `docker-compose.yml`: `migrate` runs the migrations before every deploy, `web` serves the Next.js app, and `worker` runs the workflow and the schedules. A firewall group opens 80/443 to everyone, and SSH and the Coolify dashboard only to your IP. Daily VM backups run at 02:00 PKT. |
+| **Managed Databases for PostgreSQL** | PostgreSQL 17. Holds all records: invoices, transactions, matches, flags, drafts, the audit log, sign-in sessions, the run queue and the cron schedules (pg-boss). It's reached over the VPC's private hostname, only from the VPC, with TLS (verified when `DATABASE_CA_CERT` is set), and backed up daily. |
 | **Object Storage** | Stores the documents (credit advices, ePRCs, screenshots, wallet exports and uploads) and the PDF of every invoice as it was sent, through the S3 API, keyed by SHA-256, so the same file is never stored or counted twice. A second bucket holds the nightly database backups. At 02:30 PKT the worker writes every table from one consistent snapshot as a gzipped file sealed with AES-256-GCM, and keeps the newest 14. |
-| **Serverless Inference** | Reads documents and emails through the OpenAI-compatible API: it classifies each document, extracts its fields with JSON output and a quote for each value, and reads client replies for promises to pay and claims of payment. |
+| **Serverless Inference** | Reads documents and emails through the OpenAI-compatible API with `minimax-m3.1-flash`, chosen by the [reading benchmark](#reading-benchmark): it classifies each document, extracts its fields with JSON output and a quote for each value, and reads client replies for promises to pay and claims of payment. Each call is stored with its tokens, time and cost. |
 | **Vultr API** | `packages/vultr` is a typed client generated from Vultr's OpenAPI document (`openapi-typescript` + `openapi-fetch`). `pnpm infra:plan / apply / status` uses it to create the whole stack. The settings page uses it to show live status: VM, backups, database, storage, and model usage and cost. |
-| **DNS** (optional) | If `DOMAIN` is a Vultr DNS zone, `infra:apply` adds an A record for `app.<domain>`. |
+| **DNS** (optional) | If `DOMAIN` is a Vultr DNS zone, `infra:apply` adds an A record for `app.<domain>`. Without one, the address is the VM's IP under `sslip.io`, which still gets a real certificate, as the live demo does. |
 
 <details>
 <summary><b>Text version of the diagram</b></summary>
@@ -303,7 +363,7 @@ Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ───�
           ▼                                           ▼                                     ▼
   Managed PostgreSQL                          Object Storage                       Serverless Inference
   records, run queue, schedules,              documents (S3 API),                  classify, extract, read replies
-  audit log (private VPC host, TLS)           sealed nightly backups               (OpenAI-compatible, JSON)
+  audit log (private VPC host, TLS)           sealed nightly backups               (minimax-m3.1-flash, JSON)
 ```
 
 </details>
@@ -313,7 +373,7 @@ Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ───�
 ## Reading benchmark
 
 <p align="center">
-  <img src="assets/benchmark.svg" alt="Layout rules with no model read 100% of fields correctly in the demo layout but only 12% in other layouts, and get 19 of 61 documents fully right." width="100%">
+  <img src="assets/benchmark.svg" alt="Reading 61 simulated documents with known answers, 45 of them in layouts the built-in rules were never written for. Fields right in those layouts: minimax-m3.1-flash 100% (the model in use), glm-5.3-flash 99.0%, deepseek-v4.1-flash-1017 98.6%, layout rules with no model 12%. Documents fully right, of 61: 61, 55, 54 and 19." width="100%">
 </p>
 
 The model is chosen by measurement. `pnpm bench` has every reader read the answer key: 61 SIMULATED documents, each with the values it should yield, taken from the generator's own inputs so the key can't drift from the files. 16 are in the demo bank's layout. The other 45 show the same facts in layouts the built-in rules were never written for: another bank's advice, a letter, a noisy scan, other SMS wording (one in Roman Urdu), another app's screenshot and a printed MT103. Three advices are addressed to someone else. A field counts when the answer or the reading has a value, so an invented value is a miss.
@@ -333,10 +393,10 @@ The model rows come from `pnpm bench --models candidates`, which needs `VULTR_IN
 
 ## Try the demo
 
-All data is fictional and marked SIMULATED: a software house (Ravi Code Works) and a freelancer (Ayesha Siddiqui), with their invoices, bank documents, wallet exports and client emails.
+Open **https://45-76-150-156.sslip.io** and press **Try the demo**. All data is fictional and marked SIMULATED: a software house (Ravi Code Works) and a freelancer (Ayesha Siddiqui), with their invoices, bank documents, wallet exports and client emails.
 
-- On the landing page, **Try the demo** gives you a private copy of both workspaces for 7 days (no sign-up). If you then create an account, the copy stays with you until it expires.
-- Each demo workspace has its own clock. **Run now** runs the workflow at the current clock. **Next Monday →** moves the clock to the next Monday 09:00 PKT, lets that week's replies arrive, and runs the weekly workflow. **Reset** starts again.
+- **Try the demo** gives you a private copy of both workspaces for 7 days (no sign-up). If you then create an account, the copy stays with you until it expires.
+- Each demo workspace has its own clock. **Run now** runs the workflow at the current clock; on the live site, Serverless Inference does the reading, so the first Monday's run takes about 20 seconds. **Next Monday →** moves the clock to the next Monday 09:00 PKT, lets that week's replies arrive, and runs the weekly workflow. **Reset** starts again.
 - On **Documents**, upload your own files (PDF, CSV, text or an image, up to 10 at a time), or press **Upload a sample credit advice**. The sample is a SIMULATED bank advice for the oldest open invoice: the run reads it, matches it and marks the invoice paid. Uploads that fail a check appear under **Need a person**, where you can correct and confirm them.
 - In the software house, the first Monday (2 Nov 2026) produces 6 emails to approve, 9 flags and the tasks for a person. After you approve the emails, the next Monday's replies close four flags and mark the short-paid invoice paid. The bank that didn't send a withholding certificate gets a phone-call task.
 - In the freelancer's workspace, the same Monday matches two payments and leaves two emails to approve: the purpose-code correction to her bank, and the one sending Harbor & Pine's November retainer invoice (USD 2,400, billed on the 1st). The agent drafted that invoice itself because the billing day had come.
@@ -370,7 +430,7 @@ pnpm seed                # the shared demo workspaces and users
 pnpm local               # http://localhost:3000, a production build using about 200 MB of memory
 ```
 
-`pnpm local` builds the app (again only when the source changes) and runs the workflow inside the web process, so no worker is needed. For hot reload while coding, use `pnpm dev` (the web app only, and much heavier), or `pnpm dev:all` to run the worker as well. Every command reads the `.env` at the repo root; variables already set in your shell win. Without `VULTR_INFERENCE_API_KEY`, documents are read by the built-in layout rules. With a key, `pnpm --filter @ebo/ai models` lists the models it can use. Set `VULTR_INFERENCE_MODEL` to choose one, and `pnpm --filter @ebo/ai try <file>` reads a single document with it. `pnpm bench` scores the readers against the answer key.
+`pnpm local` builds the app (again only when the source changes) and runs the workflow inside the web process, so no worker is needed. For hot reload while coding, use `pnpm dev` (the web app only, and much heavier), or `pnpm dev:all` to run the worker as well. Every command reads the `.env` at the repo root; variables already set in your shell win. Without `VULTR_INFERENCE_API_KEY`, documents are read by the built-in layout rules. With a key, `pnpm --filter @ebo/ai models` lists the models it can use. Set `VULTR_INFERENCE_MODEL` to choose one (the default is `minimax-m3.1-flash`), and `pnpm --filter @ebo/ai try <file>` reads a single document with it. `pnpm bench` scores the readers against the answer key.
 
 ```bash
 pnpm typecheck
@@ -429,6 +489,7 @@ The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It bac
 | `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data and its answer key |
 | `packages/vultr` | A typed Vultr API client generated from the OpenAPI document, plus platform status |
 | `infra` | `plan`, `apply` and `status` for the Vultr stack |
+| `assets` | The images in this README. The screens are drawn from the live demo's pages. |
 
 To regenerate the Vultr client, download Vultr's OpenAPI document to `packages/vultr/openapi.json` (it's gitignored) and run `pnpm vultr:types`.
 
