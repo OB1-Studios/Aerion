@@ -318,9 +318,14 @@ Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ───�
 
 The model is chosen by measurement. `pnpm bench` has every reader read the answer key: 61 SIMULATED documents, each with the values it should yield, taken from the generator's own inputs so the key can't drift from the files. 16 are in the demo bank's layout. The other 45 show the same facts in layouts the built-in rules were never written for: another bank's advice, a letter, a noisy scan, other SMS wording (one in Roman Urdu), another app's screenshot and a printed MT103. Three advices are addressed to someone else. A field counts when the answer or the reading has a value, so an invented value is a miss.
 
-| Reader | Fields right, demo layout | Fields right, other layouts | Documents fully right | Cost |
-| --- | --- | --- | --- | --- |
-| Layout rules (no model) | 100% | 12% | 19 of 61 | $0 |
+| Reader | Fields right, demo layout | Fields right, other layouts | Documents fully right | Cost for all 61 | Median per document |
+| --- | --- | --- | --- | --- | --- |
+| Layout rules (no model) | 100% | 12% | 19 of 61 | $0 | under 1 ms |
+| **minimax-m3.1-flash** (in use) | 100% | 100% | 61 of 61 | $0.12 | 4.0 s |
+| glm-5.3-flash | 100% | 99.0% | 55 of 61 | $0.05 | 5.4 s |
+| deepseek-v4.1-flash-1017 | 100% | 98.6% | 54 of 61 | $0.09 | 6.6 s |
+
+Measured on 2026-11-07 with the deployed settings. These models reason before they answer, and the reasoning counts against the token limit. An earlier run with a limit of 2,000 tokens cut that reasoning off and scored all three lower in other layouts (97.3%, 92.6% and 87.9%), so the limits now leave room for it. minimax-m3.1-flash reads documents and emails on the deployed site. It also gave the same demo result on every repeated run. The documents are the team's own simulated ones, so the table compares the models; it doesn't promise the same accuracy on real bank mail.
 
 The model rows come from `pnpm bench --models candidates`, which needs `VULTR_INFERENCE_API_KEY`. It runs every candidate model the key can use and reports tokens, cost and time per document; add `--out <dir>` to save the report. A test checks that the layout rules read every demo document exactly as the key says, and that a model which can't be reached counts as a miss rather than borrowing the rules' answer.
 
