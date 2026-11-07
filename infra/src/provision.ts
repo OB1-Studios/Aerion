@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseEnv } from "node:util";
+import { ensureBucket } from "@ebo/db";
 import type { VultrResources } from "@ebo/vultr";
 import { REPO_ROOT, names, splitCidr, type InfraConfig } from "./config";
 import { readState, writeState, type InfraState } from "./state";
@@ -158,7 +159,8 @@ export async function plan(r: VultrResources, cfg: InfraConfig): Promise<Plan> {
     const chosen = cfg.dbPlan
       ? dbPlans.find((p) => p.id === cfg.dbPlan)
       : [...dbPlans]
-          .filter((p) => (p.number_of_nodes ?? 1) === 1 && (p.locations ?? [cfg.region]).includes(cfg.region))
+          // Vultr lists a database plan's locations in capitals ("SGP"), unlike its regions everywhere else.
+          .filter((p) => (p.number_of_nodes ?? 1) === 1 && (p.locations ?? [cfg.region]).some((l) => l.toLowerCase() === cfg.region))
           .sort((a, b) => (a.monthly_cost ?? Infinity) - (b.monthly_cost ?? Infinity))[0];
     if (chosen?.id) context.dbPlanId = chosen.id;
     else warnings.push(`No PostgreSQL plan found in ${cfg.region}${cfg.dbPlan ? ` matching ${cfg.dbPlan}` : ""}.`);
@@ -166,7 +168,7 @@ export async function plan(r: VultrResources, cfg: InfraConfig): Promise<Plan> {
       resource: "Managed PostgreSQL",
       name: n.database,
       action: "create",
-      detail: `PostgreSQL ${cfg.pgVersion}, ${chosen?.id ?? "?"} (${chosen?.vcpu_count ?? "?"} vCPU, ${chosen?.ram ?? "?"} MB), on the VPC, daily backups ${cfg.dbBackupHourUtc}:00 UTC`,
+      detail: `PostgreSQL ${cfg.pgVersion}, ${chosen?.id ?? "?"} (${chosen?.vcpu_count ?? "?"} vCPU, ${chosen?.ram ?? "?"} MB, ${(chosen?.max_connections as { pg?: number } | undefined)?.pg ?? "?"} connections), on the VPC, daily backups ${cfg.dbBackupHourUtc}:00 UTC`,
       monthlyUsd: chosen?.monthly_cost,
     });
   }
@@ -184,7 +186,8 @@ export async function plan(r: VultrResources, cfg: InfraConfig): Promise<Plan> {
       items.push({ resource: "Object Storage", name: n.objectStorage, action: "skip", detail: "no cluster in region" });
     } else {
       const tiers = await r.objectStorageTiers(cluster.id);
-      const tier = tiers.find((t) => t.is_default === "yes") ?? [...tiers].sort((a, b) => (a.price ?? 0) - (b.price ?? 0))[0];
+      // The app reads its documents all the time, and the cheaper Archival tier is for data rarely read.
+      const tier = tiers.find((t) => t.sales_name === "Standard") ?? tiers.find((t) => t.is_default === "yes") ?? [...tiers].sort((a, b) => (a.price ?? 0) - (b.price ?? 0))[0];
       context.objectStorageClusterId = cluster.id;
       if (tier?.id) context.objectStorageTierId = tier.id;
       items.push({
@@ -363,14 +366,10 @@ export async function apply(r: VultrResources, cfg: InfraConfig, p: Plan, opts: 
       documents: `${cfg.label}-docs-${state.bucketSuffix}`,
       backups: `${cfg.label}-backups-${state.bucketSuffix}`,
     };
+    // Through S3 itself, because Vultr's API answers its own documented request with "Missing bucket name".
     for (const bucket of Object.values(state.buckets)) {
-      try {
-        await r.createBucket(id, bucket);
-        log(`  + bucket ${bucket}`);
-      } catch (err) {
-        // Creating a bucket that already exists fails; that's fine on a re-run.
-        log(`  = bucket ${bucket} (${(err as Error).message})`);
-      }
+      const result = await ensureBucket({ endpoint: ready?.s3_hostname ?? "", accessKeyId: ready?.s3_access_key ?? "", secretAccessKey: ready?.s3_secret_key ?? "", bucket });
+      log(`  ${result === "created" ? "+" : "="} bucket ${bucket}`);
     }
     save();
     return ready;

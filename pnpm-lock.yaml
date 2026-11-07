@@ -105,6 +105,9 @@ importers:
 
   infra:
     dependencies:
+      '@ebo/db':
+        specifier: workspace:*
+        version: link:../packages/db
       '@ebo/vultr':
         specifier: workspace:*
         version: link:../packages/vultr

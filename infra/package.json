@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@ebo/db": "workspace:*",
     "@ebo/vultr": "workspace:*"
   }
 }

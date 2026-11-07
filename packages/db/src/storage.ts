@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CreateBucketCommand, DeleteObjectCommand, GetObjectCommand, HeadBucketCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 /**
  * Where documents live. Vultr Object Storage (S3-compatible) when S3_* is configured,
@@ -97,10 +97,9 @@ export interface S3Settings {
   region?: string;
 }
 
-export function s3Storage(s: S3Settings): Storage {
-  const endpoint = s.endpoint.startsWith("http") ? s.endpoint : `https://${s.endpoint}`;
-  const client = new S3Client({
-    endpoint,
+function s3Client(s: S3Settings): S3Client {
+  return new S3Client({
+    endpoint: s.endpoint.startsWith("http") ? s.endpoint : `https://${s.endpoint}`,
     region: s.region ?? "us-east-1", // Vultr ignores the region, but the SDK requires one
     forcePathStyle: true,
     credentials: { accessKeyId: s.accessKeyId, secretAccessKey: s.secretAccessKey },
@@ -108,6 +107,19 @@ export function s3Storage(s: S3Settings): Storage {
     requestChecksumCalculation: "WHEN_REQUIRED",
     responseChecksumValidation: "WHEN_REQUIRED",
   });
+}
+
+/** Creates the bucket unless it's already there. */
+export async function ensureBucket(s: S3Settings): Promise<"created" | "exists"> {
+  const client = s3Client(s);
+  const found = await client.send(new HeadBucketCommand({ Bucket: s.bucket })).then(() => true, () => false);
+  if (found) return "exists";
+  await client.send(new CreateBucketCommand({ Bucket: s.bucket }));
+  return "created";
+}
+
+export function s3Storage(s: S3Settings): Storage {
+  const client = s3Client(s);
   const get = async (key: string) => {
     const out = await client.send(new GetObjectCommand({ Bucket: s.bucket, Key: checkKey(key) }));
     if (!out.Body) throw new Error(`empty object: ${key}`);

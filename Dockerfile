@@ -10,6 +10,10 @@ RUN npm install -g pnpm@10.34.9 && mkdir -p /data/storage && chown node:node /da
 WORKDIR /repo
 
 # Dependencies first, so source changes don't reinstall them.
+# Node gives each address 250 ms to connect. From Singapore, Vultr's API and Serverless Inference take
+# about 235 ms, so calls to them would fail at random. Set again in the web image, which starts from Node's.
+ENV NODE_OPTIONS=--network-family-autoselection-attempt-timeout=5000
+
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json apps/web/
@@ -31,7 +35,7 @@ RUN BETTER_AUTH_SECRET=build-time-placeholder-not-used-at-run-time pnpm --filter
 
 FROM node:24-slim AS web
 WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 NODE_OPTIONS=--network-family-autoselection-attempt-timeout=5000
 # Used only when Object Storage isn't configured (a volume shared with the worker).
 RUN mkdir -p /data/storage && chown node:node /data/storage
 COPY --from=web-build --chown=node:node /repo/apps/web/.next/standalone ./

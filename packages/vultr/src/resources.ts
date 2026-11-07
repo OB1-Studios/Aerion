@@ -217,15 +217,6 @@ export function vultrResources(client: VultrClient) {
         "POST /object-storage",
       ).object_storage;
     },
-    async createBucket(objectStorageId: string, bucketName: string) {
-      unwrap(
-        await client.POST("/object-storage/{object-storage-id}/bucket", {
-          params: { path: { "object-storage-id": objectStorageId } },
-          body: { bucket_name: bucketName },
-        }),
-        "POST /object-storage/{id}/bucket",
-      );
-    },
 
     // Serverless Inference
     async inferenceSubscriptions() {

@@ -1,7 +1,11 @@
+import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 import { creditStatus, createVultrClient, describeCredit, platformStatus, vultrResources } from "@ebo/vultr";
 import { loadEnv, names, readConfig } from "./config";
 import { apply, plan, wantedFirewallRules } from "./provision";
 import { readState } from "./state";
+
+// Node gives each address 250 ms to connect, and from Pakistan Vultr's API often takes longer.
+setDefaultAutoSelectFamilyAttemptTimeout(5000);
 
 const usage = `Usage: pnpm infra:<plan|apply|status> [-- --yes]
 
@@ -88,6 +92,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+  // A failed fetch only says "fetch failed"; the reason is in its cause.
+  const cause = err instanceof Error && err.cause instanceof Error ? ` (${(err.cause as NodeJS.ErrnoException).code ?? err.cause.message})` : "";
+  console.error(`${err instanceof Error ? err.message : err}${cause}`);
   process.exit(1);
 });
