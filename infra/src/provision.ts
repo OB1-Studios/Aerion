@@ -1,5 +1,7 @@
-import { writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parseEnv } from "node:util";
 import type { VultrResources } from "@ebo/vultr";
 import { REPO_ROOT, names, splitCidr, type InfraConfig } from "./config";
 import { readState, writeState, type InfraState } from "./state";
@@ -217,13 +219,28 @@ export async function plan(r: VultrResources, cfg: InfraConfig): Promise<Plan> {
   return { items, warnings, monthlyUsd, context };
 }
 
+/**
+ * The app's own settings for Coolify. Without a domain, sslip.io gives the VM's IP a name that can
+ * get a certificate. Secrets are generated once and kept on every re-run: a new APP_ENCRYPTION_KEY
+ * would lock out the sealed mailbox passwords and the backups made with the old one. They never
+ * come from the local .env, which holds development values.
+ */
+export function appSettings(cfg: InfraConfig, appIp: string, previous: NodeJS.Dict<string>, demoPassword: string | undefined) {
+  return {
+    BETTER_AUTH_URL: cfg.domain ? `https://${cfg.appSubdomain}.${cfg.domain}` : `https://${appIp.replaceAll(".", "-")}.sslip.io`,
+    BETTER_AUTH_SECRET: previous.BETTER_AUTH_SECRET || randomBytes(32).toString("hex"),
+    APP_ENCRYPTION_KEY: previous.APP_ENCRYPTION_KEY || randomBytes(32).toString("hex"),
+    DEMO_PASSWORD: previous.DEMO_PASSWORD || demoPassword || randomBytes(18).toString("base64url"),
+  };
+}
+
 export interface ApplyOptions {
   log?: (msg: string) => void;
   /** How long to wait for the VM and database to come up. */
   waitMs?: number;
 }
 
-/** Creates whatever `plan` found missing, then writes connection details to .env.vultr. */
+/** Creates whatever `plan` found missing, then writes everything Coolify needs to .env.vultr. */
 export async function apply(r: VultrResources, cfg: InfraConfig, p: Plan, opts: ApplyOptions = {}): Promise<InfraState> {
   const log = opts.log ?? console.log;
   const n = names(cfg);
@@ -231,6 +248,12 @@ export async function apply(r: VultrResources, cfg: InfraConfig, p: Plan, opts: 
   state.region = cfg.region;
   state.bucketSuffix ??= Math.random().toString(36).slice(2, 8);
   const save = () => writeState(state);
+  // For what the app can run without. A refusal is reported, and .env.vultr is still written for what worked.
+  const orWarn = <T>(what: string, step: () => Promise<T>): Promise<T | undefined> =>
+    step().catch((err: Error) => {
+      log(`! ${what} failed, and the rest carries on: ${err.message}`);
+      return undefined;
+    });
 
   // SSH key
   let sshKeyId = (await r.sshKeys()).find((k) => k.name === n.sshKey)?.id;
@@ -294,9 +317,12 @@ export async function apply(r: VultrResources, cfg: InfraConfig, p: Plan, opts: 
     "VM to become active",
   );
   state.appIp = vm?.main_ip;
-  await r.setBackupSchedule(vm!.id!, cfg.vmBackupHourUtc);
-  log(`VM ready at ${vm?.main_ip}; daily backup at ${cfg.vmBackupHourUtc}:00 UTC`);
+  log(`VM ready at ${vm?.main_ip}`);
   save();
+  await orWarn("Setting the VM's backup hour", async () => {
+    await r.setBackupSchedule(vm!.id!, cfg.vmBackupHourUtc);
+    log(`  daily backup at ${cfg.vmBackupHourUtc}:00 UTC`);
+  });
 
   // Managed PostgreSQL, reachable only from inside the VPC
   let db = (await r.databases({ label: n.database }))[0];
@@ -322,22 +348,24 @@ export async function apply(r: VultrResources, cfg: InfraConfig, p: Plan, opts: 
   save();
   db = await waitFor(() => r.database(db!.id!), (d) => d?.status === "Running", opts.waitMs ?? 20 * 60_000, "database to start");
 
-  // Object Storage and buckets
-  let store = (await r.objectStorages()).find((s) => s.label === n.objectStorage);
-  if (!store && p.context.objectStorageClusterId && p.context.objectStorageTierId) {
-    store = await r.createObjectStorage(p.context.objectStorageClusterId, p.context.objectStorageTierId, n.objectStorage);
-    log(`created Object Storage ${n.objectStorage}; waiting for it…`);
-  }
-  if (store?.id) {
-    state.objectStorageId = store.id;
-    store = await waitFor(() => r.objectStorage(store!.id!), (s) => s?.status === "active", opts.waitMs ?? 10 * 60_000, "Object Storage");
+  // Object Storage and buckets. Without it, documents and backups go to a volume on the VM.
+  const store = await orWarn("Object Storage", async () => {
+    let found = (await r.objectStorages()).find((s) => s.label === n.objectStorage);
+    if (!found && p.context.objectStorageClusterId && p.context.objectStorageTierId) {
+      found = await r.createObjectStorage(p.context.objectStorageClusterId, p.context.objectStorageTierId, n.objectStorage);
+      log(`created Object Storage ${n.objectStorage}; waiting for it…`);
+    }
+    if (!found?.id) return undefined;
+    const id = found.id;
+    state.objectStorageId = id;
+    const ready = await waitFor(() => r.objectStorage(id), (s) => s?.status === "active", opts.waitMs ?? 10 * 60_000, "Object Storage");
     state.buckets = {
       documents: `${cfg.label}-docs-${state.bucketSuffix}`,
       backups: `${cfg.label}-backups-${state.bucketSuffix}`,
     };
     for (const bucket of Object.values(state.buckets)) {
       try {
-        await r.createBucket(store!.id!, bucket);
+        await r.createBucket(id, bucket);
         log(`  + bucket ${bucket}`);
       } catch (err) {
         // Creating a bucket that already exists fails; that's fine on a re-run.
@@ -345,32 +373,42 @@ export async function apply(r: VultrResources, cfg: InfraConfig, p: Plan, opts: 
       }
     }
     save();
-  }
+    return ready;
+  });
 
-  // Serverless Inference
-  let inf = (await r.inferenceSubscriptions()).find((s) => s.label === n.inference);
-  if (!inf) {
-    inf = await r.createInference(n.inference);
+  // Serverless Inference. Without it, documents are read by the built-in layout rules.
+  const inf = await orWarn("Serverless Inference", async () => {
+    const found = (await r.inferenceSubscriptions()).find((s) => s.label === n.inference);
+    if (found) return found;
+    const created = await r.createInference(n.inference);
     log(`created Serverless Inference subscription ${n.inference}`);
-  }
+    return created;
+  });
   state.inferenceId = inf?.id;
   save();
 
   // DNS
   if (cfg.domain && state.appIp) {
-    const zone = (await r.domains()).find((d) => d.domain === cfg.domain);
-    if (zone) {
-      const records = await r.dnsRecords(cfg.domain);
+    const appIp = state.appIp;
+    await orWarn("The DNS record", async () => {
+      const zone = (await r.domains()).find((d) => d.domain === cfg.domain);
+      if (!zone) return;
+      const records = await r.dnsRecords(cfg.domain!);
       if (!records.some((x) => x.type === "A" && x.name === cfg.appSubdomain)) {
-        await r.createDnsRecord(cfg.domain, { name: cfg.appSubdomain, type: "A", data: state.appIp, ttl: 300 });
-        log(`created DNS A record ${cfg.appSubdomain}.${cfg.domain} -> ${state.appIp}`);
+        await r.createDnsRecord(cfg.domain!, { name: cfg.appSubdomain, type: "A", data: appIp, ttl: 300 });
+        log(`created DNS A record ${cfg.appSubdomain}.${cfg.domain} -> ${appIp}`);
       }
-    }
+    });
   }
 
-  // Connection details for Coolify's environment variables. Never committed (.gitignore covers .env.*).
+  // Everything for Coolify's environment variables. Never committed (.gitignore covers .env.*).
+  const out = resolve(REPO_ROOT, ".env.vultr");
+  const previous = existsSync(out) ? parseEnv(readFileSync(out, "utf8")) : {};
+  const settings = appSettings(cfg, state.appIp ?? "", previous, process.env.DEMO_PASSWORD);
   const lines = [
     "# Written by `pnpm infra:apply`. Paste these into Coolify's environment variables. Do not commit.",
+    "# Keep a copy of APP_ENCRYPTION_KEY off the server: without it, mailbox passwords and backups can't be opened.",
+    ...Object.entries(settings).map(([key, value]) => `${key}=${value}`),
     `VULTR_REGION=${cfg.region}`,
     `VULTR_INSTANCE_ID=${state.instanceId ?? ""}`,
     `VULTR_DATABASE_ID=${state.databaseId ?? ""}`,
@@ -387,9 +425,9 @@ export async function apply(r: VultrResources, cfg: InfraConfig, p: Plan, opts: 
     `S3_BUCKET_BACKUPS=${state.buckets?.backups ?? ""}`,
     `VULTR_INFERENCE_API_KEY=${inf?.api_key ?? ""}`,
   ];
-  const out = resolve(REPO_ROOT, ".env.vultr");
   writeFileSync(out, lines.join("\n") + "\n", { mode: 0o600 });
-  log(`wrote connection details to ${out} (secret; not committed)`);
+  log(`wrote the settings for Coolify to ${out} (secret; not committed)`);
+  log(`the app's address will be ${settings.BETTER_AUTH_URL}`);
   return state;
 }
 

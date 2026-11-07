@@ -384,15 +384,12 @@ pnpm --filter @ebo/worker cli run ravi-code-works   # run one workspace from the
 > [!WARNING]
 > `pnpm infra:apply` creates paid resources. `pnpm infra:plan` is read-only and shows the monthly cost first.
 
-1. **Settings.** Put `VULTR_API_KEY` and `ADMIN_CIDR` (your IP) in `.env`, plus optionally `VULTR_REGION` (default `sgp`), `DOMAIN` and `SSH_PUBLIC_KEY_PATH`.
+1. **Settings.** Put `VULTR_API_KEY` and `ADMIN_CIDR` (your IP) in `.env`, plus optionally `VULTR_REGION` (default `sgp`), `DOMAIN` and `SSH_PUBLIC_KEY_PATH`. The key comes from Account, API in the Vultr portal, where you also add your IP under Access Control, or Vultr refuses the calls.
 2. **Plan.** `pnpm infra:plan` is read-only. It shows what already exists, what would be created, the monthly cost, and how long the account's Vultr credit lasts with the new resources.
-3. **Apply.** `pnpm infra:apply -- --yes` creates what's missing: the SSH key, VPC, firewall group, VM with Coolify, Managed PostgreSQL, Object Storage with its buckets, the Serverless Inference subscription and the optional DNS record. Resources are found by label, so running it again is safe. The connection details go to `.env.vultr` (secret, gitignored). *This step costs money.*
-4. **Coolify.** Open `http://<vm-ip>:8000` from your IP and create the admin account. Add this repository as a **Docker Compose** resource, give the `web` service your domain on port 3000, and paste `.env.vultr` into the environment variables. Also add these:
-   - `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (`https://app.<domain>`)
-   - `APP_ENCRYPTION_KEY` (`openssl rand -hex 32`), which seals mailbox app passwords and the nightly backups. Keep a copy off the server: without it, neither can be opened
-   - `DEMO_PASSWORD`
-   - optionally `VULTR_API_KEY` for the live status on the settings page (restrict the key to the VM's IP)
-   - optionally `DATABASE_CA_CERT` (the database's CA certificate, `\n` for line breaks) to verify the database's certificate
+3. **Apply.** `pnpm infra:apply -- --yes` creates what's missing: the SSH key, VPC, firewall group, VM with Coolify, Managed PostgreSQL, Object Storage with its buckets, the Serverless Inference subscription and the optional DNS record. Resources are found by label, so running it again is safe. Everything Coolify needs goes to `.env.vultr` (secret, gitignored): the connection details, plus the app's secrets, generated once and kept on every re-run. *This step costs money.*
+4. **Coolify.** Open `http://<vm-ip>:8000` from your IP and create the admin account. Add this repository as a **Docker Compose** resource and paste `.env.vultr` into the environment variables. Give the `web` service the address in `BETTER_AUTH_URL` on port 3000, such as `https://app.example.com:3000`. Without a `DOMAIN`, that address is the VM's IP under `sslip.io`, which can still get a certificate. Optionally add these:
+   - `VULTR_API_KEY` for the live status on the settings page (restrict the key to the VM's IP)
+   - `DATABASE_CA_CERT` (the database's CA certificate, `\n` for line breaks) to verify the database's certificate
 5. **Deploy.** The migrations run first; `web` and `worker` start only if they succeed. Load the shared demo from the worker's terminal in Coolify: `pnpm --filter @ebo/worker cli reset-demo`.
 6. **Check.** `pnpm infra:status` shows the credit left and how many days it lasts at this month's spending rate, plus health, backups, model usage and pending charges. The settings page shows the same credit line, in amber when it's under USD 25 or 14 days.
 
