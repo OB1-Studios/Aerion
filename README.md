@@ -342,7 +342,7 @@ Created by `pnpm seed`, with the password set in `DEMO_PASSWORD`.
 
 | Account | Role |
 | --- | --- |
-| `sana@` | Owns the software house |
+| `sana@ravicodeworks.example` | Owns the software house |
 | `hamza@ravicodeworks.example` | Does the software house's finance |
 | `qureshi@qureshi-associates.example` | Outside accountant for both workspaces (read-only, except for building tax packs) |
 | `ayesha@ayeshabuilds.example` | The freelancer |
@@ -429,6 +429,8 @@ The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It bac
 | `infra` | `plan`, `apply` and `status` for the Vultr stack |
 
 To regenerate the Vultr client, download Vultr's OpenAPI document to `packages/vultr/openapi.json` (it's gitignored) and run `pnpm vultr:types`.
+
+This README is also published as the [project page](https://code-breakers-4.github.io/IT-Export-Back-Office/) on GitHub Pages (`.github/workflows/pages.yml`, built by `scripts/build-site.mjs`). It's only this page: the app needs a server and a database, so it runs on Vultr.
 
 ---
 

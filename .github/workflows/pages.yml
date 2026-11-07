@@ -1,64 +1,53 @@
 name: Deploy project site to GitHub Pages
 
+# Publishes the README as the project page (scripts/build-site.mjs).
+# The app itself needs a server and a database, so it runs on Vultr, not here.
 on:
   push:
     branches: [main]
+    paths:
+      - README.md
+      - assets/**
+      - scripts/build-site.mjs
+      - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
+# A deployment that has started finishes; the newest push deploys after it.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/configure-pages@v5
-
-      - name: Build static project site
-        run: |
-          mkdir -p site
-          cp -R assets site/assets
-          python3 - <<'PY'
-          from html import escape
-          from pathlib import Path
-
-          readme = Path("README.md").read_text()
-          page = f"""<!doctype html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>IT Export Back Office</title>
-              <style>
-                :root {{ color-scheme: light dark; }}
-                body {{ max-width:  min(960px, 92vw); margin: 3rem auto; font: 1rem/1.6 system-ui, sans-serif; }}
-                pre {{ white-space: pre-wrap; overflow-wrap: anywhere; }}
-              </style>
-            </head>
-            <body><pre>{escape(readme)}</pre></body>
-          </html>
-          """
-          Path("site/index.html").write_text(page)
-          PY
-
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/setup-node@v7
         with:
-          path: site
+          node-version: 24
+
+      - name: Build the project page
+        run: node scripts/build-site.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
