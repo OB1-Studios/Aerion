@@ -73,7 +73,7 @@ export default async function Inbox({ params, searchParams }: { params: Promise<
       ) : null}
       <PageHeader
         title="Inbox"
-        sub={lastRun ? <>Last run {ws.isDemo ? `at ${clock(lastRun.clockAt, ws.timezone)}` : ago(lastRun.startedAt)}: {needsPerson ? `${needsPerson} thing${needsPerson === 1 ? "" : "s"} need a person.` : "nothing needs a person."}</> : "No run yet."}
+        sub={lastRun ? <>Last run {ws.isDemo ? `at ${clock(lastRun.clockAt, ws.timezone)}` : ago(lastRun.startedAt)}: {needsPerson ? `${needsPerson} thing${needsPerson === 1 ? " needs" : "s need"} a person.` : "nothing needs a person."}</> : "No run yet."}
         actions={
           acts && drafts.filter((d) => d.status === "draft").length > 1 ? (
             <form action={approveAll.bind(null, slug)}>
@@ -94,7 +94,8 @@ export default async function Inbox({ params, searchParams }: { params: Promise<
           <h2 className="font-semibold text-ink">{lastRun ? "New items have arrived" : sp.welcome ? "Welcome: this is your own copy of the demo" : "Ready for the weekly run"}</h2>
           <p className="mt-1 max-w-3xl text-sm text-muted">
             It&apos;s {clock(now, ws.timezone)}. {waitingN} item{waitingN === 1 ? " has" : "s have"} arrived since the last run: bank credit advices, client emails and wallet exports.
-            {!lastRun ? " Run the workflow and watch it plan, read every document, match the money to invoices, raise flags and draft the follow-ups. Nothing is sent without your approval." : ""}
+            {!lastRun ? " Run the workflow and watch it plan, read every document, match the money to invoices, raise flags and draft the follow-ups." : ""}
+            {!lastRun ? (ws.approvalPolicy.mode === "autopilot" ? " Under autopilot, routine emails that pass every check go out on their own." : " Nothing is sent without your approval.") : ""}
           </p>
           {acts ? (
             <form action={runNow.bind(null, slug)} className="mt-3">
@@ -105,7 +106,7 @@ export default async function Inbox({ params, searchParams }: { params: Promise<
       ) : null}
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Emails to approve" value={drafts.length} hint={pendingSend.length ? `${pendingSend.length} scheduled` : "supervised: you approve each one"} tone={drafts.length ? "warn" : undefined} />
+        <Stat label="Emails to approve" value={drafts.length} hint={pendingSend.length ? `${pendingSend.length} scheduled` : ws.approvalPolicy.mode === "autopilot" ? "autopilot: these need a person" : "supervised: you approve each one"} tone={drafts.length ? "warn" : undefined} />
         <Stat label="Open flags" value={openFlags.length} hint={[highOpen ? `${highOpen} high` : "none high", waitingOnReply ? `${waitingOnReply} waiting on a reply` : null].filter(Boolean).join(" · ")} tone={highOpen ? "bad" : undefined} />
         <Stat label="Tasks and checks" value={tasks.length + review.length + unmatched.length} hint="for a person" />
         <Stat label="Banking-channel share" value={share ? `${share.sharePct}%` : "—"} hint="this tax year, minimum 80%" tone={share ? (Number(share.sharePct) >= 85 ? "good" : "warn") : undefined} />

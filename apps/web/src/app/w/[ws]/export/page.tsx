@@ -21,7 +21,6 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
   const [{ file: f, summary: s }, packs] = await Promise.all([taxPackPreview(ws, asked), builtPacks(ws.id)]);
   const share = f.share;
   const openings = taxYearOpenings(f.books, f.context);
-  const missing = f.lines.filter((l) => !l.ownTransfer && (l.eprc === "missing" || l.eprc === "requested")).length;
   const base = `/w/${slug}`;
   const csv = `/api/w/${slug}/export`;
 
@@ -94,7 +93,7 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Banking-channel share" value={share ? `${share.sharePct}%` : "—"} hint={`minimum ${f.rules["banking_share.min_pct"]}% (rule unverified)`} tone={share ? (Number(share.sharePct) >= Number(f.rules["banking_share.warn_pct"]) ? "good" : "warn") : undefined} />
         <Stat label="Export credits" value={f.lines.filter((l) => !l.ownTransfer).length} hint={`${f.lines.filter((l) => l.ownTransfer).length} more from our own wallet`} />
-        <Stat label="ePRCs outstanding" value={missing} tone={missing ? "warn" : "good"} hint="missing or requested" />
+        <Stat label="ePRCs outstanding" value={s.eprc.missing} tone={s.eprc.missing ? "warn" : "good"} hint="missing or requested" />
         <Stat label="Wallet money not yet banked" value={share ? `USD ${share.walletHeldUsd}` : "—"} hint={share && share.walletSpentUsd !== "0.00" ? `USD ${share.walletSpentUsd} spent by card` : "at reference rates"} />
       </div>
 

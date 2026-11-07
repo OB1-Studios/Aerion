@@ -20,7 +20,7 @@ export const flagStep: Step = {
     const candidates = evaluateFlags(snapshot);
     const existing = await db.select().from(flag).where(eq(flag.workspaceId, wsId));
     const byKey = new Map(existing.map((f) => [f.key, f]));
-    const now = new Date();
+    const now = c.w.clock;
     const opened: FlagCandidate[] = [];
     const reopened: string[] = [];
     let updated = 0;
