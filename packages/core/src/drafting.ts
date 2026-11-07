@@ -52,8 +52,8 @@ export interface DraftPlan {
 }
 
 export const PURPOSE_CODE_DESCRIPTIONS: Record<string, string> = {
-  "9186": "IT freelance services, verify",
-  "9471": "home remittance, verify",
+  "9186": "IT freelance services",
+  "9471": "home remittance",
 };
 
 const firstName = (name: string | null | undefined) => (name ?? "").replace(/^(Dr|Mr|Mrs|Ms)\.?\s+/i, "").split(/\s+/)[0] ?? "";
@@ -290,16 +290,23 @@ export function planDrafts(flags: FlagCandidate[], ctx: DraftContext): DraftPlan
     const rows = [...byTx.entries()].sort(([a], [b]) => (ctx.transactions.get(a)!.valueDate < ctx.transactions.get(b)!.valueDate ? -1 : 1));
     const firstTx = rows[0]![0];
     const acc = accountFor(null, firstTx);
-    const evidence: Evidence = { ...base, "receiving_account.iban": ev.text(acc?.iban ?? acc?.label ?? "") };
+    const accountOf = (txId: string) => {
+      const a = accountFor(null, txId);
+      return a?.iban ?? a?.label ?? "";
+    };
+    // The credits can be on different accounts at the same bank: then each line names its own.
+    const oneAccount = new Set(rows.map(([txId]) => accountOf(txId))).size === 1;
+    const evidence: Evidence = { ...base, ...(oneAccount ? { "receiving_account.iban": ev.text(accountOf(firstTx)) } : {}) };
     rows.forEach(([txId, row], i) => {
       const tx = ctx.transactions.get(txId)!;
+      if (!oneAccount) evidence[`items.${i}.account`] = ev.text(accountOf(txId));
       evidence[`items.${i}.advice_number`] = ev.text(tx.adviceNumber ?? tx.reference ?? "credit");
       evidence[`items.${i}.value_date`] = ev.date(tx.valueDate);
       evidence[`items.${i}.amount`] = ev.money(tx.amount, tx.currency);
       evidence[`items.${i}.needed`] = ev.text([...row.needed].join(" and "));
     });
     const flagsInGroup = rows.flatMap(([, r]) => r.flags);
-    out.push(email(`T8:${bank}:${flagsInGroup.map((f) => f.key).sort().join("|")}`, flagsInGroup, missingDocumentsTemplate(rows.length), evidence, acc?.tradeServicesEmail));
+    out.push(email(`T8:${bank}:${flagsInGroup.map((f) => f.key).sort().join("|")}`, flagsInGroup, missingDocumentsTemplate(rows.length, !oneAccount), evidence, acc?.tradeServicesEmail));
   }
 
   return out;

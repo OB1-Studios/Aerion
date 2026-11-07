@@ -4,6 +4,7 @@ import { evaluateFlags } from "../src/flags";
 import type { ApprovalPolicy } from "../src/policy";
 import { mondaySnapshot } from "./monday";
 import { rules } from "./fixtures";
+import { attachesInvoice, missingDocumentsTemplate, TEMPLATES } from "../src/templates";
 
 const ACCOUNT_INSTRUCTIONS = "Shalimar Bank Ltd, SWIFT DEMOPKKA, IBAN PK41DEMO0001004470005678 (USD account of Ravi Code Works (Pvt) Ltd)";
 
@@ -66,8 +67,27 @@ describe("drafts for the Monday run (data spec section 9)", () => {
   it("the purpose-code email goes to the bank's trade services, citing the IT code", () => {
     const t6 = emails.find((d) => d.template === "T6")!;
     expect(t6.to).toBe("trade.services@shalimarbank.example");
-    expect(t6.body).toContain("It has been coded 9471 (home remittance, verify)");
+    expect(t6.body).toContain("It has been coded 9471 (home remittance).");
     expect(t6.body).toContain("should carry purpose code 9186");
+  });
+
+  it("only the templates that promise the invoice as an attachment are marked as carrying it", () => {
+    const templates = Object.values(TEMPLATES);
+    expect(templates.length).toBeGreaterThan(0);
+    for (const t of templates) expect([t!.key, attachesInvoice(t!.key)]).toEqual([t!.key, /attached/i.test(t!.body)]);
+    expect(attachesInvoice("T8")).toBe(false);
+    expect(attachesInvoice(null)).toBe(false);
+  });
+
+  it("a request covering two accounts names the account on each line", () => {
+    const one = missingDocumentsTemplate(1);
+    expect(one.body).toContain("to our account {{receiving_account.iban}}:");
+    expect(one.body).not.toContain("items.0.account");
+    const two = missingDocumentsTemplate(2, true);
+    expect(two.body).toContain("to the accounts shown:");
+    expect(two.body).not.toContain("receiving_account.iban");
+    expect(two.body).toContain("{{items.0.account}}");
+    expect(two.body).toContain("{{items.1.account}}");
   });
 
   it("H1 and H2 go to the bank in one grouped request", () => {

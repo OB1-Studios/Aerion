@@ -125,6 +125,28 @@ describe.skipIf(!dbUp)("invoices a person writes", () => {
     expect(change).toEqual({ ok: false, problems: ["Only a draft invoice can be changed; this one has been sent."] });
   });
 
+  it("the bank's purpose-code correction carries the invoice it says is attached", async () => {
+    const [draft] = await db.select().from(draftAction).where(and(eq(draftAction.workspaceId, wsId), eq(draftAction.template, "T6")));
+    expect(draft!.bodyRendered).toContain(", attached,");
+    const [inv] = await db.select().from(invoice).where(eq(invoice.id, draft!.invoiceId!));
+    const sent: OutgoingEmail[] = [];
+    const capture = { ...deps, mailer: { kind: "demo" as const, send: async (e: OutgoingEmail) => (sent.push(e), { messageId: null }) } };
+    expect(await approveAndSend(capture, draft!.id, "test-user")).toEqual({ ok: true });
+    expect(sent[0]!.attachments?.map((a) => a.name)).toEqual([`${inv!.number}.pdf`]);
+    const [out] = await db.select().from(message).where(and(eq(message.workspaceId, wsId), eq(message.subject, draft!.subject!)));
+    expect(out!.documentIds).toHaveLength(1);
+  });
+
+  it("the request to the bank names the right account for each credit", async () => {
+    const [t8] = await db.select().from(draftAction).where(and(eq(draftAction.workspaceId, wsId), eq(draftAction.template, "T8")));
+    const [esfca, pkr] = [await accountOfKind("esfca"), await accountOfKind("pkr_account")];
+    const lineFor = (ref: string) => t8!.bodyRendered!.split("\n").find((l) => l.includes(ref))!;
+    expect(t8!.numbersCheck?.ok).toBe(true);
+    expect(t8!.bodyRendered).toContain("to the accounts shown:");
+    expect(lineFor("ADV-ESF-")).toContain(esfca.iban!);
+    expect(lineFor("ADV-PKR-")).toContain(pkr.iban!);
+  });
+
   it("an invoice sent some other way can be marked as sent, once", async () => {
     const northwind = await clientNamed("Northwind Analytics Inc");
     const esfca = await accountOfKind("esfca");

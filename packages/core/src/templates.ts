@@ -148,11 +148,16 @@ ${SIGNATURE}`,
   },
 };
 
+/** The templates whose text says the invoice is attached. Each must go out with its PDF. */
+export function attachesInvoice(template: string | null | undefined): boolean {
+  return template === "T1" || template === "T6" || template === "T11";
+}
+
 /** T8 is built per run because it lists one line per credit (grouped per bank). */
-export function missingDocumentsTemplate(itemCount: number): EmailTemplate {
+export function missingDocumentsTemplate(itemCount: number, accountPerLine = false): EmailTemplate {
   const lines = Array.from(
     { length: itemCount },
-    (_, i) => `  {{items.${i}.advice_number}}  {{items.${i}.value_date}}  {{items.${i}.amount}}  {{items.${i}.needed}}`,
+    (_, i) => `  {{items.${i}.advice_number}}  ${accountPerLine ? `{{items.${i}.account}}  ` : ""}{{items.${i}.value_date}}  {{items.${i}.amount}}  {{items.${i}.needed}}`,
   ).join("\n");
   return {
     key: "T8",
@@ -160,7 +165,7 @@ export function missingDocumentsTemplate(itemCount: number): EmailTemplate {
     subject: "Request for ePRCs and withholding certificates: {{workspace.legal_name}}",
     body: `Dear Trade Services team,
 
-Please issue the outstanding documents for the following inward remittances to our account {{receiving_account.iban}}:
+Please issue the outstanding documents for the following inward remittances to ${accountPerLine ? "the accounts shown" : "our account {{receiving_account.iban}}"}:
 
 ${lines}
 

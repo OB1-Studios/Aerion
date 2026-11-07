@@ -1,4 +1,4 @@
-import { checkNumbers, dateInZone, TEMPLATE_ALLOW_LIST } from "@ebo/core";
+import { attachesInvoice, checkNumbers, dateInZone, TEMPLATE_ALLOW_LIST } from "@ebo/core";
 import { complianceItem, document, documentKey, draftAction, flag, invoice, invoiceReminder, message, sha256, workspace, type Db, type Storage } from "@ebo/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { audit, workspaceClock, type Mailer, type OutgoingEmail } from "./context";
@@ -32,9 +32,10 @@ export async function sendDraft(deps: SendDeps, draftId: string, actor: Actor): 
 
   const at = workspaceClock(ws);
   const from = ws.settings?.mailboxAddress ?? `no-reply@${ws.emailDomain ?? "example.invalid"}`;
-  // An invoice email carries the invoice, rendered from the records as they are now.
-  const pdf = d.invoiceId && d.template === "T11" ? await invoicePdf(db, ws.id, d.invoiceId) : null;
-  if (d.template === "T11" && !pdf) return { ok: false, reason: "The invoice for this email no longer exists." };
+  // An email that says the invoice is attached carries it, rendered from the records as they are now.
+  const needsPdf = attachesInvoice(d.template);
+  const pdf = needsPdf && d.invoiceId ? await invoicePdf(db, ws.id, d.invoiceId) : null;
+  if (needsPdf && !pdf) return { ok: false, reason: "The invoice for this email no longer exists." };
   const attachments: OutgoingEmail["attachments"] = pdf ? [{ name: pdf.name, contentType: "application/pdf", content: pdf.bytes }] : [];
   await db.update(draftAction).set({ status: "sending" }).where(eq(draftAction.id, d.id));
   let providerId: string | null = null;
@@ -74,7 +75,7 @@ export async function sendDraft(deps: SendDeps, draftId: string, actor: Actor): 
         const itemIds = flags.filter((f) => f.subjectType === "compliance_item").map((f) => f.subjectId);
         if (itemIds.length) await tx.update(complianceItem).set({ status: "requested", requestedAt: at }).where(and(inArray(complianceItem.id, itemIds), eq(complianceItem.status, "missing")));
       }
-      await tx.update(flag).set({ status: "actioned", updatedAt: new Date() }).where(and(inArray(flag.id, d.flagIds), eq(flag.status, "open")));
+      await tx.update(flag).set({ status: "actioned", updatedAt: at }).where(and(inArray(flag.id, d.flagIds), eq(flag.status, "open")));
     }
   });
   await audit(db, { workspaceId: ws.id, actorType: actor.type, actorId: actor.id, action: "email.sent", objectType: "draft_action", objectId: d.id, details: { template: d.template, to: d.toAddress, subject: d.subject, mailer: via, attachments: attachments.map((a) => a.name) } });
@@ -95,7 +96,7 @@ async function keepFile(db: Db, storage: Storage, workspaceId: string, at: Date,
   await storage.put(key, bytes, "application/pdf");
   const [row] = await db
     .insert(document)
-    .values({ workspaceId, kind: "invoice_pdf", storagePath: key, sha256: hash, originalName: name, mimeType: "application/pdf", sizeBytes: bytes.length, source: "generated", receivedAt: at, parseStatus: "skipped", reviewReasons: [`The copy of ${name} emailed to the client, kept on file. The agent doesn't read what the workspace sends.`] })
+    .values({ workspaceId, kind: "invoice_pdf", storagePath: key, sha256: hash, originalName: name, mimeType: "application/pdf", sizeBytes: bytes.length, source: "generated", receivedAt: at, parseStatus: "skipped", reviewReasons: [`The copy of ${name} sent by email, kept on file. The agent doesn't read what the workspace sends.`] })
     .onConflictDoUpdate({ target: [document.workspaceId, document.sha256], set: { originalName: name } })
     .returning({ id: document.id });
   return row!.id;

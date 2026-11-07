@@ -1,4 +1,4 @@
-import type { FoundNumber } from "@ebo/core";
+import { attachesInvoice, type FoundNumber } from "@ebo/core";
 import { client, draftAction, flag, getDb, invoice } from "@ebo/db";
 import { and, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
@@ -77,7 +77,7 @@ export default async function DraftPage({ params, searchParams }: { params: Prom
               <Row k="Subject">
                 <b>{highlight(d.subject ?? "", found)}</b>
               </Row>
-              {d.template === "T11" && d.invoiceId && inv[0] ? (
+              {attachesInvoice(d.template) && d.invoiceId && inv[0] ? (
                 <Row k="Attached">
                   <a href={`/api/w/${slug}/invoices/${d.invoiceId}/pdf`} target="_blank" rel="noopener" className="text-accent hover:underline">
                     {inv[0].number}.pdf
