@@ -10,8 +10,15 @@ export * from "./fields";
 export * from "./prompts";
 export * from "./readers";
 
-/** Model named in the build kit; set VULTR_INFERENCE_MODEL to whatever `pnpm --filter @ebo/ai models` lists. */
-export const DEFAULT_MODEL = "glm-5.3-flash";
+/**
+ * Chosen by measurement on 2026-11-07. Three flash models read all 16 demo documents correctly.
+ * Reading each demo email five times, glm-5.3-flash read 4 of 17 differently between tries (some
+ * replies were not JSON), minimax-m3.1-flash 1 (a label only), deepseek-v4.1-flash-1017 none.
+ * Three full demo runs each with minimax and deepseek gave identical results; minimax took
+ * about 20 s a run, deepseek about 45 s. Set VULTR_INFERENCE_MODEL to whatever
+ * `pnpm --filter @ebo/ai models` lists to use another.
+ */
+export const DEFAULT_MODEL = "minimax-m3.1-flash";
 
 /**
  * Readers backed by Vultr Serverless Inference when VULTR_INFERENCE_API_KEY is set, otherwise

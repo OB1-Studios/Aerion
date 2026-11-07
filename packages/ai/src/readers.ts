@@ -54,6 +54,7 @@ export function modelReaders(o: ModelReaderOptions): Readers {
     parse: (raw: Record<string, unknown>) => T,
     schema: { name: string; schema: Record<string, unknown> } | null,
     log: ModelCallRecord[],
+    maxTokens?: number,
   ): Promise<T> {
     let convo = messages;
     let lastError = "";
@@ -61,7 +62,7 @@ export function modelReaders(o: ModelReaderOptions): Readers {
       const started = Date.now();
       let res: ChatResult;
       try {
-        res = await o.client.chat({ model, messages: convo, json: o.jsonMode === "schema" && schema ? { mode: "schema", ...schema } : { mode: "object" } });
+        res = await o.client.chat({ model, messages: convo, maxTokens, json: o.jsonMode === "schema" && schema ? { mode: "schema", ...schema } : { mode: "object" } });
       } catch (err) {
         log.push({ purpose, model, inputTokens: 0, outputTokens: 0, costUsd: "0", latencyMs: Date.now() - started, ok: false, error: (err as Error).message.slice(0, 500) });
         throw err;
@@ -164,6 +165,8 @@ export function modelReaders(o: ModelReaderOptions): Readers {
           },
           null,
           log,
+          // A reply is a few hundred tokens. A model that starts repeating itself is cut off early.
+          800,
         );
         return { result, model: o.model, promptVersion: PROMPT_VERSIONS.intent, calls: log };
       } catch {

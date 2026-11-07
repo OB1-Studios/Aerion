@@ -1,4 +1,5 @@
 import "server-only";
+import { DEFAULT_MODEL } from "@ebo/ai";
 import { createVultrClient, platformStatus, vultrResources, type PlatformStatus } from "@ebo/vultr";
 
 let cached: { at: number; status: PlatformStatus } | null = null;
@@ -24,7 +25,7 @@ export async function vultrStatus(): Promise<PlatformStatus | null> {
   return status;
 }
 
-/** How documents are read in this deployment. */
+/** How documents are read in this deployment. Compose passes an unset model as "", so `||`, as readersFromEnv does. */
 export function readerInfo(): { mode: "vultr" | "offline"; model: string | null } {
-  return process.env.VULTR_INFERENCE_API_KEY ? { mode: "vultr", model: process.env.VULTR_INFERENCE_MODEL ?? "default" } : { mode: "offline", model: null };
+  return process.env.VULTR_INFERENCE_API_KEY ? { mode: "vultr", model: process.env.VULTR_INFERENCE_MODEL || DEFAULT_MODEL } : { mode: "offline", model: null };
 }

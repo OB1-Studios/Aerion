@@ -14,4 +14,4 @@ export const LIST_PRICES: Record<string, { input: number; output: number }> = {
 };
 
 /** Models worth comparing for reading documents (build plan, "Models on Vultr"); `bench --models candidates` runs the ones the key can use. */
-export const CANDIDATE_MODELS = ["glm-5.3-flash", "qwen3.8-flash-next", "nemotron-3-nano-omni-30b-a3b-reasoning", "deepseek-v4.1-flash-1017", "glm-5.3", "mimo-v2.6-pro"];
+export const CANDIDATE_MODELS = ["minimax-m3.1-flash", "glm-5.3-flash", "qwen3.8-flash-next", "nemotron-3-nano-omni-30b-a3b-reasoning", "deepseek-v4.1-flash-1017", "glm-5.3", "mimo-v2.6-pro"];
