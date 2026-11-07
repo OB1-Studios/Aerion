@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 /**
  * Where documents live. Vultr Object Storage (S3-compatible) when S3_* is configured,
@@ -104,11 +104,25 @@ export function s3Storage(s: S3Settings): Storage {
     region: s.region ?? "us-east-1", // Vultr ignores the region, but the SDK requires one
     forcePathStyle: true,
     credentials: { accessKeyId: s.accessKeyId, secretAccessKey: s.secretAccessKey },
+    // The SDK's newer checksums are made for AWS. Not every S3-compatible service accepts them.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
   const get = async (key: string) => {
     const out = await client.send(new GetObjectCommand({ Bucket: s.bucket, Key: checkKey(key) }));
     if (!out.Body) throw new Error(`empty object: ${key}`);
     return out.Body.transformToByteArray();
+  };
+  const list = async (prefix: string) => {
+    const p = checkKey(prefix).replace(/\/?$/, "/");
+    const out: StoredObject[] = [];
+    let token: string | undefined;
+    do {
+      const page = await client.send(new ListObjectsV2Command({ Bucket: s.bucket, Prefix: p, ContinuationToken: token }));
+      for (const o of page.Contents ?? []) if (o.Key) out.push({ key: o.Key, size: o.Size ?? 0, modified: o.LastModified ?? new Date(0) });
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
+    return out.sort((a, b) => a.key.localeCompare(b.key));
   };
   return {
     kind: "s3",
@@ -120,26 +134,10 @@ export function s3Storage(s: S3Settings): Storage {
       return new TextDecoder().decode(await get(key));
     },
     async deletePrefix(prefix) {
-      const p = checkKey(prefix).replace(/\/?$/, "/");
-      let token: string | undefined;
-      do {
-        const page = await client.send(new ListObjectsV2Command({ Bucket: s.bucket, Prefix: p, ContinuationToken: token }));
-        const keys = (page.Contents ?? []).flatMap((o) => (o.Key ? [{ Key: o.Key }] : []));
-        if (keys.length) await client.send(new DeleteObjectsCommand({ Bucket: s.bucket, Delete: { Objects: keys } }));
-        token = page.IsTruncated ? page.NextContinuationToken : undefined;
-      } while (token);
+      // One at a time: S3's bulk delete requires a checksum, in a form not every service accepts.
+      for (const o of await list(prefix)) await client.send(new DeleteObjectCommand({ Bucket: s.bucket, Key: o.key }));
     },
-    async list(prefix) {
-      const p = checkKey(prefix).replace(/\/?$/, "/");
-      const out: StoredObject[] = [];
-      let token: string | undefined;
-      do {
-        const page = await client.send(new ListObjectsV2Command({ Bucket: s.bucket, Prefix: p, ContinuationToken: token }));
-        for (const o of page.Contents ?? []) if (o.Key) out.push({ key: o.Key, size: o.Size ?? 0, modified: o.LastModified ?? new Date(0) });
-        token = page.IsTruncated ? page.NextContinuationToken : undefined;
-      } while (token);
-      return out.sort((a, b) => a.key.localeCompare(b.key));
-    },
+    list,
     async delete(key) {
       await client.send(new DeleteObjectCommand({ Bucket: s.bucket, Key: checkKey(key) }));
     },
