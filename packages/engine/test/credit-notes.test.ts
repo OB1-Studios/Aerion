@@ -159,7 +159,8 @@ describe.skipIf(!dbUp)("credit notes, write-offs and voids", () => {
     const events = await db
       .select()
       .from(auditEvent)
-      .where(and(eq(auditEvent.workspaceId, wsId), inArray(auditEvent.action, ["invoice.credited", "invoice.written_off", "invoice.voided"])));
+      .where(and(eq(auditEvent.workspaceId, wsId), inArray(auditEvent.action, ["invoice.credited", "invoice.written_off", "invoice.voided"])))
+      .orderBy(asc(auditEvent.id));
     expect(events).toHaveLength(6);
     expect(events.find((e) => e.action === "invoice.credited")).toMatchObject({
       actorType: "user",

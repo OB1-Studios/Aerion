@@ -41,7 +41,10 @@ describe.skipIf(!dbUp)("backups", () => {
   afterAll(async () => {
     await target?.end();
     await blank?.end();
-    if (dbUp) for (const name of Object.values(names)) await pool.query(`drop database if exists ${name} with (force)`);
+    // Not "with (force)": the pools above can still be closing, and force would kill those connections
+    // and throw an error nothing is listening for. A plain drop waits for them to go.
+    if (dbUp) for (const name of Object.values(names)) await pool.query(`drop database if exists ${name}`);
+    if (dbUp) await pool.query("delete from workspace where slug = $1", [`backup-test-${tag}`]);
     await pool.end();
   });
 
