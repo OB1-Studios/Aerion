@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { account, fxReferenceRate, member, rule, user, workspace } from "../schema";
 import type { Storage } from "../storage";
@@ -39,9 +39,7 @@ export async function seedReferenceData(db: Db): Promise<void> {
       .onConflictDoUpdate({ target: [fxReferenceRate.currency, fxReferenceRate.rateDate], set: { midRate: sql`excluded.mid_rate`, source: sql`excluded.source` } });
   }
   for (const r of globalRuleRows()) {
-    const existing = await db.select({ id: rule.id }).from(rule).where(and(isNull(rule.workspaceId), eq(rule.key, r.key)));
-    if (existing.length) continue; // keep whatever a person verified or changed
-    await db.insert(rule).values(r);
+    await db.insert(rule).values(r).onConflictDoNothing({ target: [rule.workspaceId, rule.key] }); // keep whatever a person verified or changed
   }
 }
 
