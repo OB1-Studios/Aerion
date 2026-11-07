@@ -72,7 +72,7 @@ export function modelReaders(o: ModelReaderOptions): Readers {
         log.push({ purpose, model: res.model, inputTokens: res.inputTokens, outputTokens: res.outputTokens, costUsd: cost(res), latencyMs: res.latencyMs, ok: true });
         return value;
       } catch (err) {
-        lastError = (err as Error).message;
+        lastError = res.truncated ? `cut off at the token limit (${(err as Error).message})` : (err as Error).message;
         log.push({ purpose, model: res.model, inputTokens: res.inputTokens, outputTokens: res.outputTokens, costUsd: cost(res), latencyMs: res.latencyMs, ok: false, error: `unusable reply: ${lastError}`.slice(0, 500) });
         convo = [...messages, { role: "assistant", content: res.content.slice(0, 4000) }, { role: "user", content: `That reply could not be used (${lastError}). Reply again with only the JSON object, matching the schema.` }];
       }
@@ -165,8 +165,9 @@ export function modelReaders(o: ModelReaderOptions): Readers {
           },
           null,
           log,
-          // A reply is a few hundred tokens. A model that starts repeating itself is cut off early.
-          800,
+          // Hidden reasoning counts: most demo emails take 150 to 450 tokens in all, the forwarded
+          // bank-details one about 1,200. A model that starts repeating itself stops here.
+          3000,
         );
         return { result, model: o.model, promptVersion: PROMPT_VERSIONS.intent, calls: log };
       } catch {

@@ -24,7 +24,16 @@ export interface ChatResult {
   inputTokens: number;
   outputTokens: number;
   latencyMs: number;
+  /** The model stopped at the token limit (finish_reason "length"), so the reply may be incomplete or empty. */
+  truncated?: boolean;
 }
+
+/**
+ * Reasoning models count their hidden reasoning against max_tokens. On the answer key,
+ * minimax-m3.1-flash used up to about 1,100 tokens per call when it finished, and a limit of 2,000
+ * cut off the first attempt on 12 of 61 documents (2026-11-07).
+ */
+export const DEFAULT_MAX_TOKENS = 6000;
 
 export class InferenceError extends Error {
   constructor(
@@ -79,17 +88,24 @@ export function inferenceClient(o: ClientOptions): InferenceClient {
     baseUrl,
     async chat(opts) {
       const started = Date.now();
-      const body: Record<string, unknown> = { model: opts.model, messages: opts.messages, temperature: 0, max_tokens: opts.maxTokens ?? 2000 };
+      const body: Record<string, unknown> = { model: opts.model, messages: opts.messages, temperature: 0, max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS };
       if (opts.json?.mode === "object") body.response_format = { type: "json_object" };
       if (opts.json?.mode === "schema") body.response_format = { type: "json_schema", json_schema: { name: opts.json.name, schema: opts.json.schema, strict: true } };
       const data = (await call("/chat/completions", { method: "POST", body: JSON.stringify(body) })) as {
         model?: string;
-        choices?: Array<{ message?: { content?: string | null } }>;
+        choices?: Array<{ message?: { content?: string | null }; finish_reason?: string | null }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
       const content = data.choices?.[0]?.message?.content;
       if (typeof content !== "string") throw new InferenceError("the response had no message content", null);
-      return { content, model: data.model ?? opts.model, inputTokens: data.usage?.prompt_tokens ?? 0, outputTokens: data.usage?.completion_tokens ?? 0, latencyMs: Date.now() - started };
+      return {
+        content,
+        model: data.model ?? opts.model,
+        inputTokens: data.usage?.prompt_tokens ?? 0,
+        outputTokens: data.usage?.completion_tokens ?? 0,
+        latencyMs: Date.now() - started,
+        truncated: data.choices?.[0]?.finish_reason === "length",
+      };
     },
     async models() {
       const data = (await call("/models", { method: "GET" })) as { data?: Array<{ id?: string }> };
@@ -98,14 +114,25 @@ export function inferenceClient(o: ClientOptions): InferenceClient {
   };
 }
 
-/** The first JSON object in a reply (models sometimes wrap JSON in prose or code fences). */
+/**
+ * The first complete JSON object in a reply. Models sometimes wrap it in prose or a code fence,
+ * and some repeat it until the token limit, so read up to the brace that closes the first one.
+ */
 export function parseJsonObject(content: string): Record<string, unknown> {
   const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(content)?.[1];
   const text = (fenced ?? content).trim();
   const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("no JSON object in the reply");
-  const value: unknown = JSON.parse(text.slice(start, end + 1));
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("the reply is not a JSON object");
-  return value as Record<string, unknown>;
+  if (start < 0) throw new Error("no JSON object in the reply");
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === "\\") i++;
+      else if (ch === '"') inString = false;
+    } else if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) return JSON.parse(text.slice(start, i + 1)) as Record<string, unknown>;
+  }
+  throw new Error("the JSON object in the reply is not complete");
 }
