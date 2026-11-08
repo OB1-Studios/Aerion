@@ -38,7 +38,7 @@ export default async function AskPage({ params, searchParams }: { params: Promis
   return (
     <>
       <PageHeader
-        eyebrow="Intelligence and automation"
+        eyebrow="Intelligence & automation"
         title="Ask your books"
         sub="Ask about what's owed, what came in, missing paperwork, costs or one invoice. Aerion turns the question into one of a fixed set of queries and works out every figure from your records, so the numbers match the rest of the app. It never guesses an amount and never changes anything."
       />

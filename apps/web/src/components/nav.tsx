@@ -25,7 +25,7 @@ const isActive = (path: string, href: string) => path === href || path.startsWit
 function Links({ groups, onNavigate }: { groups: NavGroup[]; onNavigate?: () => void }) {
   const path = usePathname();
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       {groups.map((g, gi) => (
         <div key={g.label ?? gi}>
           {g.label ? <div className="mb-1 px-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-sidebar-muted/80">{g.label}</div> : null}
@@ -38,7 +38,7 @@ function Links({ groups, onNavigate }: { groups: NavGroup[]; onNavigate?: () => 
                     href={it.href}
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
-                    className={`group flex items-center gap-3 rounded-lg px-3 py-[7px] text-[13.5px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-gold ${
+                    className={`group flex items-center gap-3 rounded-lg px-3 py-1.5 text-[13.5px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-gold ${
                       active ? "bg-[linear-gradient(100deg,#dcbd80,#c69c58)] font-bold text-[#1c2823] shadow-[0_2px_10px_rgb(0_0_0/0.18)]" : "font-medium text-sidebar-ink/85 hover:bg-white/[0.07] hover:text-white"
                     }`}
                   >

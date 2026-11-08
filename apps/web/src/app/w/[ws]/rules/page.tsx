@@ -24,7 +24,7 @@ export default async function RulesPage({ params }: { params: Promise<{ ws: stri
   return (
     <>
       <PageHeader
-        eyebrow="Intelligence and automation"
+        eyebrow="Intelligence & automation"
         title="Rules library"
         sub="Every threshold Aerion decides with: purpose codes, wait times, tolerances and tax rates. Code reads them from here, never from a model, and each flag names the rules it used."
       />

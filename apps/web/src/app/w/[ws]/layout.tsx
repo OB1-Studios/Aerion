@@ -50,7 +50,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
       ],
     },
     {
-      label: "Money in and out",
+      label: "Money in & out",
       items: [
         { href: `${base}/invoices`, label: "Invoices & receivables", icon: "invoice" },
         { href: `${base}/payments`, label: "Payments & matching", icon: "card", count: unmatched },
@@ -75,7 +75,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
       ],
     },
     {
-      label: "Intelligence and automation",
+      label: "Intelligence & automation",
       items: [
         { href: `${base}/ask`, label: "Ask your books", icon: "sparkle" },
         { href: `${base}/runs`, label: "Run history", icon: "run" },
@@ -166,7 +166,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
     <div className="min-h-dvh lg:pl-[16.5rem]">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[16.5rem] flex-col bg-[linear-gradient(180deg,var(--sidebar),var(--sidebar-deep))] lg:flex">
         <Curves className="h-56 opacity-[0.08]" />
-        <div className="relative flex shrink-0 justify-center px-4 pb-4 pt-6">
+        <div className="relative flex shrink-0 justify-center px-4 pb-3 pt-5">
           <LogoStacked href={`${base}/inbox`} />
         </div>
         {/* The links scroll on short screens; the workspace and the person stay at the foot. */}
