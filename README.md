@@ -504,7 +504,7 @@ The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It bac
 
 To regenerate the Vultr client, download Vultr's OpenAPI document to `packages/vultr/openapi.json` (it's gitignored) and run `pnpm vultr:types`.
 
-This README is also published as the [project page](https://code-breakers-4.github.io/IT-Export-Back-Office/) on GitHub Pages (`.github/workflows/pages.yml`, built by `scripts/build-site.mjs`). It's only this page: the app needs a server and a database, so it runs on Vultr.
+This README is also published as the [project page](https://ob1-studios.github.io/Aerion/) on GitHub Pages (`.github/workflows/pages.yml`, built by `scripts/build-site.mjs`). It's only this page: the app needs a server and a database, so it runs on Vultr.
 
 ---
 

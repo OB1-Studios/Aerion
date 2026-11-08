@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const out = join(root, "_site");
-const repoUrl = `https://github.com/${process.env.GITHUB_REPOSITORY ?? "code-breakers-4/IT-Export-Back-Office"}`;
+const repoUrl = `https://github.com/${process.env.GITHUB_REPOSITORY ?? "OB1-Studios/Aerion"}`;
 
 const response = await fetch("https://api.github.com/markdown", {
   method: "POST",
