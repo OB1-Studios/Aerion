@@ -8,7 +8,7 @@ import { clock, duration } from "@/lib/format";
 import { canAct, requireWorkspace } from "@/lib/session";
 import { runNow } from "../actions";
 
-export const metadata = { title: "Runs" };
+export const metadata = { title: "Run history" };
 
 const COUNT_LABELS: Array<[string, string]> = [
   ["documents_read", "read"],
@@ -35,7 +35,7 @@ export default async function RunsPage({ params }: { params: Promise<{ ws: strin
     <>
       <RunPoller active={active} everyMs={2000} />
       <PageHeader
-        title="Runs"
+        title="Run history"
         sub="Every run of the workflow, step by step. The weekly run starts on its own every Monday at 09:00 PKT."
         actions={
           canAct(role) && !ws.isDemo ? (

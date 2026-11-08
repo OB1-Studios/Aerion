@@ -1,21 +1,14 @@
 @import "tailwindcss";
 
-/* dark: follows the system setting unless the page forces a theme with data-theme. */
-@custom-variant dark {
-  &:where([data-theme="dark"], [data-theme="dark"] *) {
-    @slot;
-  }
-  @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
-      @slot;
-    }
-  }
-}
+/* Light is the default. Dark is a choice (the sun/moon button), kept as data-theme="dark" on <html>. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
- * Aerion's identity: a ledger, not a dashboard template. Warm paper, deep treasury green for
- * actions, brass only in the mark, hairline rules instead of shadows, a serif for titles and
- * tabular figures everywhere money is shown.
+ * Aerion, Corporate Creative: warm off-white canvas and white work surfaces, forest green for the
+ * brand and the actions that matter, gold for the one thing that's selected, terracotta rarely.
+ * DM Serif Display for titles and headline figures, Manrope for everything else, tabular figures
+ * wherever money lines up. Status colours are their own (success, warning, danger, info), so the
+ * brand never has to carry a status.
  */
 @theme {
   --color-ink: var(--ink);
@@ -26,81 +19,125 @@
   --color-sunken: var(--sunken);
   --color-canvas: var(--canvas);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
-  --color-brass: var(--brass);
-  --font-sans: var(--font-plex), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: var(--font-serif), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-terracotta: var(--terracotta);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-line: var(--info-line);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-violet-line: var(--violet-line);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-deep: var(--sidebar-deep);
+  --color-sidebar-ink: var(--sidebar-ink);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-dm-serif), Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --shadow-card: 0 1px 2px rgb(23 33 29 / 0.04), 0 4px 14px rgb(23 33 29 / 0.04);
+  --shadow-pop: 0 10px 30px rgb(23 33 29 / 0.12), 0 2px 6px rgb(23 33 29 / 0.06);
 }
 
 :root {
-  --ink: #17201c;
-  --muted: #5d6964;
-  --line: #e4e1d9;
-  --line-strong: #cfcac0;
+  --canvas: #f7f8f5;
   --panel: #ffffff;
-  --sunken: #f9f8f4;
-  --canvas: #f4f3ee;
-  --accent: #1d5c48;
+  --sunken: #f2f4f0;
+  --ink: #29332f;
+  /* #77817a in the brand palette; darkened to keep body text above 4.5:1 on white and canvas. */
+  --muted: #5f6963;
+  --line: #e7eae5;
+  --line-strong: #d3d9d2;
+  --accent: #214f41;
+  --accent-hover: #1a4135;
   --accent-ink: #ffffff;
-  --accent-soft: #e5efe9;
-  --brass: #9a6b2f;
-  /* Chart series, validated on the panel surface in each mode (dataviz palette slots 1-2). */
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  /* Ordinal ramp for age bands (one hue, light = not due, dark = most late), validated with --ordinal. */
-  --age-1: #86b6ef;
-  --age-2: #5598e7;
-  --age-3: #2a78d6;
-  --age-4: #1c5cab;
-  --age-5: #104281;
+  --accent-soft: #dce9df;
+  --gold: #c9a15f;
+  --gold-soft: #f6ecda;
+  --terracotta: #c77959;
+  --success: #237a52;
+  --success-soft: #e5f2ea;
+  --success-line: #c3dfcd;
+  --warning: #a86412;
+  --warning-soft: #fbf0de;
+  --warning-line: #edd3a6;
+  --danger: #b6403a;
+  --danger-soft: #fbe9e7;
+  --danger-line: #f0c6c2;
+  --info: #356a9a;
+  --info-soft: #e7eff8;
+  --info-line: #c4d6ea;
+  --violet: #6a4fa3;
+  --violet-soft: #f0ebf9;
+  --violet-line: #d9cdef;
+  --sidebar: #1f4a3c;
+  --sidebar-deep: #163a2f;
+  --sidebar-ink: #eef4f0;
+  --sidebar-muted: #a9c2b6;
+  /* Charts: forest and gold, like the brand; an ordinal green ramp for how late money is. */
+  --series-1: #214f41;
+  --series-2: #d0aa68;
+  --age-1: #cfe3d6;
+  --age-2: #9cc4ad;
+  --age-3: #5e9a7c;
+  --age-4: #2f6b53;
+  --age-5: #173f31;
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ink: #e6e9e4;
-    --muted: #9ba6a0;
-    --line: #26302b;
-    --line-strong: #36423c;
-    --panel: #151b18;
-    --sunken: #111613;
-    --canvas: #0d1210;
-    --accent: #5fb596;
-    --accent-ink: #0a1912;
-    --accent-soft: #17302a;
-    --brass: #c99a5b;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --age-1: #184f95;
-    --age-2: #256abf;
-    --age-3: #3987e5;
-    --age-4: #6da7ec;
-    --age-5: #9ec5f4;
-    color-scheme: dark;
-  }
-}
-
 :root[data-theme="dark"] {
-  --ink: #e6e9e4;
-  --muted: #9ba6a0;
-  --line: #26302b;
-  --line-strong: #36423c;
-  --panel: #151b18;
-  --sunken: #111613;
-  --canvas: #0d1210;
-  --accent: #5fb596;
-  --accent-ink: #0a1912;
-  --accent-soft: #17302a;
-  --brass: #c99a5b;
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --age-1: #184f95;
-  --age-2: #256abf;
-  --age-3: #3987e5;
-  --age-4: #6da7ec;
-  --age-5: #9ec5f4;
+  --canvas: #0f1513;
+  --panel: #161e1b;
+  --sunken: #121916;
+  --ink: #e7ede9;
+  --muted: #a0ada6;
+  --line: #26312c;
+  --line-strong: #35423c;
+  --accent: #6dbb98;
+  --accent-hover: #82c9a9;
+  --accent-ink: #0b1a14;
+  --accent-soft: #1b3229;
+  --gold: #d6b172;
+  --gold-soft: #2c2416;
+  --terracotta: #dc957a;
+  --success: #62c491;
+  --success-soft: #142a1f;
+  --success-line: #1f4532;
+  --warning: #e3a85c;
+  --warning-soft: #2d2213;
+  --warning-line: #4a3820;
+  --danger: #ec847c;
+  --danger-soft: #331b19;
+  --danger-line: #55302c;
+  --info: #7fb0e0;
+  --info-soft: #16233a;
+  --info-line: #26395a;
+  --violet: #b9a3ec;
+  --violet-soft: #241d39;
+  --violet-line: #3b3060;
+  --sidebar: #12271f;
+  --sidebar-deep: #0c1c16;
+  --sidebar-ink: #e7efea;
+  --sidebar-muted: #93ab9f;
+  --series-1: #6dbb98;
+  --series-2: #d6b172;
+  --age-1: #1d3a2e;
+  --age-2: #2b5a45;
+  --age-3: #3f7d61;
+  --age-4: #67ab89;
+  --age-5: #a3d3ba;
   color-scheme: dark;
 }
 
@@ -124,30 +161,34 @@ table,
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
 }
+.scroll-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.16) transparent;
+}
 
 @layer components {
   .btn {
-    @apply inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply bg-accent text-accent-ink shadow-[inset_0_-1px_0_rgb(0_0_0/0.15)] hover:brightness-110;
+    @apply bg-accent text-accent-ink shadow-[0_1px_2px_rgb(23_33_29/0.12)] hover:bg-accent-hover;
   }
   .btn-secondary {
-    @apply border border-line-strong bg-panel text-ink hover:bg-sunken;
+    @apply border border-line-strong bg-panel text-ink hover:border-accent/40 hover:bg-sunken;
   }
   .btn-danger {
-    @apply border border-rose-300 bg-panel text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950;
+    @apply border border-danger-line bg-panel text-danger hover:bg-danger-soft;
   }
   .btn-ghost {
     @apply text-muted hover:bg-sunken hover:text-ink;
   }
   .input {
-    @apply w-full rounded-md border border-line-strong bg-panel px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-2 focus:outline-offset-0 focus:outline-accent/30;
+    @apply w-full rounded-lg border border-line-strong bg-panel px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-2 focus:outline-offset-0 focus:outline-accent/25;
   }
   .link {
-    @apply text-accent underline-offset-2 hover:underline;
+    @apply font-medium text-accent underline-offset-2 hover:underline;
   }
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted;
+    @apply text-[11px] font-bold uppercase tracking-[0.1em] text-muted;
   }
 }

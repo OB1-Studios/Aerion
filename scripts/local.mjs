@@ -63,9 +63,11 @@ if (why) {
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
-// The standalone server serves the static files from next to itself.
+// The standalone server serves the static files, and public/ (the logo), from next to itself.
 rmSync(join(standalone, "apps/web/.next/static"), { recursive: true, force: true });
 cpSync(join(web, ".next/static"), join(standalone, "apps/web/.next/static"), { recursive: true });
+rmSync(join(standalone, "apps/web/public"), { recursive: true, force: true });
+cpSync(join(web, "public"), join(standalone, "apps/web/public"), { recursive: true });
 
 const port = process.env.PORT || "3000";
 const child = spawn(process.execPath, [`--max-old-space-size=${process.env.LOCAL_HEAP_MB || 384}`, server], {

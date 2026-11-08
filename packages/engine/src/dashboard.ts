@@ -260,3 +260,87 @@ export function dashboard(b: Books, w: WorkspaceContext): Dashboard {
     clients,
   };
 }
+
+/**
+ * Money in, the way "Money received" counts it: bank credits, Payoneer receipts and marketplace
+ * earnings, less transfers between the business's own accounts, duplicates and ignored lines.
+ */
+const MONEY_IN_KINDS: ReadonlySet<string> = new Set(["credit", "payoneer_receipt", "platform_earning"]);
+export const isMoneyIn = (t: Books["transactions"][number]) => MONEY_IN_KINDS.has(t.kind) && t.matchStatus !== "transfer" && t.matchStatus !== "duplicate" && t.matchStatus !== "ignored";
+
+/** A payment in PKR: as credited when the bank converted it, otherwise at its value date's reference rate. */
+function paymentPkr(t: Books["transactions"][number], w: WorkspaceContext): Decimal | null {
+  if (t.pkrAmount != null) return dec(t.pkrAmount);
+  if (t.currency === "PKR") return dec(t.amount);
+  const r = w.refRate(t.currency, t.valueDate);
+  return r == null ? null : dec(t.amount).times(r);
+}
+
+export interface Received {
+  pkr: string;
+  payments: number;
+  /** A payment in a currency without a reference rate was left out of `pkr`. */
+  unpriced: boolean;
+}
+
+/** Money in between two days, both included, in PKR. */
+export function receivedBetween(b: Books, w: WorkspaceContext, from: IsoDate, to: IsoDate): Received {
+  let pkr = dec(0);
+  let payments = 0;
+  let unpriced = false;
+  for (const t of b.transactions) {
+    if (!isMoneyIn(t) || t.valueDate < from || t.valueDate > to) continue;
+    payments++;
+    const v = paymentPkr(t, w);
+    if (v) pkr = pkr.plus(v);
+    else unpriced = true;
+  }
+  return { pkr: fixed2(pkr), payments, unpriced };
+}
+
+export interface MonthFlow {
+  /** "2026-10" */
+  month: string;
+  /** "Oct" */
+  label: string;
+  invoicedPkr: string;
+  invoices: number;
+  receivedPkr: string;
+  payments: number;
+  /** This month, so far. */
+  partial: boolean;
+  /** Something in a currency without a reference rate was left out. */
+  unpriced: boolean;
+}
+
+/**
+ * Invoiced and received by calendar month: the last `months` months up to today, this one so far.
+ * An invoice counts in the month it's dated, at that day's reference rate (drafts and voids don't
+ * count); money in counts on its value date, the way "Money received" counts it.
+ */
+export function monthlyFlows(b: Books, w: WorkspaceContext, months = 6): MonthFlow[] {
+  const today = w.today;
+  const at = Number(today.slice(0, 4)) * 12 + Number(today.slice(5, 7)) - 1;
+  const out: MonthFlow[] = [];
+  for (let k = months - 1; k >= 0; k--) {
+    const year = Math.floor((at - k) / 12);
+    const m = ((at - k) % 12) + 1;
+    const month = `${year}-${String(m).padStart(2, "0")}`;
+    const from = `${month}-01`;
+    const end = `${month}-${String(new Date(Date.UTC(year, m, 0)).getUTCDate()).padStart(2, "0")}`;
+    const to = end < today ? end : today;
+    let invoiced = dec(0);
+    let invoices = 0;
+    let unpriced = false;
+    for (const i of b.invoices) {
+      if (i.status === "draft" || i.status === "void" || i.issuedOn < from || i.issuedOn > to) continue;
+      invoices++;
+      const r = i.currency === "PKR" ? 1 : w.refRate(i.currency, i.issuedOn);
+      if (r == null) unpriced = true;
+      else invoiced = invoiced.plus(dec(i.amount).times(r));
+    }
+    const rec = receivedBetween(b, w, from, to);
+    out.push({ month, label: MONTH_NAMES[m - 1]!.slice(0, 3), invoicedPkr: fixed2(invoiced), invoices, receivedPkr: rec.pkr, payments: rec.payments, partial: to < end, unpriced: unpriced || rec.unpriced });
+  }
+  return out;
+}

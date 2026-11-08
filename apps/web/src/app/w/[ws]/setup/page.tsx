@@ -168,7 +168,7 @@ export default async function SetupPage({ params, searchParams }: { params: Prom
             <ol className="space-y-4">
               {steps.map((x) => (
                 <li key={x.title} className="flex gap-3 text-sm">
-                  <span aria-hidden className={cx("mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-xs", x.done ? "bg-emerald-600 text-white" : "border border-line text-muted")}>
+                  <span aria-hidden className={cx("mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-xs", x.done ? "bg-success text-white dark:text-canvas" : "border border-line text-muted")}>
                     {x.done ? "✓" : ""}
                   </span>
                   <span className="min-w-0">

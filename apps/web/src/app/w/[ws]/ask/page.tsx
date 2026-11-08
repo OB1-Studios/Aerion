@@ -19,7 +19,7 @@ const TOOL_ABOUT: Record<(typeof ASK_TOOLS)[number], string> = {
   invoice: "One invoice from issue to payment, with anything open on it.",
 };
 
-const TONE_TEXT = { bad: "text-rose-700 dark:text-rose-400", warn: "text-amber-700 dark:text-amber-400", good: "text-emerald-700 dark:text-emerald-400" } as const;
+const TONE_TEXT = { bad: "text-danger", warn: "text-warning", good: "text-success" } as const;
 
 export default async function AskPage({ params, searchParams }: { params: Promise<{ ws: string }>; searchParams: Promise<{ q?: string }> }) {
   const { ws: slug } = await params;
@@ -38,7 +38,7 @@ export default async function AskPage({ params, searchParams }: { params: Promis
   return (
     <>
       <PageHeader
-        eyebrow="Insights"
+        eyebrow="Intelligence and automation"
         title="Ask your books"
         sub="Ask about what's owed, what came in, missing paperwork, costs or one invoice. Aerion turns the question into one of a fixed set of queries and works out every figure from your records, so the numbers match the rest of the app. It never guesses an amount and never changes anything."
       />
@@ -138,7 +138,7 @@ function Answer({ result, base }: { result: AskResult; base: string }) {
       </header>
       <div className="px-5 py-5">
         <div className="eyebrow mb-1.5">{a.title}</div>
-        <div className="font-display text-[30px] font-semibold leading-tight tracking-[-0.01em] text-ink tabular-nums">{a.headline}</div>
+        <div className="font-display text-[32px] leading-tight text-ink tabular-nums">{a.headline}</div>
         {a.sub ? <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">{a.sub}</p> : null}
       </div>
       {a.lines.length ? (

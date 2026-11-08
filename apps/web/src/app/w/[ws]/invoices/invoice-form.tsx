@@ -121,7 +121,7 @@ export function InvoiceForm({ action, initial, lines, lineCount, routes, currenc
             ))}
           </div>
         ) : (
-          <p className="text-sm text-rose-700 dark:text-rose-300">None of your receiving accounts can take {currency}. Add one in Setup first.</p>
+          <p className="text-sm text-danger">None of your receiving accounts can take {currency}. Add one in Setup first.</p>
         )}
       </fieldset>
 

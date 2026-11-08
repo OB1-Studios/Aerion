@@ -3,7 +3,7 @@
  * read-only queries: what's owed, what's overdue, what came in, export proceeds by month, the
  * banking-channel share, missing paperwork, what getting paid costs, how long clients take to
  * pay, or one invoice from start to finish. Code computes every figure from the same books and
- * reference rates as Insights, and each line links to the record behind it.
+ * reference rates as the financial overview, and each line links to the record behind it.
  *
  * Built-in rules choose the query. When they can't and the workspace allows AI, a model may
  * choose instead, but only the query and its client, invoice and dates: never a number. Its
@@ -14,7 +14,7 @@ import { flag, modelCall, type Db } from "@ebo/db";
 import { and, count, eq, gte, inArray } from "drizzle-orm";
 import { BANK_ACCOUNT_KINDS, flagSnapshot, loadBooks, taxYearOpenings, type Books } from "./books";
 import type { WorkspaceContext } from "./context";
-import { dashboard } from "./dashboard";
+import { dashboard, isMoneyIn } from "./dashboard";
 import type { ModelCallRecord } from "./readers/types";
 
 export const ASK_TOOLS = ["owed", "overdue", "received", "proceeds", "banking_share", "missing_paperwork", "cost", "days_to_pay", "invoice"] as const;
@@ -319,7 +319,6 @@ export function periodLabel(p: Period, today: IsoDate, fiscalStartMonth = 7): st
   return `${shortDay(p.from)} to ${shortDay(p.to)}`;
 }
 
-const MONEY_IN = new Set(["credit", "payoneer_receipt", "platform_earning"]);
 const LIST_MAX = 12;
 
 interface Ctx {
@@ -402,7 +401,7 @@ function received(c: Ctx, plan: AskPlan, period: Period): AskAnswer {
     if (i) matchesOf.set(m.transactionId, [...(matchesOf.get(m.transactionId) ?? []), { number: i.number, clientId: i.clientId }]);
   }
   const txs = b.transactions
-    .filter((t) => MONEY_IN.has(t.kind) && t.matchStatus !== "transfer" && t.matchStatus !== "duplicate" && t.matchStatus !== "ignored" && t.valueDate >= period.from && t.valueDate <= period.to)
+    .filter((t) => isMoneyIn(t) && t.valueDate >= period.from && t.valueDate <= period.to)
     .filter((t) => !plan.clientId || ((matchesOf.get(t.id) ?? []).length > 0 && (matchesOf.get(t.id) ?? []).every((x) => x.clientId === plan.clientId)))
     .sort((a, b) => b.valueDate.localeCompare(a.valueDate) || Number(b.amount) - Number(a.amount));
   const label = periodLabel(period, c.w.today, c.w.ws.fiscalYearStartMonth);
@@ -541,7 +540,7 @@ function missingPaperwork(c: Ctx, plan: AskPlan): AskAnswer {
     .filter((x) => x.status !== "on_file" && x.t && (!plan.clientId || (clientsOf.get(x.ci.transactionId) ?? []).includes(plan.clientId)))
     .sort((a, b) => a.t!.valueDate.localeCompare(b.t!.valueDate));
   const title = who ? `Paperwork still missing for ${who}'s payments` : "ePRCs and certificates still missing";
-  const seeAlso = { label: "Tax year", href: "/export" };
+  const seeAlso = { label: "Tax-year file", href: "/export" };
   if (!items.length) return { tool: "missing_paperwork", title, headline: "Everything is on file.", sub: who ? `Every ePRC and withholding certificate for ${who}'s payments is on file.` : "Every ePRC and withholding certificate Aerion expects is on file.", lines: [], more: null, notes: [], seeAlso };
   const due = items.filter((x) => !x.ci.dueOn || x.ci.dueOn <= w.today);
   const lines = items.map((x): AskLine => {
@@ -573,7 +572,7 @@ function cost(c: Ctx, plan: AskPlan): AskAnswer {
   const who = plan.clientId ? c.clientName(plan.clientId) : null;
   const line = who ? (d.clients.find((x) => x.clientId === plan.clientId)?.cost ?? null) : d.cost.total;
   const title = `What getting paid cost${who ? ` with ${who}` : ""}, tax year ${d.year.label} so far`;
-  const seeAlso = { label: "Insights", href: "/dashboard" };
+  const seeAlso = { label: "Financial overview", href: "/dashboard" };
   if (!line || line.payments === 0) return { tool: "cost", title, headline: `No payments${who ? ` from ${who}` : ""} this tax year yet.`, sub: null, lines: [], more: null, notes: [], seeAlso };
   const lines: AskLine[] = [
     { group: "Where it went", label: "Bank and intermediary fees", value: c.pkr(line.feesPkr) },
@@ -598,7 +597,7 @@ function cost(c: Ctx, plan: AskPlan): AskAnswer {
 
 function daysToPay(c: Ctx, plan: AskPlan): AskAnswer {
   const d = dashboard(c.b, c.w);
-  const seeAlso = { label: "Insights", href: "/dashboard" };
+  const seeAlso = { label: "Financial overview", href: "/dashboard" };
   const fmt = (n: number | null) => (n == null ? "—" : plural(n, "day"));
   const lateText = (n: number | null) => (n == null ? "" : n > 0 ? `${plural(n, "day")} after the due date` : n < 0 ? `${plural(-n, "day")} before the due date` : "on the due date");
   if (plan.clientId) {

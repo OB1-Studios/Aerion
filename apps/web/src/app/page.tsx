@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Logo, Mark } from "@/components/brand";
+import { Curves, Logo, LogoFull, Mark } from "@/components/brand";
 import { SubmitButton } from "@/components/submit-button";
 import { getSession } from "@/lib/session";
 import { startDemo } from "./actions";
@@ -67,7 +67,7 @@ export default async function Landing() {
         <section className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-12 sm:px-6 md:pt-20 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
           <div>
             <p className="eyebrow text-accent">For Pakistani software houses and IT freelancers</p>
-            <h1 className="mt-4 font-display text-[40px] font-semibold leading-[1.08] tracking-[-0.015em] text-ink sm:text-5xl">Every export payment matched, explained and on file.</h1>
+            <h1 className="mt-4 font-display text-[42px] leading-[1.06] text-ink sm:text-[54px]">Every export payment matched, explained and on file.</h1>
             <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-muted">
               PayPal and Stripe don&rsquo;t pay out to Pakistan, so every SWIFT wire, Payoneer and Wise payment brings paperwork that decides how your income is taxed. Aerion does that work each week: it reads your bank
               advices and client emails, matches money to invoices, keeps your ePRCs and certificates on file, and drafts the follow-ups for you to approve.
@@ -110,7 +110,7 @@ export default async function Landing() {
           <ol className="mt-10 grid gap-x-10 gap-y-0 md:grid-cols-2">
             {WEEK.map(([name, text], i) => (
               <li key={name} className="flex gap-4 border-t border-line py-5">
-                <span className="w-7 shrink-0 font-display text-lg font-semibold tabular-nums text-brass">{String(i + 1).padStart(2, "0")}</span>
+                <span className="w-8 shrink-0 font-display text-xl tabular-nums text-accent">{String(i + 1).padStart(2, "0")}</span>
                 <div>
                   <h3 className="font-semibold text-ink">{name}</h3>
                   <p className="mt-1 text-sm leading-relaxed text-muted">{text}</p>
@@ -120,15 +120,16 @@ export default async function Landing() {
           </ol>
         </section>
 
-        <section className="bg-[#121a16] text-[#e9e6dc]">
-          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-            <p className="eyebrow text-[#c99a5b]">What it catches</p>
-            <h2 className="mt-3 max-w-2xl font-display text-[32px] font-semibold leading-tight">The problems that cost money when nobody notices them in time.</h2>
-            <ul className="mt-10 grid gap-px overflow-hidden rounded-[10px] bg-[#26302b] sm:grid-cols-2 lg:grid-cols-3">
+        <section className="relative overflow-hidden bg-[linear-gradient(160deg,var(--sidebar),var(--sidebar-deep))] text-sidebar-ink">
+          <Curves className="h-80 opacity-[0.07]" />
+          <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6">
+            <p className="eyebrow text-gold">What it catches</p>
+            <h2 className="mt-3 max-w-2xl font-display text-[34px] leading-tight text-white">The problems that cost money when nobody notices them in time.</h2>
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {CATCHES.map(([t, d]) => (
-                <li key={t} className="bg-[#151d19] p-6">
-                  <h3 className="font-semibold text-[#f4f1e8]">{t}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#a8b0aa]">{d}</p>
+                <li key={t} className="rounded-xl bg-white/[0.06] p-6 ring-1 ring-inset ring-white/10">
+                  <h3 className="font-semibold text-white">{t}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-sidebar-muted">{d}</p>
                 </li>
               ))}
             </ul>
@@ -161,9 +162,9 @@ export default async function Landing() {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <div className="flex flex-col items-start justify-between gap-8 rounded-[14px] border border-line bg-panel p-8 sm:p-10 md:flex-row md:items-center">
+          <div className="flex flex-col items-start justify-between gap-8 rounded-xl border border-accent/15 bg-accent-soft/60 p-8 sm:p-10 md:flex-row md:items-center">
             <div className="max-w-xl">
-              <h2 className="font-display text-[28px] font-semibold leading-tight text-ink">See a week of it in two minutes.</h2>
+              <h2 className="font-display text-[30px] leading-tight text-ink">See a week of it in two minutes.</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">Run the workflow on a fictional software house: ten new bank documents and emails, four problems worth catching, six emails to approve.</p>
             </div>
             <form action={startDemo}>
@@ -178,8 +179,8 @@ export default async function Landing() {
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 text-sm text-muted sm:px-6 md:flex-row md:items-start md:justify-between">
           <div className="max-w-md">
-            <Logo size="sm" />
-            <p className="mt-3 text-xs leading-relaxed">
+            <LogoFull className="w-[230px]" />
+            <p className="mt-4 text-xs leading-relaxed">
               Named after the Aerarium, the public treasury of ancient Rome. Hosted on Vultr in Singapore: Cloud Compute, Managed PostgreSQL and Object Storage. When AI reading is on, Vultr Serverless Inference reads documents in Vultr&rsquo;s US data centres.
             </p>
           </div>
@@ -206,7 +207,7 @@ function SectionHead({ eyebrow, title, children }: { eyebrow: string; title: str
   return (
     <div className="max-w-2xl">
       <p className="eyebrow text-accent">{eyebrow}</p>
-      <h2 className="mt-3 font-display text-[32px] font-semibold leading-tight tracking-[-0.01em] text-ink">{title}</h2>
+      <h2 className="mt-3 font-display text-[34px] leading-tight text-ink">{title}</h2>
       <p className="mt-3 leading-relaxed text-muted">{children}</p>
     </div>
   );
@@ -215,12 +216,12 @@ function SectionHead({ eyebrow, title, children }: { eyebrow: string; title: str
 function Audience({ title, points, children }: { title: string; points: string[]; children: ReactNode }) {
   return (
     <div>
-      <h2 className="font-display text-2xl font-semibold text-ink">{title}</h2>
+      <h2 className="font-display text-[26px] text-ink">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted">{children}</p>
       <ul className="mt-5 space-y-2.5 text-sm text-ink">
         {points.map((p) => (
           <li key={p} className="flex gap-3">
-            <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rotate-45 bg-brass" />
+            <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rotate-45 bg-gold" />
             {p}
           </li>
         ))}
@@ -241,20 +242,20 @@ function Ledger() {
     ["Certificates to request", "2", null],
   ];
   return (
-    <figure className="relative rounded-[14px] border border-line bg-panel p-6 shadow-[0_1px_0_var(--line),0_24px_48px_-24px_rgb(23_32_28/0.25)] sm:p-8">
+    <figure className="relative rounded-xl border border-line bg-panel p-6 shadow-[0_1px_0_var(--line),0_24px_48px_-24px_rgb(23_50_40/0.28)] sm:p-8">
       <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
         <div>
           <div className="eyebrow">Monday run</div>
-          <div className="mt-1 font-display text-xl font-semibold text-ink">2 November 2026, 09:00</div>
+          <div className="mt-1 font-display text-[22px] text-ink">2 November 2026, 09:00</div>
           <div className="mt-0.5 text-xs text-muted">Ravi Code Works (Pvt) Ltd · simulated</div>
         </div>
-        <Mark className="size-8 text-brass" />
+        <Mark className="w-11" />
       </div>
       <dl className="divide-y divide-dashed divide-line">
         {rows.map(([k, v, tone]) => (
           <div key={k} className="flex items-baseline justify-between gap-4 py-2.5 text-sm">
             <dt className="text-muted">{k}</dt>
-            <dd className={`font-medium tabular-nums ${tone === "bad" ? "text-rose-700 dark:text-rose-400" : "text-ink"}`}>{v}</dd>
+            <dd className={`font-semibold tabular-nums ${tone === "bad" ? "text-danger" : "text-ink"}`}>{v}</dd>
           </div>
         ))}
       </dl>
@@ -263,7 +264,7 @@ function Ledger() {
         <span className="font-semibold tabular-nums text-ink">6</span>
       </div>
       <figcaption className="mt-5 flex items-center gap-2 text-xs text-muted">
-        <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-[5px] bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-900">✓ 23 numbers checked</span>
+        <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-success-soft px-2 py-0.5 font-semibold text-success ring-1 ring-inset ring-success-line">✓ 23 numbers checked</span>
         Every amount and date in the six emails traced to the records.
       </figcaption>
     </figure>

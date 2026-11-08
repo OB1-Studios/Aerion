@@ -28,7 +28,7 @@ const STATE_TEXT: Record<CheckState, string> = {
 };
 
 function Mark({ state }: { state: CheckState }) {
-  const tone = state === "done" ? "bg-emerald-600 text-white dark:bg-emerald-500" : state === "waiting" ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-800" : "bg-rose-600 text-white dark:bg-rose-500";
+  const tone = state === "done" ? "bg-success text-white dark:text-canvas" : state === "waiting" ? "bg-warning-soft text-ink ring-1 ring-warning-line" : "bg-danger text-white dark:text-canvas";
   const glyph = state === "done" ? "✓" : state === "waiting" ? "…" : "!";
   return (
     <span aria-hidden className={cx("mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", tone)}>
@@ -42,7 +42,7 @@ function Lines({ lines, base }: { lines: CheckLine[]; base: string }) {
     <ul className="space-y-1.5">
       {lines.map((l, i) => (
         <li key={i} className="flex gap-2 text-sm">
-          <span aria-hidden className={cx("mt-[0.45rem] size-1.5 shrink-0 rounded-full", l.state === "todo" ? "bg-rose-500" : l.state === "waiting" ? "bg-amber-500" : "bg-emerald-500")} />
+          <span aria-hidden className={cx("mt-[0.45rem] size-1.5 shrink-0 rounded-full", l.state === "todo" ? "bg-danger" : l.state === "waiting" ? "bg-warning" : "bg-success")} />
           <span className="min-w-0">
             <span className="sr-only">{STATE_TEXT[l.state]}: </span>
             {l.text}{" "}
@@ -69,7 +69,7 @@ function Item({ item, base, extra }: { item: CloseItem; base: string; extra?: Re
         <div>
           <div className="flex flex-wrap items-baseline gap-x-2">
             <h3 className="font-medium text-ink">{item.title}</h3>
-            <span className={cx("text-xs font-medium", item.state === "done" ? "text-emerald-700 dark:text-emerald-400" : item.state === "waiting" ? "text-amber-700 dark:text-amber-400" : "text-rose-700 dark:text-rose-400")}>{STATE_TEXT[item.state]}</span>
+            <span className={cx("text-xs font-medium", item.state === "done" ? "text-success" : item.state === "waiting" ? "text-warning" : "text-danger")}>{STATE_TEXT[item.state]}</span>
           </div>
           <p className="text-sm text-muted">{item.summary}</p>
         </div>

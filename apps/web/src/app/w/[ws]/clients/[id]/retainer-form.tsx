@@ -15,7 +15,7 @@ export function RetainerForm({ action, currency, currencies, today }: { action: 
     <form action={formAction} key={`${state.saved ?? 0}:${JSON.stringify(state.values)}`} className="space-y-3">
       <FormProblems problems={state.problems} />
       {state.saved ? (
-        <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">
+        <p role="status" className="text-sm text-success">
           Added. {state.notice}
         </p>
       ) : null}

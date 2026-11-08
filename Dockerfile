@@ -40,6 +40,8 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 NOD
 RUN mkdir -p /data/storage && chown node:node /data/storage
 COPY --from=web-build --chown=node:node /repo/apps/web/.next/standalone ./
 COPY --from=web-build --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static
+# The logo files (/brand/…); standalone output leaves public/ out.
+COPY --from=web-build --chown=node:node /repo/apps/web/public ./apps/web/public
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

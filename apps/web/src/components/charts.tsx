@@ -163,12 +163,74 @@ export function ColumnChart({ columns, ticks, top, tickLabel, height = 160 }: { 
   );
 }
 
+export interface GroupedColumn {
+  key: string;
+  label: string;
+  /** For narrow screens: one letter. */
+  short: string;
+  /** One value per series, in the series' order. */
+  values: number[];
+  aria: string;
+  tip: Tip;
+  /** Still going (this month so far): the label says so. */
+  partial?: boolean;
+}
+
+/**
+ * Two or more series side by side in each column, on one axis with hairline gridlines: invoiced
+ * against received, month by month. The legend sits above; a tooltip per column on hover and focus.
+ */
+export function GroupedColumns({ columns, series, ticks, top, tickLabel, height = 200 }: { columns: GroupedColumn[]; series: Array<{ label: string; color: string }>; ticks: number[]; top: number; tickLabel: (t: number) => string; height?: number }) {
+  const at = (v: number) => `${top > 0 ? (v / top) * 100 : 0}%`;
+  const n = columns.length;
+  return (
+    <div>
+      <Legend items={series} />
+      <div className="flex gap-2 pt-2">
+        <div aria-hidden className="relative w-12 shrink-0 text-right text-[11px] tabular-nums text-muted" style={{ height }}>
+          {ticks.map((t) => (
+            <div key={t} className="absolute right-0 translate-y-1/2 leading-none" style={{ bottom: at(t) }}>
+              {tickLabel(t)}
+            </div>
+          ))}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="relative" style={{ height }}>
+            {ticks.map((t) => (
+              <div key={t} aria-hidden className={cx("absolute inset-x-0 border-t", t === 0 ? "border-muted/50" : "border-line")} style={{ bottom: at(t) }} />
+            ))}
+            <div className="absolute inset-0 flex">
+              {columns.map((c, i) => (
+                <div key={c.key} role="group" tabIndex={0} aria-label={c.aria} className="group relative flex h-full flex-1 items-end justify-center gap-[3px] rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                  {c.values.map((v, k) => (
+                    <div key={k} className="w-[30%] max-w-6 rounded-t-[4px] transition-[filter] group-hover:brightness-110 group-focus-visible:brightness-110" style={{ height: v > 0 ? at(v) : 0, background: series[k]?.color }} />
+                  ))}
+                  <Tooltip tip={c.tip} className={cx("bottom-full mb-2", i < 2 ? "left-0" : i >= n - 2 ? "right-0" : "left-1/2 -translate-x-1/2")} />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div aria-hidden className="mt-2 flex text-xs text-muted">
+            {columns.map((c) => (
+              <div key={c.key} className="flex-1 text-center">
+                <span className="sm:hidden">{c.short}</span>
+                <span className="hidden sm:inline">{c.label}</span>
+                {c.partial ? <span className="hidden text-[10px] sm:block">so far</span> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** The chart's numbers as a table, folded away under the chart. */
 export function ChartTable({ head, children, num }: { head: ReactNode[]; children: ReactNode; num?: number[] }) {
   return (
     <details className="mt-4">
       <summary className="cursor-pointer select-none text-xs text-muted hover:text-ink">Show the numbers</summary>
-      <div className="-mx-4 mt-2">
+      <div className="-mx-5 mt-2">
         <Table dense head={head} num={num}>
           {children}
         </Table>

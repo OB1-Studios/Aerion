@@ -5,7 +5,7 @@ import { clock, day } from "@/lib/format";
 import { RULE_GROUPS, RULES, ruleAbout, ruleName, ruleSource, ruleValue } from "@/lib/rules";
 import { requireWorkspace } from "@/lib/session";
 
-export const metadata = { title: "Rules" };
+export const metadata = { title: "Rules library" };
 
 export default async function RulesPage({ params }: { params: Promise<{ ws: string }> }) {
   const { ws: slug } = await params;
@@ -24,8 +24,8 @@ export default async function RulesPage({ params }: { params: Promise<{ ws: stri
   return (
     <>
       <PageHeader
-        eyebrow="Automation"
-        title="Rules"
+        eyebrow="Intelligence and automation"
+        title="Rules library"
         sub="Every threshold Aerion decides with: purpose codes, wait times, tolerances and tax rates. Code reads them from here, never from a model, and each flag names the rules it used."
       />
       {unverified ? (

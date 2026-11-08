@@ -6,7 +6,7 @@ import { clock } from "@/lib/format";
 import { AUDIT_AREAS, auditLabel, documentKindLabel, flagKindLabel } from "@/lib/labels";
 import { requireWorkspace } from "@/lib/session";
 
-export const metadata = { title: "Audit log" };
+export const metadata = { title: "Audit history" };
 
 const PAGE = 100;
 
@@ -43,8 +43,8 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   return (
     <>
       <PageHeader
-        eyebrow="Workspace"
-        title="Audit log"
+        eyebrow="Oversight"
+        title="Audit history"
         sub="Everything Aerion and people did here, newest first. Append-only: nothing in the app edits or deletes these entries. Times are real time, even in the demo."
       />
       <FilterForm clearHref={base} active={filtered}>

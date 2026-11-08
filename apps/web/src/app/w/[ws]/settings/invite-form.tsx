@@ -13,7 +13,7 @@ export function InviteForm({ action, roles }: { action: (prev: FormState, form: 
   return (
     <div className="space-y-3">
       {state.notice ? (
-        <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+        <div role="status" className="rounded-lg border border-success-line bg-success-soft p-3 text-sm text-ink">
           <p className="mb-2">Invitation ready. Send them this link: it works once, for that email address, for 7 days. It won&apos;t be shown again.</p>
           <div className="flex gap-2">
             <input readOnly value={state.notice} onFocus={(e) => e.currentTarget.select()} aria-label="Invitation link" className="input min-w-0 flex-1 font-mono text-xs" />

@@ -23,7 +23,7 @@ export function CodeForm({ next, backup }: { next?: string; backup: boolean }) {
         Don&apos;t ask again on this device for 30 days
       </label>
       {state?.error ? (
-        <p role="alert" className="text-sm text-rose-600">
+        <p role="alert" className="text-sm text-danger">
           {state.error}{" "}
           {state.restart ? (
             <Link href={next ? `/login?${new URLSearchParams({ next })}` : "/login"} className="font-medium underline">

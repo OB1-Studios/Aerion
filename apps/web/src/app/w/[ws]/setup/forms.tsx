@@ -19,7 +19,7 @@ function Footer({ canEdit, saved, label }: { canEdit: boolean; saved?: number; l
     <div className="flex flex-wrap items-center gap-3">
       <SubmitButton pendingText="Saving…">{label}</SubmitButton>
       {saved ? (
-        <span role="status" className="text-sm text-emerald-700 dark:text-emerald-300">
+        <span role="status" className="text-sm text-success">
           Saved.
         </span>
       ) : null}
@@ -129,7 +129,7 @@ export function AccountForm({ action, kinds }: { action: Action; kinds: Array<[s
     <form action={formAction} key={key} className="space-y-4">
       <FormProblems problems={state.problems} />
       {state.saved ? (
-        <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">
+        <p role="status" className="text-sm text-success">
           Added. It&apos;s offered on new invoices straight away.
         </p>
       ) : null}

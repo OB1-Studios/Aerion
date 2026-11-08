@@ -107,7 +107,7 @@ export function PasswordAction({
     <form action={formAction} className="space-y-3">
       <FormProblems problems={state.problems} title={title} />
       {state.backupCodes?.length ? (
-        <div role="status" className="space-y-2 rounded-lg border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950">
+        <div role="status" className="space-y-2 rounded-lg border border-success-line bg-success-soft p-3">
           <p className="text-sm text-ink">New backup codes. The old ones no longer work. Keep these somewhere safe: they aren&apos;t shown again.</p>
           <BackupCodes codes={state.backupCodes} />
         </div>

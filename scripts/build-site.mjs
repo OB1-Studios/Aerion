@@ -36,8 +36,8 @@ const readme = (await response.text())
   // A relative link to a file in the repo only works on github.com. The assets are published with the page.
   .replace(/href="(?!https?:|mailto:|#|assets\/)([^"]+)"/g, `href="${repoUrl}/blob/main/$1"`);
 
-// The app's own mark, so the tab looks the same on both.
-const icon = `data:image/svg+xml,${encodeURIComponent(readFileSync(join(root, "apps/web/src/app/icon.svg"), "utf8").trim())}`;
+// The app's own mark (brand/png), so the tab looks the same on both.
+const icon = `data:image/png;base64,${readFileSync(join(root, "brand/png/favicon-64.png")).toString("base64")}`;
 
 const page = `<!doctype html>
 <html lang="en">
@@ -51,28 +51,28 @@ const page = `<!doctype html>
 :root {
   color-scheme: light dark;
   /* The app's palette (apps/web/src/app/globals.css). */
-  --ink: #17201c;
-  --muted: #5d6964;
-  --line: #e4e1d9;
+  --ink: #29332f;
+  --muted: #5f6963;
+  --line: #e7eae5;
   --panel: #ffffff;
-  --canvas: #f4f3ee;
-  --link: #1d5c48;
-  --accent: #9a6b2f;
+  --canvas: #f7f8f5;
+  --link: #214f41;
+  --accent: #c77959;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --ink: #e6e9e4;
-    --muted: #9ba6a0;
-    --line: #26302b;
-    --panel: #151b18;
-    --canvas: #0d1210;
-    --link: #5fb596;
-    --accent: #c99a5b;
+    --ink: #e7ede9;
+    --muted: #a0ada6;
+    --line: #26312c;
+    --panel: #161e1b;
+    --canvas: #0f1513;
+    --link: #6dbb98;
+    --accent: #dc957a;
   }
 }
 * { box-sizing: border-box; }
 html { scroll-padding-top: 1rem; }
-body { margin: 0; background: var(--canvas); color: var(--ink); font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { margin: 0; background: var(--canvas); color: var(--ink); font: 1rem/1.6 Manrope, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 a { color: var(--link); }
 .bar { border-bottom: 1px solid var(--line); background: var(--panel); }
 .bar div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 1rem; max-width: 60rem; margin: 0 auto; padding: 0.75rem 1rem; }

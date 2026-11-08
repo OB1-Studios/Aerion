@@ -8,7 +8,7 @@ import { flagTargets } from "@/lib/flag-links";
 import { FLAG_KIND, FLAG_STATUS_LABEL, flagKindLabel, SEVERITY_LABEL } from "@/lib/labels";
 import { requireWorkspace } from "@/lib/session";
 
-export const metadata = { title: "Flags" };
+export const metadata = { title: "Compliance flags" };
 
 const TABS = [
   ["open", "Open", ["open", "actioned"]],
@@ -60,8 +60,8 @@ export default async function FlagsPage({ params, searchParams }: { params: Prom
   return (
     <>
       <PageHeader
-        eyebrow="Compliance"
-        title="Flags"
+        eyebrow="Oversight"
+        title="Compliance flags"
         sub="Problems the checks found in payments, certificates and emails. Every run checks them again: a flag closes on its own when the records show it's fixed."
       />
 
@@ -69,7 +69,7 @@ export default async function FlagsPage({ params, searchParams }: { params: Prom
         <Tabs items={TABS.map(([k, label, statuses]) => ({ href: `${base}/flags${k === "open" ? "" : `?show=${k}`}`, label, active: k === tab[0], count: tally(statuses) }))} />
         {tab[0] === "open" && (openHigh || handled) ? (
           <p className="mb-4 text-sm text-muted">
-            {openHigh ? <b className="font-medium text-rose-700 dark:text-rose-400">{openHigh} high</b> : null}
+            {openHigh ? <b className="font-medium text-danger">{openHigh} high</b> : null}
             {openHigh && handled ? " · " : null}
             {handled ? `${handled} being handled, waiting on a reply` : null}
           </p>

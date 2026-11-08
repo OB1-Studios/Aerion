@@ -17,7 +17,7 @@ export function LoginForm({ next, email }: { next?: string; email?: string }) {
         <input name="password" type="password" required autoComplete="current-password" className="input" />
       </label>
       {state?.error ? (
-        <p role="alert" className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+        <p role="alert" className="rounded-md border border-danger-line bg-danger-soft px-3 py-2 text-sm text-ink">
           {state.error}
         </p>
       ) : null}

@@ -32,7 +32,7 @@ export default async function InvitePage({ params, searchParams }: { params: Pro
     >
       {inv ? (
         <>
-          {q.error ? <p className="mb-3 rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-900 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-100">{q.error.slice(0, 200)}</p> : null}
+          {q.error ? <p className="mb-3 rounded-md border border-danger-line bg-danger-soft px-3 py-2 text-sm text-ink">{q.error.slice(0, 200)}</p> : null}
           {inv.problem ? (
             <p className="text-sm text-ink">{inv.problem}</p>
           ) : !me ? (

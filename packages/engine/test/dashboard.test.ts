@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, createPool, localStorage, purgeWorkspace, type Db } from "@ebo/db";
 import { seedFreelancer, seedOffice, seedReferenceData } from "@ebo/db/seed";
-import { dashboard, defaultDeps, flagSnapshot, loadBooks, loadContext, runWorkspace } from "../src/index";
+import { dashboard, defaultDeps, flagSnapshot, loadBooks, loadContext, monthlyFlows, receivedBetween, runWorkspace } from "../src/index";
 
 const url = process.env.DATABASE_URL ?? "postgres://ebo:ebo@localhost:54329/ebo";
 const pool = createPool(url, 4);
@@ -75,6 +75,27 @@ describe.skipIf(!dbUp)("dashboard", () => {
       expect(d.proceeds.months.reduce((s, m) => s + Number(m.pkr), 0).toFixed(2)).toBe(d.proceeds.totalPkr);
       expect(d.proceeds.totalPkr).toBe(snap.taxYearProceedsPkr);
       expect(d.proceeds.sharePct).toBe(snap.bankingShare?.sharePct);
+    }
+  });
+
+  it("invoiced and received by month: the last six months, each the sum of its own records", async () => {
+    for (const id of Object.values(ids)) {
+      const w = await loadContext(db, id);
+      const books = await loadBooks(db, w);
+      const flows = monthlyFlows(books, w, 6);
+      expect(flows.map((m) => m.label)).toEqual(["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"]);
+      expect(flows.map((m) => m.partial)).toEqual([false, false, false, false, false, true]);
+      for (const m of flows) {
+        const end = m.partial ? w.today : `${m.month}-${m.month.endsWith("-06") || m.month.endsWith("-09") || m.month.endsWith("-11") ? 30 : 31}`;
+        // Received is the same figure "Money received" gives for the month.
+        expect(m.receivedPkr).toBe(receivedBetween(books, w, `${m.month}-01`, end).pkr);
+        // Invoiced: every invoice dated in the month, except drafts and voids, at that day's rate.
+        const own = books.invoices.filter((i) => i.issuedOn.startsWith(m.month) && i.status !== "draft" && i.status !== "void");
+        expect(m.invoices).toBe(own.length);
+        const sum = own.reduce((s, i) => s + Number(i.amount) * Number(i.currency === "PKR" ? 1 : w.refRate(i.currency, i.issuedOn)), 0);
+        expect(Number(m.invoicedPkr)).toBeCloseTo(sum, 1);
+      }
+      expect(flows.some((m) => Number(m.receivedPkr) > 0)).toBe(true);
     }
   });
 

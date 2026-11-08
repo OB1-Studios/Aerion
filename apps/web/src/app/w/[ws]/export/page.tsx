@@ -125,7 +125,7 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
                   <ul className="space-y-2 text-sm text-ink">
                     {gaps.map((g) => (
                       <li key={g.text} className="flex gap-2">
-                        <span aria-hidden className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-amber-500" />
+                        <span aria-hidden className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-warning" />
                         <span>
                           {g.text}{" "}
                           <Link href={g.href} className="link whitespace-nowrap">

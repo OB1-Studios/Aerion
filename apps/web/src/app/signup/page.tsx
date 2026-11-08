@@ -25,7 +25,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
         </>
       }
     >
-      {visitor ? <p className="mb-4 rounded-md border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-950 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-100">You&apos;re trying the demo. Your demo copy comes with you, until it expires.</p> : null}
+      {visitor ? <p className="mb-4 rounded-md border border-violet-line bg-violet-soft px-3 py-2 text-sm text-ink">You&apos;re trying the demo. Your demo copy comes with you, until it expires.</p> : null}
       <SignUpForm next={next} email={q.email} />
     </AuthShell>
   );

@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 /** Self-hosted (SIL Open Font License, see src/fonts), so builds need no network. */
-const plex = localFont({ src: "../fonts/plex-sans-var.woff2", weight: "100 700", variable: "--font-plex", display: "swap" });
-const serif = localFont({ src: "../fonts/source-serif-4-var.woff2", weight: "200 900", variable: "--font-serif", display: "swap" });
+const manrope = localFont({ src: "../fonts/manrope-var.woff2", weight: "200 800", variable: "--font-manrope", display: "swap" });
+const dmSerif = localFont({ src: "../fonts/dm-serif-display-400.woff2", weight: "400", variable: "--font-dm-serif", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Aerion", template: "%s · Aerion" },
@@ -16,15 +16,18 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f3ee" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d1210" },
-  ],
+  themeColor: "#f7f8f5",
 };
+
+/** Light unless this browser chose dark: applied before the first paint, so the page never flashes. */
+const THEME_SCRIPT = `try{if(localStorage.getItem("aerion-theme")==="dark")document.documentElement.dataset.theme="dark"}catch(e){}`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${plex.variable} ${serif.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${dmSerif.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh font-sans antialiased">{children}</body>
     </html>
   );

@@ -2,7 +2,7 @@
 export function FormProblems({ problems, title = "Not saved yet:" }: { problems: string[]; title?: string }) {
   if (!problems.length) return null;
   return (
-    <div role="alert" className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+    <div role="alert" className="rounded-lg border border-danger-line bg-danger-soft px-3 py-2 text-sm text-ink">
       <b>{title}</b>
       <ul className="mt-1 list-disc pl-5">
         {problems.map((p) => (

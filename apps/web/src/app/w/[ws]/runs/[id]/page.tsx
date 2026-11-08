@@ -79,9 +79,9 @@ export default async function RunPage({ params }: { params: Promise<{ ws: string
                 <span
                   className={cx(
                     "absolute left-0 top-3 grid size-7 place-items-center rounded-full border text-xs font-semibold",
-                    state === "succeeded" && "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-                    state === "running" && "animate-pulse border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300",
-                    state === "failed" && "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300",
+                    state === "succeeded" && "border-success-line bg-success-soft text-success",
+                    state === "running" && "animate-pulse border-info-line bg-info-soft text-info",
+                    state === "failed" && "border-danger-line bg-danger-soft text-danger",
                     (state === "waiting" || state === "skipped") && "border-line bg-panel text-muted",
                   )}
                 >
@@ -100,7 +100,7 @@ export default async function RunPage({ params }: { params: Promise<{ ws: string
                     </span>
                   </div>
                   <div className="px-4 pb-3 pt-2 text-sm">
-                    {s?.error ? <p className="text-rose-600">{s.error}</p> : null}
+                    {s?.error ? <p className="text-danger">{s.error}</p> : null}
                     {s?.status === "succeeded" ? <StepDetail step={info.step} out={s.output} base={base} tz={ws.timezone} /> : null}
                     {s?.status === "succeeded" ? (
                       <details className="mt-2">
@@ -126,7 +126,7 @@ export default async function RunPage({ params }: { params: Promise<{ ws: string
             ) : (
               <p className="text-sm text-muted">{active ? "Written when the run finishes." : "—"}</p>
             )}
-            {r.error ? <p className="mt-2 text-sm text-rose-600">{r.error}</p> : null}
+            {r.error ? <p className="mt-2 text-sm text-danger">{r.error}</p> : null}
           </Card>
           <Card title="Counts">
             {Object.keys(r.counts).length ? (
@@ -156,7 +156,7 @@ export default async function RunPage({ params }: { params: Promise<{ ws: string
                     <td className="tabular-nums text-xs">
                       {c.inputTokens}+{c.outputTokens}
                     </td>
-                    <td className={cx("tabular-nums text-xs", !c.ok && "text-rose-600")}>{c.ok ? c.latencyMs : "failed"}</td>
+                    <td className={cx("tabular-nums text-xs", !c.ok && "text-danger")}>{c.ok ? c.latencyMs : "failed"}</td>
                   </tr>
                 ))}
               </Table>
@@ -231,7 +231,7 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
                     {d.kind ? documentKindLabel(d.kind) : ""}
                     {d.action === "imported" ? ` · ${d.created} of ${d.rows} rows new` : d.action ? ` · ${DOC_ACTION[d.action] ?? humanize(d.action).toLowerCase()}` : ""}
                   </span>
-                  {d.reasons?.length ? <span className="w-full pl-1 text-xs text-amber-700 dark:text-amber-400">{d.reasons.join(" ")}</span> : null}
+                  {d.reasons?.length ? <span className="w-full pl-1 text-xs text-warning">{d.reasons.join(" ")}</span> : null}
                 </li>
               ))}
             </Lines>
@@ -280,7 +280,7 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
           ) : null}
           {transfers.length ? <p className="text-xs text-muted">Transfers between our own accounts: {transfers.map((t) => t.what).join("; ")}.</p> : null}
           {unmatched.map((u, i) => (
-            <p key={i} className="text-xs text-amber-700 dark:text-amber-400">
+            <p key={i} className="text-xs text-warning">
               Unmatched: {u.amount} from {u.payer ?? "unknown"}. {u.explanation?.[0]}
             </p>
           ))}
@@ -339,7 +339,7 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
                   <span className="min-w-0">
                     {r.client}&apos;s retainer for {periodLabel(r.period)}, {formatMoney(r.amount, r.currency)}
                   </span>
-                  {r.problem ? <span className="text-xs text-rose-700 dark:text-rose-300">{r.problem}</span> : null}
+                  {r.problem ? <span className="text-xs text-danger">{r.problem}</span> : null}
                 </li>
               ))}
             </Lines>
@@ -372,7 +372,7 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
             </p>
           ))}
           {failed.map((f, i) => (
-            <p key={i} className="text-rose-600">
+            <p key={i} className="text-danger">
               Not sent: {f.subject} ({f.reason})
             </p>
           ))}

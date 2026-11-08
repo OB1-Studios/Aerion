@@ -20,7 +20,7 @@ export function ReviewForm({ action, fields }: { action: (prev: ReviewState, for
     // Keyed by what was sent, so a rejected attempt shows the values the person typed.
     <form action={formAction} key={JSON.stringify(state.values)} className="space-y-3">
       {state.problems.length ? (
-        <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+        <div className="rounded-lg border border-danger-line bg-danger-soft px-3 py-2 text-sm text-ink">
           <b>Not applied yet:</b>
           <ul className="mt-1 list-disc pl-5">
             {state.problems.map((p) => (
@@ -34,9 +34,9 @@ export function ReviewForm({ action, fields }: { action: (prev: ReviewState, for
           <label key={f.name} className="min-w-0 text-sm">
             <span className="mb-1 flex items-baseline justify-between gap-2 text-muted">
               <span>{f.label}</span>
-              {f.doubtful ? <span className="text-xs text-amber-600 dark:text-amber-400">check this</span> : null}
+              {f.doubtful ? <span className="text-xs text-warning">check this</span> : null}
             </span>
-            <input name={`f_${f.name}`} defaultValue={state.values?.[f.name] ?? f.value} title={f.note} className={`input w-full ${f.doubtful ? "ring-1 ring-amber-400" : ""}`} />
+            <input name={`f_${f.name}`} defaultValue={state.values?.[f.name] ?? f.value} title={f.note} className={`input w-full ${f.doubtful ? "ring-1 ring-warning" : ""}`} />
           </label>
         ))}
       </div>

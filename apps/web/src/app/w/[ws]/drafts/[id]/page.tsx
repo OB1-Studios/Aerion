@@ -178,7 +178,7 @@ export default async function DraftPage({ params, searchParams }: { params: Prom
                   <ul className="space-y-1.5 text-sm">
                     {dedupe(found).map((f) => (
                       <li key={f.text} className="flex items-baseline justify-between gap-3">
-                        <span className={f.ok ? "tabular-nums text-ink" : "font-medium tabular-nums text-rose-700 dark:text-rose-400"}>{f.text}</span>
+                        <span className={f.ok ? "tabular-nums text-ink" : "font-medium tabular-nums text-danger"}>{f.text}</span>
                         <span className="truncate text-right text-xs text-muted" title={f.matches.join(", ")}>
                           {f.ok ? f.matches.map(evidenceLabel).join(", ") : "not in the records"}
                         </span>
@@ -281,7 +281,7 @@ function highlight(text: string, found: FoundNumber[]): ReactNode[] {
       <mark
         key={`${m.index}`}
         title={f.ok ? `From the records: ${f.matches.map(evidenceLabel).join(", ")}` : "Not in the records"}
-        className={f.ok ? "rounded bg-emerald-100 px-0.5 text-inherit dark:bg-emerald-900/60" : "rounded bg-rose-200 px-0.5 text-inherit dark:bg-rose-900"}
+        className={f.ok ? "rounded bg-success/15 px-0.5 text-inherit" : "rounded bg-danger/20 px-0.5 text-inherit"}
       >
         {m[0]}
       </mark>,

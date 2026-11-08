@@ -67,7 +67,7 @@ export default async function DocumentsPage({ params, searchParams }: { params: 
     <>
       <RunPoller active={running} everyMs={2000} />
       <PageHeader
-        eyebrow="Compliance"
+        eyebrow="Records"
         title="Documents"
         sub="Everything that came in: credit advices, statements, ePRCs and certificates, wallet exports, screenshots and pasted bank alerts. Each file is kept once, however often it arrives."
       />

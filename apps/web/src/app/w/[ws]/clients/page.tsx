@@ -58,7 +58,7 @@ export default async function ClientsPage({ params, searchParams }: { params: Pr
   return (
     <>
       <PageHeader
-        eyebrow="Receivables"
+        eyebrow="Records"
         title="Clients"
         sub={
           clients.length
