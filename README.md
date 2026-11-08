@@ -86,18 +86,18 @@ These are screenshots of the live demo, taken on 2026-11-08. The software house,
 ### Monday morning: what needs a person
 
 <p align="center">
-  <img src="assets/screen-today.png" alt="The Today page of the demo software house, Ravi Code Works, after the first Monday run on the simulated clock (Mon 2 Nov 2026, 09:00). Tiles show 9 things that need a person, PKR 2.57M owed, PKR 816K overdue and a 99.20% banking-channel share. Six drafted emails wait for approval, each with its risk and how many of its numbers were checked, with Review and Approve and send buttons. Below them are three tasks for a person. On the right: what's coming up, the overdue invoice and the last run's summary." width="100%">
+  <img src="assets/screen-today.png" alt="The Dashboard of the demo software house, Ravi Code Works, after the first Monday run on the simulated clock (Mon 2 Nov 2026, 09:00). On the left, the dark green sidebar with the Aerion logo. Four tiles: PKR 2.57M owed, PKR 15.9M received in the last 30 days (58% more than the 30 days before), PKR 816K overdue, and 9 things that need a person. The Action Center lists the six drafted emails and three tasks by priority, each with how many of its numbers were checked and one next step, Review or Open. Beside it, invoiced against received for the last six months. Below: recent activity from the records, upcoming deadlines, and insights worked out from the records." width="100%">
 </p>
 
-After its first Monday run (the demo clock says Mon 2 Nov 2026, 09:00), nine things need a person: six emails to approve and three tasks, such as calling a client to confirm the bank details. Each email shows its risk and how many of its numbers were checked against the records. Nine flags are open, four of them high.
+After its first Monday run (the demo clock says Mon 2 Nov 2026, 09:00), nine things need a person: six emails to approve and three tasks, such as calling a client to confirm the bank details. The Action Center lists them by priority, high first, each with one next step and how many of its numbers were checked against the records. The tiles and the chart come from the same books, and each insight links to the record behind it. Nine flags are open, four of them high.
 
 ### Every step on the record
 
 <p align="center">
-  <img src="assets/screen-run.png" alt="The page for that run, which took 15.4 seconds. Plan, Pull and Read are shown with their times: Pull brought in nine emails and a Payoneer export, and Read lists every document and email with what it was read as, such as a credit advice, a remittance advice or a request to change bank details. On the right: the run's report, its counts and the model calls to Vultr Serverless Inference with their tokens and milliseconds." width="100%">
+  <img src="assets/screen-run.png" alt="The page for that run, which took 20.2 seconds. Plan, Pull and Read are shown with their times: Pull brought in nine emails and a Payoneer export, and Read lists every document and email with what it was read as, such as a credit advice, a remittance advice or a request to change bank details. On the right: the run's report, its counts and the model calls to Vultr Serverless Inference with their tokens and milliseconds." width="100%">
 </p>
 
-Each run has its own page: what every step did and how long it took, and every model call with its tokens and time. This run took 15.4 seconds, 14.5 of them in the Read step, where Serverless Inference read the documents and emails in 25 model calls. Every other step took milliseconds.
+Each run has its own page: what every step did and how long it took, and every model call with its tokens and time. This run took 20.2 seconds, 19.5 of them in the Read step, where Serverless Inference read the documents and emails in 26 model calls. Every other step took milliseconds.
 
 ### Every number traced
 
@@ -110,7 +110,7 @@ In a draft, every number is highlighted and traced to a record: the value date, 
 ### Next Monday, flags close on their own
 
 <p align="center">
-  <img src="assets/screen-flags.png" alt="The Flags page on the next Monday (Mon 9 Nov 2026, 09:00), on the Resolved tab: 5 open, 4 resolved, 0 dismissed. The four resolved flags are Brightlane Health's claim that INV-2026-032 was paid, the wrong purpose code on Dr. Elena Varga's EUR 1,200.00 payment, Al Noor Trading's USD 750.00 short payment on INV-2026-029, and a missing ePRC for a USD 7,500.00 credit. All four were resolved at 09:00 that day." width="100%">
+  <img src="assets/screen-flags.png" alt="The Compliance flags page on the next Monday (Mon 9 Nov 2026, 09:00), on the Resolved tab: 5 open, 4 resolved, 0 dismissed. The four resolved flags are Brightlane Health's claim that INV-2026-032 was paid, the wrong purpose code on Dr. Elena Varga's EUR 1,200.00 payment, Al Noor Trading's USD 750.00 short payment on INV-2026-029, and a missing ePRC for a USD 7,500.00 credit. All four were resolved at 09:00 that day." width="100%">
 </p>
 
 Once the emails have gone out, **Next Monday →** lets that week's replies arrive and runs again. The rest of Al Noor's payment comes in, the bank corrects the purpose code, Brightlane's money lands and the missing ePRC arrives, so four flags close on their own. Five stay open: the lookalike-domain warning, with a task for a person to call the client, and four medium flags. Three of the five are already being handled.
