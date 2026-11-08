@@ -470,8 +470,8 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
             change == null ? (
               `${last30.payments} payment${last30.payments === 1 ? "" : "s"}`
             ) : (
-              <span className="inline-flex items-center gap-1">
-                <Icon name={change >= 0 ? "arrowUp" : "arrowDown"} className={cx("size-3.5", change >= 0 ? "text-success" : "text-danger")} strokeWidth={2.2} />
+              <span>
+                <Icon name={change >= 0 ? "arrowUp" : "arrowDown"} className={cx("mr-0.5 inline size-3.5 align-[-2px]", change >= 0 ? "text-success" : "text-danger")} strokeWidth={2.2} />
                 <b className={cx("font-semibold", change >= 0 ? "text-success" : "text-danger")}>{Math.abs(change).toFixed(0)}%</b> vs the 30 days before
               </span>
             )
