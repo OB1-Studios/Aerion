@@ -1,29 +1,38 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="Aerion, the finance back office for Pakistan's software houses and IT freelancers. A ledger slip shows a credit advice read, matched to an invoice, and an ePRC item opened, stamped MATCHED." width="100%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OB1-Studios/Aerion/main/assets/aerion-logo-reversed.png">
+  <img src="assets/aerion-logo.png" alt="Aerion. Financial intelligence. Greater control." width="420">
+</picture>
 
 <br><br>
 
-<img alt="Agent Rush Challenge 2" src="https://img.shields.io/badge/Agent%20Rush-Challenge%202-DD4B3F?style=flat-square">
-<img alt="Runs on Vultr" src="https://img.shields.io/badge/runs%20on-Vultr-007BFC?style=flat-square&logo=vultr&logoColor=white">
-<img alt="Next.js" src="https://img.shields.io/badge/Next.js-app-14233B?style=flat-square&logo=nextdotjs&logoColor=white">
-<img alt="Node 22+" src="https://img.shields.io/badge/Node-22%2B-1E7F5C?style=flat-square&logo=nodedotjs&logoColor=white">
-<img alt="pnpm 10" src="https://img.shields.io/badge/pnpm-10-4457C8?style=flat-square&logo=pnpm&logoColor=white">
-<img alt="MIT license" src="https://img.shields.io/badge/license-MIT-9A6212?style=flat-square">
+<img src="assets/banner.svg" alt="Aerion's banner. On the left, in serif type beside a thin terracotta rule: “The finance back office for Pakistan’s software houses and IT freelancers.”, above three pills: Never moves money, Every number checked, Runs on Vultr. On the right, on a dark green panel, a ledger slip for Monday, 09:00 Pakistan time: credit advice read (Model), matched to invoice (Code) and ePRC item opened (Code), with a gold MATCHED stamp." width="100%">
 
 <br><br>
 
-**[Open the live demo](https://45-76-150-156.sslip.io)** and press **Try the demo**: no sign-up, a private copy for 7 days.
+**[Open the live demo&nbsp;→](https://45-76-150-156.sslip.io)** &nbsp;and press **Try the demo**: no sign-up, a private copy for 7 days.
 
 <br>
 
-[How it works](#how-it-works-in-short) &nbsp;|&nbsp;
-[See it work](#see-it-work) &nbsp;|&nbsp;
-[Why it's safe](#why-a-business-can-let-it-run) &nbsp;|&nbsp;
-[Vultr](#how-it-uses-vultr) &nbsp;|&nbsp;
-[Benchmark](#reading-benchmark) &nbsp;|&nbsp;
-[Set up](#setting-up-your-own-workspace) &nbsp;|&nbsp;
-[Run locally](#run-it-locally) &nbsp;|&nbsp;
+<a href="https://45-76-150-156.sslip.io"><img alt="Live demo: online" src="https://img.shields.io/badge/live%20demo-online-214F41?style=flat-square&labelColor=29332F"></a>
+<img alt="Agent Rush, Challenge 2" src="https://img.shields.io/badge/Agent%20Rush-Challenge%202-C77959?style=flat-square&labelColor=29332F">
+<img alt="Runs on Vultr" src="https://img.shields.io/badge/runs%20on-Vultr-214F41?style=flat-square&logo=vultr&logoColor=white&labelColor=29332F">
+<img alt="Next.js" src="https://img.shields.io/badge/Next.js-app-29332F?style=flat-square&logo=nextdotjs&logoColor=white&labelColor=29332F">
+<img alt="Node 22+" src="https://img.shields.io/badge/Node-22%2B-29332F?style=flat-square&logo=nodedotjs&logoColor=white&labelColor=29332F">
+<img alt="pnpm 10" src="https://img.shields.io/badge/pnpm-10-29332F?style=flat-square&logo=pnpm&logoColor=white&labelColor=29332F">
+<img alt="MIT license" src="https://img.shields.io/badge/license-MIT-C9A15F?style=flat-square&labelColor=29332F">
+
+<br><br>
+
+[How it works](#how-it-works-in-short) &nbsp;·&nbsp;
+[See it work](#see-it-work) &nbsp;·&nbsp;
+[Why it's safe](#why-a-business-can-let-it-run) &nbsp;·&nbsp;
+[Vultr](#how-it-uses-vultr) &nbsp;·&nbsp;
+[Architecture](#architecture) &nbsp;·&nbsp;
+[Benchmark](#reading-benchmark) &nbsp;·&nbsp;
+[Set up](#setting-up-your-own-workspace) &nbsp;·&nbsp;
+[Run locally](#run-it-locally) &nbsp;·&nbsp;
 [Deploy](#deploy-on-vultr)
 
 </div>
@@ -33,6 +42,15 @@
 **Aerion** runs the weekly finance back office for Pakistani software houses and IT freelancers. It makes sure every payment arrives, is matched to an invoice, and counts as an IT export. **It never moves money.** The name comes from the Aerarium, the public treasury of ancient Rome.
 
 Built for the lablab.ai × Vultr **Agent Rush** hackathon, Challenge 2 (Finance & Accounting: invoice processing, transaction reconciliation, anomaly flagging, payment follow-ups). It runs entirely on Vultr, live at **https://45-76-150-156.sslip.io**.
+
+## At a glance
+
+| Agent Rush asks for | Where it is |
+| --- | --- |
+| A live demo | **https://45-76-150-156.sslip.io**, then **Try the demo** (no sign-up) |
+| The Vultr services used, and how Vultr powers it | [How it uses Vultr](#how-it-uses-vultr): Cloud Compute, Managed Databases for PostgreSQL, Object Storage, Serverless Inference and the Vultr API, all created by one command |
+| The architecture | [Architecture](#architecture): the diagram, plus a text version |
+| How the agent executes real tasks | [What the agent does](#what-the-agent-does) (the weekly run, step by step) and [See it work](#see-it-work) (one run on the live demo) |
 
 ---
 
@@ -49,7 +67,7 @@ Built for the lablab.ai × Vultr **Agent Rush** hackathon, Challenge 2 (Finance 
 ## The problem
 
 <p align="center">
-  <img src="assets/problem.svg" alt="Money arrives by SWIFT wire, Payoneer or Wise. Each payment comes with paperwork: purpose code, ePRC, withholding certificates, PSEB registration and banking-channel share. That paperwork decides how the income is taxed, and today someone checks it by hand every week." width="100%">
+  <img src="assets/problem.svg" alt="Three columns. Money arrives by SWIFT wire into a Pakistani bank, as a Payoneer wallet payout, or by Wise into a PKR account; PayPal and Stripe, struck through, don't pay out to Pakistan. Each payment comes with a checklist of paperwork: the purpose code on the remittance, the ePRC (electronic Proceeds Realization Certificate), withholding certificates, PSEB registration and the banking-channel share of income that came through banks. A dark green panel says this decides how the income is taxed, and that today someone checks all of it by hand, every week, across bank emails, wallet exports and client threads." width="100%">
 </p>
 
 PayPal and Stripe don't pay out to Pakistan. Exporters get paid by SWIFT wire to a Pakistani bank, through Payoneer, or by Wise into a PKR account. Every payment comes with paperwork that decides how the income is taxed: the purpose code on the remittance, the electronic Proceeds Realization Certificate (ePRC), withholding certificates, PSEB registration, and the share of income that came through banks. Today someone checks all of this by hand, every week, across bank emails, wallet exports and client threads.
@@ -61,7 +79,7 @@ PayPal and Stripe don't pay out to Pakistan. Exporters get paid by SWIFT wire to
 Every Monday at 09:00 Pakistan time (or when someone presses **Run now**), the worker runs one workflow per workspace, from planning to output. Each card shows what that step did in the demo's first Monday run.
 
 <p align="center">
-  <img src="assets/workflow.svg" alt="The weekly run in eight steps: plan, pull, read, reconcile, flag, draft, send, follow up. Code decides most steps, a model reads documents, and a person approves what is sent. In the demo's first Monday: 10 new items, 9 documents and 9 emails read in 17.8 seconds, 7 payments matched, 9 flags opened (4 high), 6 emails and 3 tasks drafted, 6 emails waiting for a person; a week later 4 flags close on their own." width="100%">
+  <img src="assets/workflow.svg" alt="The weekly run as eight numbered cards in two rows: plan, pull, read, reconcile, flag, draft, send, follow up. A key marks who acts (code decides, the model reads, a person approves), and the run starts every Monday at 09:00 Pakistan time or when someone presses Run now. Each card says what the step does and what it did in the demo's first Monday: 10 new items in the mailbox and 9 open invoices; 9 emails and a Payoneer export pulled in; 9 documents and 9 emails read in 17.8 s; 7 payments matched and 2 own transfers linked; 9 flags opened, 4 of them high; 6 emails and 3 tasks drafted, every number checked; 6 emails waiting for a person to approve; a week later, 4 flags close on their own." width="100%">
 </p>
 
 | Step | What happens |
@@ -158,7 +176,7 @@ The **Tax-year file** page exports the year's credits and the banking-channel sh
 Its **year-end tax pack** is one zip for the accountant.
 
 <p align="center">
-  <img src="assets/taxpack.svg" alt="The year-end tax pack is one zip with: export proceeds by month, every credit with ePRC and withholding certificate status, the banking-channel share working, invoices issued, credit notes, write-offs and voids, open flags as exceptions, and a README for the accountant." width="100%">
+  <img src="assets/taxpack.svg" alt="The year-end tax pack. A dark green panel: one zip for the accountant; before it builds, the page lists what the accountant will ask about, each with a link to fix it; owners, finance and the accountant build it, and viewers can download it. Beside it, the seven things inside: export proceeds by month, in the currency received and in PKR; every credit with its ePRC and withholding certificate status; the banking-channel share working; invoices issued in the year; credit notes, write-offs and voids with their reasons; flags still open, as exceptions; and a README for the accountant with the year in numbers." width="100%">
 </p>
 
 Before building it, the page lists what the accountant will ask about, each with a link to sort it out. Each pack is kept in storage (Object Storage in production) and can be downloaded again later. Viewers can download packs; owners, finance and the accountant can build them.
@@ -202,13 +220,13 @@ Each line is done, waiting on someone outside (the bank, a client), or to do, wi
 ## Why a business can let it run
 
 <p align="center">
-  <img src="assets/trust.svg" alt="Seven safeguards: code decides and the model reads; numbers are checked twice; code decides whose document it is; a policy decides what goes out; a person checks what the agent can't; the workflow survives a model outage; everything is on the record. It never moves money." width="100%">
+  <img src="assets/trust.svg" alt="Eight cards. Seven safeguards, each with a line of detail: code decides and the model reads; numbers are checked twice; code decides whose document it is; a policy decides what goes out; a person checks what it can't; it survives a model outage; everything is on the record. The eighth card, in dark green: it never moves money." width="100%">
 </p>
 
 ### Who approves what goes out
 
 <p align="center">
-  <img src="assets/approval.svg" alt="Every drafted email has its numbers checked. In supervised mode a person approves every email and numbers are checked again at send time. In autopilot mode routine emails go out on their own, sensitive ones wait 30 minutes so anyone can cancel, and some always need a person, with an optional amount cap." width="100%">
+  <img src="assets/approval.svg" alt="A drafted email, its numbers checked against the records, goes one of two ways. Supervised mode, the default: a person approves every email, the numbers are checked again, then it is sent. Autopilot mode, with an optional amount cap: routine emails go out on their own, sensitive emails wait 30 minutes so anyone can cancel, and some emails always need a person." width="100%">
 </p>
 
 <details>
@@ -345,20 +363,13 @@ On a client's page, add the amount they pay each month and the day it's billed. 
 
 ## How it uses Vultr
 
-<p align="center">
-  <img src="assets/architecture.svg" alt="A browser reaches the Coolify proxy over HTTPS at 45-76-150-156.sslip.io, which serves the Next.js web app. The web app queues runs for the worker. The proxy, web, worker and a migrate step run in one Vultr Cloud Compute VM in Singapore, behind a firewall group. The VM uses Managed PostgreSQL 17, Object Storage and Serverless Inference, where minimax-m3.1-flash reads documents and emails." width="100%">
-</p>
-
 The live demo runs on this stack in Singapore (`sgp`), created by `pnpm infra:apply` and deployed by Coolify from this repository.
 
-| Vultr service | What it does here |
-| --- | --- |
-| **Cloud Compute** (Coolify marketplace image) | One VM (`vc2-2c-4gb` in the live demo) runs the app as three containers from `docker-compose.yml`: `migrate` runs the migrations before every deploy, `web` serves the Next.js app, and `worker` runs the workflow and the schedules. A firewall group opens 80/443 to everyone, and SSH and the Coolify dashboard only to your IP. Daily VM backups run at 02:00 PKT. |
-| **Managed Databases for PostgreSQL** | PostgreSQL 17. Holds all records: invoices, transactions, matches, flags, drafts, the audit log, sign-in sessions, the run queue and the cron schedules (pg-boss). It's reached over the VPC's private hostname, only from the VPC, with TLS (verified when `DATABASE_CA_CERT` is set), and backed up daily. |
-| **Object Storage** | Stores the documents (credit advices, ePRCs, screenshots, wallet exports and uploads) and the PDF of every invoice as it was sent, through the S3 API, keyed by SHA-256, so the same file is never stored or counted twice. A second bucket holds the nightly database backups. At 02:30 PKT the worker writes every table from one consistent snapshot as a gzipped file sealed with AES-256-GCM, and keeps the newest 14. |
-| **Serverless Inference** | Reads documents and emails through the OpenAI-compatible API with `minimax-m3.1-flash`, chosen by the [reading benchmark](#reading-benchmark): it classifies each document, extracts its fields with JSON output and a quote for each value, and reads client replies for promises to pay and claims of payment. Each call is stored with its tokens, time and cost. |
-| **Vultr API** | `packages/vultr` is a typed client generated from Vultr's OpenAPI document (`openapi-typescript` + `openapi-fetch`). `pnpm infra:plan / apply / status` uses it to create the whole stack. The settings page uses it to show live status: VM, backups, database, storage, and model usage and cost. |
-| **DNS** (optional) | If `DOMAIN` is a Vultr DNS zone, `infra:apply` adds an A record for `app.<domain>`. Without one, the address is the VM's IP under `sslip.io`, which still gets a real certificate, as the live demo does. |
+### Architecture
+
+<p align="center">
+  <img src="assets/architecture.svg" alt="A browser (owners, finance, accountants and demo visitors) reaches the Coolify proxy (HTTPS with Let's Encrypt, on 80 and 443), which serves the Next.js web app; the web app queues runs for the worker (pg-boss weekly cron and run queue, a mailbox check every 15 minutes, a nightly backup at 02:30 PKT). These, a migrate step that runs before every deploy and a firewall group sit in one Vultr Cloud Compute VM (vc2-2c-4gb, Singapore) running Coolify and docker-compose. Below it, three more Vultr services: Managed PostgreSQL 17 over a private VPC host with TLS, Object Storage through the S3 API, and Serverless Inference through its OpenAI-compatible API, where minimax-m3.1-flash reads documents and client replies. A footnote adds the Vultr API and the live address, https://45-76-150-156.sslip.io." width="100%">
+</p>
 
 <details>
 <summary><b>Text version of the diagram</b></summary>
@@ -379,12 +390,23 @@ Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ───�
 
 </details>
 
+### Vultr services
+
+| Vultr service | What it does here |
+| --- | --- |
+| **Cloud Compute** (Coolify marketplace image) | One VM (`vc2-2c-4gb` in the live demo) runs the app as three containers from `docker-compose.yml`: `migrate` runs the migrations before every deploy, `web` serves the Next.js app, and `worker` runs the workflow and the schedules. A firewall group opens 80/443 to everyone, and SSH and the Coolify dashboard only to your IP. Daily VM backups run at 02:00 PKT. |
+| **Managed Databases for PostgreSQL** | PostgreSQL 17. Holds all records: invoices, transactions, matches, flags, drafts, the audit log, sign-in sessions, the run queue and the cron schedules (pg-boss). It's reached over the VPC's private hostname, only from the VPC, with TLS (verified when `DATABASE_CA_CERT` is set), and backed up daily. |
+| **Object Storage** | Stores the documents (credit advices, ePRCs, screenshots, wallet exports and uploads) and the PDF of every invoice as it was sent, through the S3 API, keyed by SHA-256, so the same file is never stored or counted twice. A second bucket holds the nightly database backups. At 02:30 PKT the worker writes every table from one consistent snapshot as a gzipped file sealed with AES-256-GCM, and keeps the newest 14. |
+| **Serverless Inference** | Reads documents and emails through the OpenAI-compatible API with `minimax-m3.1-flash`, chosen by the [reading benchmark](#reading-benchmark): it classifies each document, extracts its fields with JSON output and a quote for each value, and reads client replies for promises to pay and claims of payment. Each call is stored with its tokens, time and cost. |
+| **Vultr API** | `packages/vultr` is a typed client generated from Vultr's OpenAPI document (`openapi-typescript` + `openapi-fetch`). `pnpm infra:plan / apply / status` uses it to create the whole stack. The settings page uses it to show live status: VM, backups, database, storage, and model usage and cost. |
+| **DNS** (optional) | If `DOMAIN` is a Vultr DNS zone, `infra:apply` adds an A record for `app.<domain>`. Without one, the address is the VM's IP under `sslip.io`, which still gets a real certificate, as the live demo does. |
+
 ---
 
 ## Reading benchmark
 
 <p align="center">
-  <img src="assets/benchmark.svg" alt="Reading 61 simulated documents with known answers, 45 of them in layouts the built-in rules were never written for. Fields right in those layouts: minimax-m3.1-flash 100% (the model in use), glm-5.3-flash 99.0%, deepseek-v4.1-flash-1017 98.6%, layout rules with no model 12%. Documents fully right, of 61: 61, 55, 54 and 19." width="100%">
+  <img src="assets/benchmark.svg" alt="Two bar charts from reading 61 simulated documents with known answers, 45 of them in layouts the built-in rules were never written for. Fields right in those layouts: minimax-m3.1-flash 100% (the model in use, in forest green), glm-5.3-flash 99.0%, deepseek-v4.1-flash-1017 98.6%, layout rules with no model 12%. Documents fully right, of 61: 61, 55, 54 and 19. Each row also gives the cost for all 61 and the time per document." width="100%">
 </p>
 
 The model is chosen by measurement. `pnpm bench` has every reader read the answer key: 61 SIMULATED documents, each with the values it should yield, taken from the generator's own inputs so the key can't drift from the files. 16 are in the demo bank's layout. The other 45 show the same facts in layouts the built-in rules were never written for: another bank's advice, a letter, a noisy scan, other SMS wording (one in Roman Urdu), another app's screenshot and a printed MT103. Three advices are addressed to someone else. A field counts when the answer or the reading has a value, so an invented value is a miss.
@@ -454,7 +476,7 @@ pnpm --filter @ebo/worker cli run ravi-code-works   # run one workspace from the
 ## Deploy on Vultr
 
 <p align="center">
-  <img src="assets/deploy.svg" alt="Deploy in six steps: settings, plan, apply, Coolify, deploy, check. The apply step creates the whole stack and costs money." width="100%">
+  <img src="assets/deploy.svg" alt="Deploy on Vultr as a six-step timeline, each step with its command: settings (VULTR_API_KEY and ADMIN_CIDR in .env), plan (pnpm infra:plan, read-only), apply (pnpm infra:apply -- --yes, marked Costs money), Coolify (http://&lt;vm-ip&gt;:8000), deploy (pnpm --filter @ebo/worker cli reset-demo) and check (pnpm infra:status)." width="100%">
 </p>
 
 > [!WARNING]
@@ -500,7 +522,7 @@ The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It bac
 | `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data and its answer key |
 | `packages/vultr` | A typed Vultr API client generated from the OpenAPI document, plus platform status |
 | `infra` | `plan`, `apply` and `status` for the Vultr stack |
-| `assets` | The images in this README. The screens are drawn from the live demo's pages. |
+| `assets` | The images in this README: the drawings, the logo (copied unchanged from `brand/png`) and the screens, drawn from the live demo's pages. |
 
 To regenerate the Vultr client, download Vultr's OpenAPI document to `packages/vultr/openapi.json` (it's gitignored) and run `pnpm vultr:types`.
 

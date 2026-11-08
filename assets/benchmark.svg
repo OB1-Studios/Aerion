@@ -1,1 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 404" width="1000" height="404" role="img" aria-labelledby="t d"><title id="t">Reading benchmark</title><desc id="d">61 simulated documents with known answers, 45 of them in layouts the built-in rules were never written for. Fields right in those layouts: minimax-m3.1-flash 100% (the model in use), glm-5.3-flash 99.0%, deepseek-v4.1-flash-1017 98.6%, layout rules with no model 12%. Documents fully right, of 61: 61, 55, 54 and 19.</desc><style>.serif{font-family:Georgia,'Iowan Old Style','Palatino Linotype',Palatino,'Times New Roman',serif}.sans{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}</style><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#5B6B84" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker></defs><rect x="0.5" y="0.5" width="999.0" height="403.0" rx="18" fill="#F5F7F4" stroke="#C6D3C8" stroke-width="1"/><text x="36.0" y="42.0" class="sans" font-size="16" font-weight="700" fill="#14233B">Reading 61 SIMULATED documents with known answers</text><text x="36.0" y="64.0" class="sans" font-size="13" fill="#4B5B73">45 of them are in layouts the built-in rules were never written for. Measured 2026-11-07 with the deployed settings.</text><rect x="20.0" y="84.0" width="960.0" height="270.0" rx="14" fill="#FFFFFF" stroke="#D3DDD4" stroke-width="1"/><text x="360.0" y="116.0" class="sans" font-size="13" font-weight="700" fill="#14233B">Fields right, other layouts</text><text x="660.0" y="116.0" class="sans" font-size="13" font-weight="700" fill="#14233B">Documents fully right, of 61</text><line x1="360.0" y1="130.0" x2="360.0" y2="312.0" stroke="#CBD5E1" stroke-width="1"/><text x="360.0" y="330.0" class="sans" font-size="11" fill="#64748B" text-anchor="middle">0%</text><line x1="475.0" y1="130.0" x2="475.0" y2="312.0" stroke="#E2E8F0" stroke-width="1"/><text x="475.0" y="330.0" class="sans" font-size="11" fill="#64748B" text-anchor="middle">50%</text><line x1="590.0" y1="130.0" x2="590.0" y2="312.0" stroke="#E2E8F0" stroke-width="1"/><text x="590.0" y="330.0" class="sans" font-size="11" fill="#64748B" text-anchor="middle">100%</text><line x1="660.0" y1="130.0" x2="660.0" y2="312.0" stroke="#CBD5E1" stroke-width="1"/><text x="660.0" y="330.0" class="sans" font-size="11" fill="#64748B" text-anchor="middle">0</text><line x1="735.4" y1="130.0" x2="735.4" y2="312.0" stroke="#E2E8F0" stroke-width="1"/><text x="735.4" y="330.0" class="sans" font-size="11" fill="#64748B" text-anchor="middle">20</text><line x1="810.8" y1="130.0" x2="810.8" y2="312.0" stroke="#E2E8F0" stroke-width="1"/><text x="810.8" y="330.0" class="sans" font-size="11" fill="#64748B" text-anchor="middle">40</text><line x1="886.2" y1="130.0" x2="886.2" y2="312.0" stroke="#E2E8F0" stroke-width="1"/><text x="886.2" y="330.0" class="sans" font-size="11" fill="#64748B" text-anchor="middle">60</text><text x="36.0" y="145.0" class="sans" font-size="13.5" font-weight="700" fill="#14233B">minimax-m3.1-flash</text><text x="36.0" y="162.0" class="sans" font-size="11.5" fill="#64748B">in use · $0.12 for all 61 · 4.0 s a document</text><path d="M360.0 136.0h226.0a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-226.0z" fill="#2a78d6"/><text x="598.0" y="149.5" class="sans" font-size="13" font-weight="700" fill="#14233B">100%</text><path d="M660.0 136.0h226.0a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-226.0z" fill="#2a78d6"/><text x="898.0" y="149.5" class="sans" font-size="13" font-weight="700" fill="#14233B">61 of 61</text><text x="36.0" y="191.0" class="sans" font-size="13.5" font-weight="500" fill="#14233B">glm-5.3-flash</text><text x="36.0" y="208.0" class="sans" font-size="11.5" fill="#64748B">$0.05 · 5.4 s a document</text><path d="M360.0 182.0h223.7a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-223.7z" fill="#94a3b8"/><text x="595.7" y="195.5" class="sans" font-size="13" font-weight="500" fill="#14233B">99.0%</text><path d="M660.0 182.0h203.4a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-203.4z" fill="#94a3b8"/><text x="875.4" y="195.5" class="sans" font-size="13" font-weight="500" fill="#14233B">55</text><text x="36.0" y="237.0" class="sans" font-size="13.5" font-weight="500" fill="#14233B">deepseek-v4.1-flash-1017</text><text x="36.0" y="254.0" class="sans" font-size="11.5" fill="#64748B">$0.09 · 6.6 s a document</text><path d="M360.0 228.0h222.8a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-222.8z" fill="#94a3b8"/><text x="594.8" y="241.5" class="sans" font-size="13" font-weight="500" fill="#14233B">98.6%</text><path d="M660.0 228.0h199.6a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-199.6z" fill="#94a3b8"/><text x="871.6" y="241.5" class="sans" font-size="13" font-weight="500" fill="#14233B">54</text><text x="36.0" y="283.0" class="sans" font-size="13.5" font-weight="500" fill="#14233B">Layout rules, no model</text><text x="36.0" y="300.0" class="sans" font-size="11.5" fill="#64748B">$0 · under 1 ms</text><path d="M360.0 274.0h23.6a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-23.6z" fill="#94a3b8"/><text x="395.6" y="287.5" class="sans" font-size="13" font-weight="500" fill="#14233B">12%</text><path d="M660.0 274.0h67.6a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-67.6z" fill="#94a3b8"/><text x="739.6" y="287.5" class="sans" font-size="13" font-weight="500" fill="#14233B">19</text><text x="36.0" y="384.0" class="sans" font-size="12" fill="#4B5B73">A field counts when the answer or the reading has a value, so an invented value is a miss. The table below has the same numbers.</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 404" width="1000" height="404" role="img" aria-labelledby="title" aria-describedby="desc">
+<title id="title">Reading benchmark</title>
+<desc id="desc">Reading 61 simulated documents with known answers, 45 of them in layouts the built-in rules were never written for. Fields right in those layouts: minimax-m3.1-flash 100% (the model in use, $0.12 for all 61, 4.0 s a document), glm-5.3-flash 99.0%, deepseek-v4.1-flash-1017 98.6%, layout rules with no model 12%. Documents fully right, of 61: 61, 55, 54 and 19.</desc>
+<style>
+.serif{font-family:'DM Serif Display',Georgia,'Times New Roman',serif;font-weight:400}
+.sans{font-family:Manrope,'Segoe UI',Helvetica,Arial,sans-serif}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+</style>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1.5 1.5 8.5 5 1.5 8.5" fill="none" stroke="#5F6963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<linearGradient id="panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1F4A3C"/><stop offset="1" stop-color="#163A2F"/></linearGradient>
+</defs>
+<!-- Its own light card, so the drawing reads the same on GitHub's light and dark themes. -->
+<rect x="0.5" y="0.5" width="999" height="403" rx="16" fill="#F7F8F5" stroke="#E7EAE5"/>
+<text x="32" y="46" class="serif" font-size="22" fill="#29332F">Reading 61 SIMULATED documents with known answers</text>
+<text x="32" y="70" class="sans" font-size="13" fill="#5F6963">45 of them are in layouts the built-in rules were never written for. Measured 2026-11-07 with the deployed settings.</text>
+<rect x="32" y="88" width="936" height="272" rx="14" fill="#FFFFFF" stroke="#E7EAE5"/>
+<text x="372" y="122" class="sans" font-size="13" font-weight="700" fill="#29332F">Fields right, other layouts</text>
+<text x="664" y="122" class="sans" font-size="13" font-weight="700" fill="#29332F">Documents fully right, of 61</text>
+<!-- Grid -->
+<line x1="372" y1="134" x2="372" y2="314" stroke="#D3D9D2"/>
+<text x="372" y="334" class="sans" font-size="11" text-anchor="middle" fill="#5F6963">0%</text>
+<line x1="477" y1="134" x2="477" y2="314" stroke="#E7EAE5"/>
+<text x="477" y="334" class="sans" font-size="11" text-anchor="middle" fill="#5F6963">50%</text>
+<line x1="582" y1="134" x2="582" y2="314" stroke="#E7EAE5"/>
+<text x="582" y="334" class="sans" font-size="11" text-anchor="middle" fill="#5F6963">100%</text>
+<line x1="664" y1="134" x2="664" y2="314" stroke="#D3D9D2"/>
+<text x="664" y="334" class="sans" font-size="11" text-anchor="middle" fill="#5F6963">0</text>
+<line x1="734" y1="134" x2="734" y2="314" stroke="#E7EAE5"/>
+<text x="734" y="334" class="sans" font-size="11" text-anchor="middle" fill="#5F6963">20</text>
+<line x1="804" y1="134" x2="804" y2="314" stroke="#E7EAE5"/>
+<text x="804" y="334" class="sans" font-size="11" text-anchor="middle" fill="#5F6963">40</text>
+<line x1="874" y1="134" x2="874" y2="314" stroke="#E7EAE5"/>
+<text x="874" y="334" class="sans" font-size="11" text-anchor="middle" fill="#5F6963">60</text>
+<!-- minimax-m3.1-flash -->
+<text x="56" y="155" class="sans" font-size="13.5" font-weight="700" fill="#29332F">minimax-m3.1-flash</text>
+<text x="56" y="172" class="sans" font-size="11.5" fill="#5F6963"><tspan font-weight="700" fill="#214F41">in use</tspan> · $0.12 for all 61 · 4.0 s a document</text>
+<path d="M372 148h206a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-206z" fill="#214F41"/>
+<text x="590" y="160.5" class="sans" font-size="13" font-weight="700" fill="#29332F">100%</text>
+<path d="M664 148h209.5a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-209.5z" fill="#214F41"/>
+<text x="885.5" y="160.5" class="sans" font-size="13" font-weight="700" fill="#29332F">61 of 61</text>
+<!-- glm-5.3-flash -->
+<text x="56" y="201" class="sans" font-size="13.5" font-weight="600" fill="#29332F">glm-5.3-flash</text>
+<text x="56" y="218" class="sans" font-size="11.5" fill="#5F6963">$0.05 · 5.4 s a document</text>
+<path d="M372 194h203.9a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-203.9z" fill="#9CC4AD"/>
+<text x="587.9" y="206.5" class="sans" font-size="13" font-weight="600" fill="#29332F">99.0%</text>
+<path d="M664 194h188.5a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-188.5z" fill="#9CC4AD"/>
+<text x="864.5" y="206.5" class="sans" font-size="13" font-weight="600" fill="#29332F">55</text>
+<!-- deepseek-v4.1-flash-1017 -->
+<text x="56" y="247" class="sans" font-size="13.5" font-weight="600" fill="#29332F">deepseek-v4.1-flash-1017</text>
+<text x="56" y="264" class="sans" font-size="11.5" fill="#5F6963">$0.09 · 6.6 s a document</text>
+<path d="M372 240h203.1a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-203.1z" fill="#9CC4AD"/>
+<text x="587.1" y="252.5" class="sans" font-size="13" font-weight="600" fill="#29332F">98.6%</text>
+<path d="M664 240h185a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-185z" fill="#9CC4AD"/>
+<text x="861" y="252.5" class="sans" font-size="13" font-weight="600" fill="#29332F">54</text>
+<!-- Layout rules, no model -->
+<text x="56" y="293" class="sans" font-size="13.5" font-weight="600" fill="#29332F">Layout rules, no model</text>
+<text x="56" y="310" class="sans" font-size="11.5" fill="#5F6963">$0 · under 1 ms</text>
+<path d="M372 286h21.2a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-21.2z" fill="#9CC4AD"/>
+<text x="405.2" y="298.5" class="sans" font-size="13" font-weight="600" fill="#29332F">12%</text>
+<path d="M664 286h62.5a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4h-62.5z" fill="#9CC4AD"/>
+<text x="738.5" y="298.5" class="sans" font-size="13" font-weight="600" fill="#29332F">19</text>
+<text x="32" y="388" class="sans" font-size="12" fill="#5F6963">A field counts when the answer or the reading has a value, so an invented value is a miss. The table below has the same numbers.</text>
+</svg>

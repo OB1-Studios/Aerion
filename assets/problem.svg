@@ -1,1 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 392" width="1000" height="392" role="img" aria-labelledby="t d"><title id="t">The problem</title><desc id="d">Money arrives by SWIFT wire, Payoneer or Wise. Each payment comes with paperwork: purpose code, ePRC, withholding certificates, PSEB registration and banking-channel share. That paperwork decides how the income is taxed, and today someone checks it by hand every week.</desc><style>.serif{font-family:Georgia,'Iowan Old Style','Palatino Linotype',Palatino,'Times New Roman',serif}.sans{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}</style><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#5B6B84" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker></defs><rect x="0.5" y="0.5" width="999" height="391" rx="18" fill="#F5F7F4" stroke="#C6D3C8" stroke-width="1" /><text x="36" y="40" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >Money arrives by</text><text x="326" y="40" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >Each payment comes with</text><text x="714" y="40" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >which decides</text><rect x="36" y="60" width="250" height="56" rx="12" fill="#FFFFFF" stroke="#D3DDD4" stroke-width="1" /><text x="54" y="85" class="sans" font-size="16" font-weight="700" fill="#14233B" text-anchor="start" >SWIFT wire</text><text x="54" y="104" class="sans" font-size="13" font-weight="400" fill="#4B5B73" text-anchor="start" >into a Pakistani bank</text><rect x="36" y="128" width="250" height="56" rx="12" fill="#FFFFFF" stroke="#D3DDD4" stroke-width="1" /><text x="54" y="153" class="sans" font-size="16" font-weight="700" fill="#14233B" text-anchor="start" >Payoneer</text><text x="54" y="172" class="sans" font-size="13" font-weight="400" fill="#4B5B73" text-anchor="start" >wallet payout</text><rect x="36" y="196" width="250" height="56" rx="12" fill="#FFFFFF" stroke="#D3DDD4" stroke-width="1" /><text x="54" y="221" class="sans" font-size="16" font-weight="700" fill="#14233B" text-anchor="start" >Wise</text><text x="54" y="240" class="sans" font-size="13" font-weight="400" fill="#4B5B73" text-anchor="start" >into a PKR account</text><text x="36" y="292" class="sans" font-size="13" font-weight="700" fill="#4B5B73" text-anchor="start" >These don't pay out to Pakistan</text><rect x="36" y="304" width="84" height="30" rx="15" fill="#ECEFEA" stroke="#D3DDD4" stroke-width="1" /><text x="78.0" y="324" class="sans" font-size="14" font-weight="600" fill="#7B879B" text-anchor="middle" >PayPal</text><line x1="50" y1="319" x2="106" y2="319" stroke="#7B879B" stroke-width="1.5"/><rect x="130" y="304" width="84" height="30" rx="15" fill="#ECEFEA" stroke="#D3DDD4" stroke-width="1" /><text x="172.0" y="324" class="sans" font-size="14" font-weight="600" fill="#7B879B" text-anchor="middle" >Stripe</text><line x1="144" y1="319" x2="200" y2="319" stroke="#7B879B" stroke-width="1.5"/><rect x="326" y="60" width="350" height="296" rx="12" fill="#FFFFFF" stroke="#D3DDD4" stroke-width="1" /><rect x="346" y="82" width="18" height="18" rx="4" fill="#fff" stroke="#5B6B84" stroke-width="1.5" /><text x="376" y="96" class="sans" font-size="16" font-weight="700" fill="#14233B" text-anchor="start" >Purpose code</text><text x="376" y="116" class="sans" font-size="12" font-weight="400" fill="#4B5B73" text-anchor="start" >on the remittance</text><line x1="346" y1="125" x2="656" y2="125" stroke="#D3DDD4"/><rect x="346" y="137" width="18" height="18" rx="4" fill="#fff" stroke="#5B6B84" stroke-width="1.5" /><text x="376" y="151" class="sans" font-size="16" font-weight="700" fill="#14233B" text-anchor="start" >ePRC</text><text x="376" y="171" class="sans" font-size="12" font-weight="400" fill="#4B5B73" text-anchor="start" >electronic Proceeds Realization Certificate</text><line x1="346" y1="180" x2="656" y2="180" stroke="#D3DDD4"/><rect x="346" y="192" width="18" height="18" rx="4" fill="#fff" stroke="#5B6B84" stroke-width="1.5" /><text x="376" y="212" class="sans" font-size="16" font-weight="700" fill="#14233B" text-anchor="start" >Withholding certificates</text><line x1="346" y1="235" x2="656" y2="235" stroke="#D3DDD4"/><rect x="346" y="247" width="18" height="18" rx="4" fill="#fff" stroke="#5B6B84" stroke-width="1.5" /><text x="376" y="267" class="sans" font-size="16" font-weight="700" fill="#14233B" text-anchor="start" >PSEB registration</text><line x1="346" y1="290" x2="656" y2="290" stroke="#D3DDD4"/><rect x="346" y="302" width="18" height="18" rx="4" fill="#fff" stroke="#5B6B84" stroke-width="1.5" /><text x="376" y="316" class="sans" font-size="16" font-weight="700" fill="#14233B" text-anchor="start" >Banking-channel share</text><text x="376" y="336" class="sans" font-size="12" font-weight="400" fill="#4B5B73" text-anchor="start" >of income that came through banks</text><rect x="714" y="60" width="250" height="296" rx="12" fill="#14233B" stroke="#14233B" stroke-width="0" /><text x="736" y="104" class="serif" font-size="23" font-weight="700" fill="#F3F6FA" text-anchor="start" >How the income</text><text x="736" y="134" class="serif" font-size="23" font-weight="700" fill="#F3F6FA" text-anchor="start" >is taxed</text><line x1="736" y1="150" x2="942" y2="150" stroke="#38507A"/><text x="736" y="182" class="sans" font-size="14" font-weight="400" fill="#C9D4E6" text-anchor="start" >Today, someone checks all</text><text x="736" y="203" class="sans" font-size="14" font-weight="400" fill="#C9D4E6" text-anchor="start" >of it by hand, every week,</text><text x="736" y="224" class="sans" font-size="14" font-weight="400" fill="#C9D4E6" text-anchor="start" >across:</text><rect x="736" y="238" width="150" height="30" rx="15" fill="#1F3250" stroke="#38507A" stroke-width="1" /><text x="811" y="258" class="sans" font-size="13.5" font-weight="600" fill="#E3EAF5" text-anchor="middle" >bank emails</text><rect x="736" y="276" width="150" height="30" rx="15" fill="#1F3250" stroke="#38507A" stroke-width="1" /><text x="811" y="296" class="sans" font-size="13.5" font-weight="600" fill="#E3EAF5" text-anchor="middle" >wallet exports</text><rect x="736" y="314" width="150" height="30" rx="15" fill="#1F3250" stroke="#38507A" stroke-width="1" /><text x="811" y="334" class="sans" font-size="13.5" font-weight="600" fill="#E3EAF5" text-anchor="middle" >client threads</text><path d="M286,88 H298 V224 H286 M298,156 H304" fill="none" stroke="#5B6B84" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M300,156 H320" fill="none" stroke="#5B6B84" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah)"/><path d="M682,208 H706" fill="none" stroke="#5B6B84" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah)"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 392" width="1000" height="392" role="img" aria-labelledby="title" aria-describedby="desc">
+<title id="title">The problem</title>
+<desc id="desc">Money arrives by SWIFT wire into a Pakistani bank, as a Payoneer wallet payout, or by Wise into a PKR account; PayPal and Stripe don't pay out to Pakistan. Each payment comes with paperwork: the purpose code on the remittance, the ePRC, withholding certificates, PSEB registration and the banking-channel share. That paperwork decides how the income is taxed, and today someone checks it by hand every week across bank emails, wallet exports and client threads.</desc>
+<style>
+.serif{font-family:'DM Serif Display',Georgia,'Times New Roman',serif;font-weight:400}
+.sans{font-family:Manrope,'Segoe UI',Helvetica,Arial,sans-serif}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+</style>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1.5 1.5 8.5 5 1.5 8.5" fill="none" stroke="#5F6963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<linearGradient id="panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1F4A3C"/><stop offset="1" stop-color="#163A2F"/></linearGradient>
+</defs>
+<!-- Its own light card, so the drawing reads the same on GitHub's light and dark themes. -->
+<rect x="0.5" y="0.5" width="999" height="391" rx="16" fill="#F7F8F5" stroke="#E7EAE5"/>
+<text x="32" y="42" class="sans" font-size="11" font-weight="700" letter-spacing="1.3" fill="#5F6963">MONEY ARRIVES BY</text>
+<text x="306" y="42" class="sans" font-size="11" font-weight="700" letter-spacing="1.3" fill="#5F6963">EACH PAYMENT COMES WITH</text>
+<text x="718" y="42" class="sans" font-size="11" font-weight="700" letter-spacing="1.3" fill="#5F6963">WHICH DECIDES</text>
+<!-- How the money arrives -->
+<rect x="32" y="60" width="236" height="56" rx="12" fill="#FFFFFF" stroke="#E7EAE5"/>
+<circle cx="62" cy="88" r="17" fill="#DCE9DF"/>
+<g transform="translate(52 78) scale(0.8)" fill="none" stroke="#214F41" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 4l9 5.5z"/><line x1="6" y1="12.5" x2="6" y2="17"/><line x1="10" y1="12.5" x2="10" y2="17"/><line x1="14" y1="12.5" x2="14" y2="17"/><line x1="18" y1="12.5" x2="18" y2="17"/><line x1="3.5" y1="20" x2="20.5" y2="20"/></g>
+<text x="90" y="85" class="sans" font-size="15.5" font-weight="700" fill="#29332F">SWIFT wire</text>
+<text x="90" y="103" class="sans" font-size="12.5" fill="#5F6963">into a Pakistani bank</text>
+<rect x="32" y="128" width="236" height="56" rx="12" fill="#FFFFFF" stroke="#E7EAE5"/>
+<circle cx="62" cy="156" r="17" fill="#DCE9DF"/>
+<g transform="translate(52 146) scale(0.8)" fill="none" stroke="#214F41" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5h14a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 7.5 15 4.3a1.5 1.5 0 0 1 1.9 1.4v1.8"/><circle cx="16" cy="13.8" r="1.1"/></g>
+<text x="90" y="153" class="sans" font-size="15.5" font-weight="700" fill="#29332F">Payoneer</text>
+<text x="90" y="171" class="sans" font-size="12.5" fill="#5F6963">wallet payout</text>
+<rect x="32" y="196" width="236" height="56" rx="12" fill="#FFFFFF" stroke="#E7EAE5"/>
+<circle cx="62" cy="224" r="17" fill="#DCE9DF"/>
+<g transform="translate(52 214) scale(0.8)" fill="none" stroke="#214F41" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><polyline points="14.5,4.5 18,8 14.5,11.5"/><path d="M20 16H6"/><polyline points="9.5,12.5 6,16 9.5,19.5"/></g>
+<text x="90" y="221" class="sans" font-size="15.5" font-weight="700" fill="#29332F">Wise</text>
+<text x="90" y="239" class="sans" font-size="12.5" fill="#5F6963">into a PKR account</text>
+<text x="32" y="292" class="sans" font-size="12.5" font-weight="700" fill="#5F6963">These don’t pay out to Pakistan</text>
+<rect x="32" y="304" width="76.7" height="30" rx="15" fill="#F2F4F0" stroke="#D3D9D2"/>
+<text x="70.3" y="324" class="sans" font-size="13.5" font-weight="600" text-anchor="middle" fill="#5F6963">PayPal</text>
+<line x1="43" y1="319" x2="97.7" y2="319" stroke="#C77959" stroke-width="1.5"/>
+<rect x="118.7" y="304" width="72" height="30" rx="15" fill="#F2F4F0" stroke="#D3D9D2"/>
+<text x="154.7" y="324" class="sans" font-size="13.5" font-weight="600" text-anchor="middle" fill="#5F6963">Stripe</text>
+<line x1="129.7" y1="319" x2="179.6" y2="319" stroke="#C77959" stroke-width="1.5"/>
+<!-- The paperwork -->
+<rect x="306" y="60" width="380" height="296" rx="14" fill="#FFFFFF" stroke="#E7EAE5"/>
+<rect x="326" y="82" width="18" height="18" rx="4" fill="#FFFFFF" stroke="#214F41" stroke-width="1.5"/>
+<text x="358" y="96" class="sans" font-size="15.5" font-weight="700" fill="#29332F">Purpose code</text>
+<text x="358" y="115" class="sans" font-size="12.5" fill="#5F6963">on the remittance</text>
+<line x1="326" y1="125" x2="666" y2="125" stroke="#E7EAE5"/>
+<rect x="326" y="137" width="18" height="18" rx="4" fill="#FFFFFF" stroke="#214F41" stroke-width="1.5"/>
+<text x="358" y="151" class="sans" font-size="15.5" font-weight="700" fill="#29332F">ePRC</text>
+<text x="358" y="170" class="sans" font-size="12.5" fill="#5F6963">electronic Proceeds Realization Certificate</text>
+<line x1="326" y1="180" x2="666" y2="180" stroke="#E7EAE5"/>
+<rect x="326" y="198.5" width="18" height="18" rx="4" fill="#FFFFFF" stroke="#214F41" stroke-width="1.5"/>
+<text x="358" y="213" class="sans" font-size="15.5" font-weight="700" fill="#29332F">Withholding certificates</text>
+<line x1="326" y1="235" x2="666" y2="235" stroke="#E7EAE5"/>
+<rect x="326" y="253.5" width="18" height="18" rx="4" fill="#FFFFFF" stroke="#214F41" stroke-width="1.5"/>
+<text x="358" y="268" class="sans" font-size="15.5" font-weight="700" fill="#29332F">PSEB registration</text>
+<line x1="326" y1="290" x2="666" y2="290" stroke="#E7EAE5"/>
+<rect x="326" y="302" width="18" height="18" rx="4" fill="#FFFFFF" stroke="#214F41" stroke-width="1.5"/>
+<text x="358" y="316" class="sans" font-size="15.5" font-weight="700" fill="#29332F">Banking-channel share</text>
+<text x="358" y="335" class="sans" font-size="12.5" fill="#5F6963">of income that came through banks</text>
+<!-- What it decides -->
+<rect x="718" y="60" width="250" height="296" rx="14" fill="url(#panel)"/>
+<text x="740" y="102" class="serif" font-size="26" fill="#EEF4F0">How the income</text>
+<text x="740" y="133" class="serif" font-size="26" fill="#EEF4F0">is taxed</text>
+<line x1="740" y1="151" x2="946" y2="151" stroke="#336352"/>
+<text x="740" y="179" class="sans" font-size="14" fill="#A9C2B6">Today, someone checks all of</text>
+<text x="740" y="200" class="sans" font-size="14" fill="#A9C2B6">it by hand, every week, across:</text>
+<rect x="740" y="216" width="150" height="30" rx="15" fill="#163A2F" stroke="#336352"/>
+<text x="815" y="236" class="sans" font-size="13.5" font-weight="600" text-anchor="middle" fill="#EEF4F0">bank emails</text>
+<rect x="740" y="254" width="150" height="30" rx="15" fill="#163A2F" stroke="#336352"/>
+<text x="815" y="274" class="sans" font-size="13.5" font-weight="600" text-anchor="middle" fill="#EEF4F0">wallet exports</text>
+<rect x="740" y="292" width="150" height="30" rx="15" fill="#163A2F" stroke="#336352"/>
+<text x="815" y="312" class="sans" font-size="13.5" font-weight="600" text-anchor="middle" fill="#EEF4F0">client threads</text>
+<!-- Arrows -->
+<path d="M268 88H280V224H268" fill="none" stroke="#5F6963" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M280 156H299" fill="none" stroke="#5F6963" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M690 208H711" fill="none" stroke="#5F6963" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+</svg>

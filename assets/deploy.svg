@@ -1,1 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 444" width="1000" height="444" role="img" aria-labelledby="t d"><title id="t">Deploy on Vultr in six steps</title><desc id="d">Settings, plan, apply, Coolify, deploy, check. The apply step creates the whole stack and costs money.</desc><style>.serif{font-family:Georgia,'Iowan Old Style','Palatino Linotype',Palatino,'Times New Roman',serif}.sans{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}</style><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#5B6B84" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker></defs><rect x="0.5" y="0.5" width="999" height="443" rx="18" fill="#F5F7F4" stroke="#C6D3C8" stroke-width="1" /><line x1="60" y1="60" x2="60" y2="380" stroke="#C6D3C8" stroke-width="2"/><circle cx="60" cy="60" r="16" fill="#14233B"/><text x="60" y="66" class="sans" font-size="16" font-weight="700" fill="#fff" text-anchor="middle" >1</text><text x="100" y="58" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >Settings</text><text x="100" y="79" class="sans" font-size="13.5" font-weight="400" fill="#4B5B73" text-anchor="start" >Add VULTR_API_KEY and ADMIN_CIDR to .env.</text><rect x="636" y="42" width="328" height="36" rx="8" fill="#14233B" stroke="#14233B" stroke-width="0" /><text x="650" y="65" class="mono" font-size="12" font-weight="400" fill="#E3EAF5" text-anchor="start" >VULTR_API_KEY, ADMIN_CIDR</text><circle cx="60" cy="124" r="16" fill="#14233B"/><text x="60" y="130" class="sans" font-size="16" font-weight="700" fill="#fff" text-anchor="middle" >2</text><text x="100" y="122" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >Plan</text><text x="100" y="143" class="sans" font-size="13.5" font-weight="400" fill="#4B5B73" text-anchor="start" >Read-only. Shows what exists, what would be created, cost and credit.</text><rect x="636" y="106" width="328" height="36" rx="8" fill="#14233B" stroke="#14233B" stroke-width="0" /><text x="650" y="129" class="mono" font-size="12" font-weight="400" fill="#E3EAF5" text-anchor="start" >pnpm infra:plan</text><circle cx="60" cy="188" r="16" fill="#14233B"/><text x="60" y="194" class="sans" font-size="16" font-weight="700" fill="#fff" text-anchor="middle" >3</text><text x="100" y="186" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >Apply</text><rect x="178" y="168" width="99" height="22" rx="11.0" fill="#F8DAD6" stroke="#F8DAD6" stroke-width="0" /><text x="227.5" y="183.2" class="sans" font-size="12" font-weight="600" fill="#8E241C" text-anchor="middle" >Costs money</text><text x="100" y="207" class="sans" font-size="13.5" font-weight="400" fill="#4B5B73" text-anchor="start" >Creates the whole stack: VM, database, storage, inference.</text><rect x="636" y="170" width="328" height="36" rx="8" fill="#14233B" stroke="#14233B" stroke-width="0" /><text x="650" y="193" class="mono" font-size="12" font-weight="400" fill="#E3EAF5" text-anchor="start" >pnpm infra:apply -- --yes</text><circle cx="60" cy="252" r="16" fill="#14233B"/><text x="60" y="258" class="sans" font-size="16" font-weight="700" fill="#fff" text-anchor="middle" >4</text><text x="100" y="250" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >Coolify</text><text x="100" y="271" class="sans" font-size="13.5" font-weight="400" fill="#4B5B73" text-anchor="start" >Open it from your IP, add the repo as a Docker Compose resource.</text><rect x="636" y="234" width="328" height="36" rx="8" fill="#14233B" stroke="#14233B" stroke-width="0" /><text x="650" y="257" class="mono" font-size="12" font-weight="400" fill="#E3EAF5" text-anchor="start" >http://&lt;vm-ip&gt;:8000</text><circle cx="60" cy="316" r="16" fill="#14233B"/><text x="60" y="322" class="sans" font-size="16" font-weight="700" fill="#fff" text-anchor="middle" >5</text><text x="100" y="314" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >Deploy</text><text x="100" y="335" class="sans" font-size="13.5" font-weight="400" fill="#4B5B73" text-anchor="start" >Migrations run first; web and worker start only if they succeed.</text><rect x="636" y="298" width="328" height="36" rx="8" fill="#14233B" stroke="#14233B" stroke-width="0" /><text x="650" y="321" class="mono" font-size="12" font-weight="400" fill="#E3EAF5" text-anchor="start" >pnpm --filter @ebo/worker cli reset-demo</text><circle cx="60" cy="380" r="16" fill="#14233B"/><text x="60" y="386" class="sans" font-size="16" font-weight="700" fill="#fff" text-anchor="middle" >6</text><text x="100" y="378" class="serif" font-size="20" font-weight="700" fill="#14233B" text-anchor="start" >Check</text><text x="100" y="399" class="sans" font-size="13.5" font-weight="400" fill="#4B5B73" text-anchor="start" >Credit left, health, backups, model usage and pending charges.</text><rect x="636" y="362" width="328" height="36" rx="8" fill="#14233B" stroke="#14233B" stroke-width="0" /><text x="650" y="385" class="mono" font-size="12" font-weight="400" fill="#E3EAF5" text-anchor="start" >pnpm infra:status</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 444" width="1000" height="444" role="img" aria-labelledby="title" aria-describedby="desc">
+<title id="title">Deploy on Vultr in six steps</title>
+<desc id="desc">Settings (VULTR_API_KEY and ADMIN_CIDR in .env), plan (pnpm infra:plan, read-only), apply (pnpm infra:apply -- --yes, which creates the whole stack and costs money), Coolify (open it from your IP and add the repo as a Docker Compose resource), deploy (migrations first, then web and worker), check (pnpm infra:status).</desc>
+<style>
+.serif{font-family:'DM Serif Display',Georgia,'Times New Roman',serif;font-weight:400}
+.sans{font-family:Manrope,'Segoe UI',Helvetica,Arial,sans-serif}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+</style>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1.5 1.5 8.5 5 1.5 8.5" fill="none" stroke="#5F6963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<linearGradient id="panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1F4A3C"/><stop offset="1" stop-color="#163A2F"/></linearGradient>
+</defs>
+<!-- Its own light card, so the drawing reads the same on GitHub's light and dark themes. -->
+<rect x="0.5" y="0.5" width="999" height="443" rx="16" fill="#F7F8F5" stroke="#E7EAE5"/>
+<line x1="60" y1="60" x2="60" y2="380" stroke="#D3D9D2" stroke-width="2"/>
+<!-- 1. Settings -->
+<circle cx="60" cy="60" r="15" fill="#214F41"/>
+<text x="60" y="65" class="sans" font-size="14" font-weight="700" text-anchor="middle" fill="#FFFFFF">1</text>
+<text x="96" y="59" class="serif" font-size="20" fill="#29332F">Settings</text>
+<text x="96" y="80" class="sans" font-size="13" fill="#5F6963">Add VULTR_API_KEY and ADMIN_CIDR to .env.</text>
+<rect x="638" y="43" width="330" height="34" rx="8" fill="#163A2F"/>
+<text x="652" y="64.5" class="mono" font-size="12" fill="#EEF4F0">VULTR_API_KEY, ADMIN_CIDR</text>
+<!-- 2. Plan -->
+<circle cx="60" cy="124" r="15" fill="#214F41"/>
+<text x="60" y="129" class="sans" font-size="14" font-weight="700" text-anchor="middle" fill="#FFFFFF">2</text>
+<text x="96" y="123" class="serif" font-size="20" fill="#29332F">Plan</text>
+<text x="96" y="144" class="sans" font-size="13" fill="#5F6963">Read-only. Shows what exists, what would be created, cost and credit.</text>
+<rect x="638" y="107" width="330" height="34" rx="8" fill="#163A2F"/>
+<text x="652" y="128.5" class="mono" font-size="12" fill="#EEF4F0">pnpm infra:plan</text>
+<!-- 3. Apply -->
+<circle cx="60" cy="188" r="15" fill="#214F41"/>
+<text x="60" y="193" class="sans" font-size="14" font-weight="700" text-anchor="middle" fill="#FFFFFF">3</text>
+<text x="96" y="187" class="serif" font-size="20" fill="#29332F">Apply</text>
+<rect x="164.2" y="170" width="96.4" height="22" rx="11" fill="#FBE9E7" stroke="#F0C6C2"/>
+<text x="212.3" y="185.3" class="sans" font-size="12" font-weight="700" text-anchor="middle" fill="#B6403A">Costs money</text>
+<text x="96" y="208" class="sans" font-size="13" fill="#5F6963">Creates the whole stack: VM, database, storage, inference.</text>
+<rect x="638" y="171" width="330" height="34" rx="8" fill="#163A2F"/>
+<text x="652" y="192.5" class="mono" font-size="12" fill="#EEF4F0">pnpm infra:apply -- --yes</text>
+<!-- 4. Coolify -->
+<circle cx="60" cy="252" r="15" fill="#214F41"/>
+<text x="60" y="257" class="sans" font-size="14" font-weight="700" text-anchor="middle" fill="#FFFFFF">4</text>
+<text x="96" y="251" class="serif" font-size="20" fill="#29332F">Coolify</text>
+<text x="96" y="272" class="sans" font-size="13" fill="#5F6963">Open it from your IP, add the repo as a Docker Compose resource.</text>
+<rect x="638" y="235" width="330" height="34" rx="8" fill="#163A2F"/>
+<text x="652" y="256.5" class="mono" font-size="12" fill="#EEF4F0">http://&lt;vm-ip&gt;:8000</text>
+<!-- 5. Deploy -->
+<circle cx="60" cy="316" r="15" fill="#214F41"/>
+<text x="60" y="321" class="sans" font-size="14" font-weight="700" text-anchor="middle" fill="#FFFFFF">5</text>
+<text x="96" y="315" class="serif" font-size="20" fill="#29332F">Deploy</text>
+<text x="96" y="336" class="sans" font-size="13" fill="#5F6963">Migrations run first; web and worker start only if they succeed.</text>
+<rect x="638" y="299" width="330" height="34" rx="8" fill="#163A2F"/>
+<text x="652" y="320.5" class="mono" font-size="12" fill="#EEF4F0">pnpm --filter @ebo/worker cli reset-demo</text>
+<!-- 6. Check -->
+<circle cx="60" cy="380" r="15" fill="#214F41"/>
+<text x="60" y="385" class="sans" font-size="14" font-weight="700" text-anchor="middle" fill="#FFFFFF">6</text>
+<text x="96" y="379" class="serif" font-size="20" fill="#29332F">Check</text>
+<text x="96" y="400" class="sans" font-size="13" fill="#5F6963">Credit left, health, backups, model usage and pending charges.</text>
+<rect x="638" y="363" width="330" height="34" rx="8" fill="#163A2F"/>
+<text x="652" y="384.5" class="mono" font-size="12" fill="#EEF4F0">pnpm infra:status</text>
+</svg>
