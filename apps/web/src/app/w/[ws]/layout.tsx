@@ -112,9 +112,9 @@ export default async function WorkspaceLayout({ children, params }: { children: 
 
   // The workspace and the person, at the foot of the sidebar; the menu opens upwards.
   const footer = (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
       <details className="group relative">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2.5 text-sidebar-ink hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-gold [&::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-3 py-2 text-sidebar-ink hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-gold [&::-webkit-details-marker]:hidden">
           <span className="flex min-w-0 items-center gap-2">
             <span aria-hidden className="size-2 shrink-0 rounded-full bg-[#5fd39a]" />
             <span className="min-w-0">
@@ -151,7 +151,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
         </div>
       </details>
       <div className="flex items-center gap-3 px-1">
-        <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-[#f4f1e8] text-sm font-bold text-[#1f4a3c]">
+        <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-[#f4f1e8] text-sm font-bold text-[#1f4a3c]">
           {initials}
         </span>
         <span className="min-w-0">
@@ -164,15 +164,16 @@ export default async function WorkspaceLayout({ children, params }: { children: 
 
   return (
     <div className="min-h-dvh lg:pl-[16.5rem]">
-      <aside className="scroll-sidebar fixed inset-y-0 left-0 z-40 hidden w-[16.5rem] flex-col overflow-y-auto bg-[linear-gradient(180deg,var(--sidebar),var(--sidebar-deep))] px-4 pb-5 pt-7 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[16.5rem] flex-col bg-[linear-gradient(180deg,var(--sidebar),var(--sidebar-deep))] lg:flex">
         <Curves className="h-56 opacity-[0.08]" />
-        <div className="relative mb-8 flex justify-center">
+        <div className="relative flex shrink-0 justify-center px-4 pb-4 pt-6">
           <LogoStacked href={`${base}/inbox`} />
         </div>
-        <div className="relative">
+        {/* The links scroll on short screens; the workspace and the person stay at the foot. */}
+        <div className="scroll-sidebar relative min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           <WorkspaceNav groups={groups} />
         </div>
-        <div className="relative mt-auto pt-8">{footer}</div>
+        <div className="relative shrink-0 border-t border-white/10 px-4 pb-4 pt-3">{footer}</div>
       </aside>
 
       <div className="sticky top-0 z-30 flex items-center gap-2 bg-sidebar px-2 py-2 shadow-[0_1px_0_rgb(0_0_0/0.15)] lg:hidden">

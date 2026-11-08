@@ -83,7 +83,7 @@ export default async function DraftPage({ params, searchParams }: { params: Prom
         }
         actions={
           <Link href={`${base}/inbox`} className="btn btn-secondary">
-            ← Today
+            ← Dashboard
           </Link>
         }
       />

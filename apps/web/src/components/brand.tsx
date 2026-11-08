@@ -59,9 +59,9 @@ export function Logo({ href, size = "md", tone = "auto", className }: { href?: s
 /** The mark over the wordmark, light on dark green: the top of the sidebar. */
 export function LogoStacked({ href }: { href: string }) {
   return (
-    <Link href={href} className="flex flex-col items-center gap-2.5 rounded-md py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
-      <Mark tone="reversed" className="w-[60px]" />
-      <Wordmark tone="reversed" className="w-[112px]" />
+    <Link href={href} className="flex flex-col items-center gap-2 rounded-md py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
+      <Mark tone="reversed" className="w-[52px]" />
+      <Wordmark tone="reversed" className="w-[104px]" />
     </Link>
   );
 }

@@ -25,15 +25,15 @@ export function Card({ title, actions, children, className, pad = true, id, sub,
   return (
     <section id={id} className={cx("scroll-mt-4 overflow-hidden rounded-xl border border-line bg-panel shadow-card", className)}>
       {title || actions ? (
-        <header className={cx("flex flex-wrap items-start justify-between gap-x-3 gap-y-1 px-5 pt-4", pad ? "pb-1" : "border-b border-line pb-3.5")}>
-          <div className="flex min-w-0 items-start gap-2.5">
-            {icon ? <Icon name={icon} className="mt-0.5 size-[22px] shrink-0 text-gold" strokeWidth={1.8} /> : null}
-            <div className="min-w-0">
-              <h2 className="font-display text-[19px] leading-snug text-ink">{title}</h2>
-              {sub ? <p className="mt-0.5 text-[13px] text-muted">{sub}</p> : null}
+        <header className={cx("px-5 pt-4", pad ? "pb-1" : "border-b border-line pb-3.5")}>
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+            <div className="flex min-w-0 items-start gap-2.5">
+              {icon ? <Icon name={icon} className="mt-0.5 size-[22px] shrink-0 text-gold" strokeWidth={1.8} /> : null}
+              <h2 className="min-w-0 font-display text-[19px] leading-snug text-ink">{title}</h2>
             </div>
+            {actions ? <div className="flex flex-wrap items-center gap-2 pt-0.5 text-sm">{actions}</div> : null}
           </div>
-          {actions ? <div className="flex flex-wrap items-center gap-2 pt-0.5 text-sm">{actions}</div> : null}
+          {sub ? <p className={cx("mt-0.5 text-[13px] text-muted", icon && "pl-8")}>{sub}</p> : null}
         </header>
       ) : null}
       <div className={pad ? "px-5 pb-5 pt-3" : ""}>{children}</div>
@@ -163,17 +163,17 @@ export function Stat({ label, value, hint, tone, href, icon, spark }: { label: s
             </span>
           ) : null}
         </span>
-        <span className={cx("mt-1.5 block font-display text-[28px] leading-none tabular-nums", icon || !t ? "text-ink" : t.text)}>{value}</span>
+        <span className={cx("mt-1.5 block font-display text-[25px] leading-none tabular-nums @min-[13.5rem]:text-[28px]", icon || !t ? "text-ink" : t.text)}>{value}</span>
         {hint ? <span className="mt-2 block text-xs leading-snug text-muted">{hint}</span> : null}
       </span>
       {spark && spark.values.length > 1 ? (
-        <span className="self-end">
+        <span className="hidden self-end @min-[19rem]:block">
           <Sparkline values={spark.values} color={t?.line ?? "var(--accent)"} label={spark.label} />
         </span>
       ) : null}
     </>
   );
-  const cls = "group relative flex items-start gap-3.5 overflow-hidden rounded-xl border border-line bg-panel p-4 shadow-card sm:p-5";
+  const cls = "@container group relative flex items-start gap-3.5 overflow-hidden rounded-xl border border-line bg-panel p-4 shadow-card sm:p-5";
   return href ? (
     <Link href={href} className={cx(cls, "transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent")}>
       {body}

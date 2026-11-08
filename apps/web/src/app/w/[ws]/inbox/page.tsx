@@ -143,16 +143,19 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
         title: x.subject,
         sub: (
           <>
-            {templateName(x.template)} · to {x.toAddress}
+            <span className="min-w-0 max-w-full truncate">
+              {templateName(x.template)} · to {x.toAddress}
+            </span>
             {x.status === "blocked" ? (
-              <span className="font-semibold text-danger"> · Held: {x.rejectedReason ? "the records changed" : "a number doesn't match"}</span>
+              <span className="basis-full font-semibold text-danger">Held: {x.rejectedReason ? "the records changed" : "a number doesn't match"}</span>
             ) : x.numbersCheck?.ok ? (
-              <span className="font-semibold text-success">
-                {" "}
-                · ✓ {x.numbersCheck.found.length} {x.numbersCheck.found.length === 1 ? "number" : "numbers"} checked
+              <span className="basis-full font-semibold text-success">
+                ✓ {x.numbersCheck.found.length} {x.numbersCheck.found.length === 1 ? "number" : "numbers"} checked against the records
+                {x.model === "person" ? " · edited by a person" : ""}
               </span>
+            ) : x.model === "person" ? (
+              <span className="basis-full font-semibold text-success">Edited by a person</span>
             ) : null}
-            {x.model === "person" ? <span className="font-semibold text-success"> · Edited by a person</span> : null}
           </>
         ),
         primary: (
@@ -188,8 +191,8 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
         title: t.title,
         sub: (
           <>
-            {t.detail ? <span className="line-clamp-1">{t.detail}</span> : null}
-            {t.dueOn ? <span>Due {shortDay(t.dueOn)} · a task for a person</span> : <span>A task for a person</span>}
+            {t.detail ? <span className="min-w-0 max-w-full basis-full truncate">{t.detail}</span> : null}
+            <span className="basis-full">{t.dueOn ? `Due ${shortDay(t.dueOn)} · a task for a person` : "A task for a person"}</span>
           </>
         ),
         primary: t.flagId ? (
@@ -273,10 +276,14 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
   // ── Recent activity, from the records themselves (on the workspace's clock).
   const invoiceById = new Map(books.invoices.map((i) => [i.id, i]));
   const clientName = new Map(books.clients.map((c) => [c.id, c.name]));
-  const paidBy = new Map<string, string[]>();
+  const paidBy = new Map<string, { numbers: string[]; client?: string }>();
   for (const m of books.matches) {
     const i = invoiceById.get(m.invoiceId);
-    if (i) paidBy.set(m.transactionId, [...(paidBy.get(m.transactionId) ?? []), i.number]);
+    if (!i) continue;
+    const cur = paidBy.get(m.transactionId) ?? { numbers: [] };
+    cur.numbers.push(i.number);
+    cur.client ??= clientName.get(i.clientId);
+    paidBy.set(m.transactionId, cur);
   }
   const noon = (iso: string) => Date.parse(`${iso}T12:00:00Z`);
   const activity: Activity[] = [
@@ -285,7 +292,8 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
       .sort((a, b) => b.valueDate.localeCompare(a.valueDate))
       .slice(0, 5)
       .map((t): Activity => {
-        const paid = paidBy.get(t.id) ?? [];
+        const paid = paidBy.get(t.id);
+        const from = paid?.client ?? t.payerName;
         return {
           key: `p-${t.id}`,
           at: noon(t.valueDate),
@@ -293,12 +301,12 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
           icon: "card",
           text: (
             <>
-              Payment received: <span className="tabular-nums">{money(t.amount, t.currency)}</span>
-              {t.payerName ? ` from ${t.payerName}` : ""}
+              <span className="tabular-nums">{money(t.amount, t.currency)}</span> received{from ? ` from ${from}` : ""}
+              {paid ? ` for ${paid.numbers.join(", ")}` : ""}
             </>
           ),
           href: `${base}/payments/${t.id}`,
-          badge: paid.length ? { tone: "green", label: "Matched" } : t.matchStatus === "unmatched" ? { tone: "amber", label: "To place" } : { tone: "gray", label: "Recorded" },
+          badge: paid ? { tone: "green", label: "Matched" } : t.matchStatus === "unmatched" ? { tone: "amber", label: "To place" } : { tone: "gray", label: "Recorded" },
         };
       }),
     ...sent.map(
@@ -351,29 +359,34 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
     .sort((a, b) => b.at - a.at)
     .slice(0, 5);
 
-  // ── One insight, worked out from the records, with the way to the evidence.
+  // ── Insights, worked out from the records (not by a model), each with the way to the evidence.
   const late = d.owed.mostOverdue[0];
   const lateDraft = late ? drafts.find((x) => x.subject?.includes(late.number)) : undefined;
-  const insight = late
-    ? {
-        text: (
-          <>
-            <b className="font-semibold text-white">{late.client}</b> is {late.daysLate} day{late.daysLate === 1 ? "" : "s"} late on {late.number}, with <span className="tabular-nums">{formatMoney(late.balance, late.currency, { grouping: g })}</span> still to pay.
-            {lateDraft ? " A reminder is drafted and waiting for your approval." : ""}
-          </>
-        ),
-        href: lateDraft ? `${base}/drafts/${lateDraft.id}` : `${base}/invoices/${late.id}`,
-      }
-    : change != null
-      ? {
-          text: (
-            <>
-              Money received in the last 30 days is <b className="font-semibold text-white">{Math.abs(change).toFixed(0)}% {change >= 0 ? "higher" : "lower"}</b> than in the 30 days before.
-            </>
-          ),
-          href: `${base}/payments`,
-        }
-      : { text: <>Nothing is overdue, and nothing unusual stands out in the records.</>, href: `${base}/dashboard` };
+  const insights: Array<{ key: string; text: ReactNode; href: string; cta: string }> = [];
+  if (late)
+    insights.push({
+      key: "late",
+      text: (
+        <>
+          <b className="font-semibold text-white">{late.client}</b> is {late.daysLate} day{late.daysLate === 1 ? "" : "s"} late on {late.number}, with <span className="tabular-nums">{formatMoney(late.balance, late.currency, { grouping: g })}</span> still to pay.
+          {lateDraft ? " A reminder is drafted and waiting for your approval." : ""}
+        </>
+      ),
+      href: lateDraft ? `${base}/drafts/${lateDraft.id}` : `${base}/invoices/${late.id}`,
+      cta: lateDraft ? "Review the reminder" : "Open the invoice",
+    });
+  if (change != null && Math.round(Math.abs(change)) >= 1)
+    insights.push({
+      key: "flow",
+      text: (
+        <>
+          Money received in the last 30 days is <b className="font-semibold text-white">{Math.abs(change).toFixed(0)}% {change >= 0 ? "higher" : "lower"}</b> than in the 30 days before: {headline(last30.pkr, g)} against {headline(prev30.pkr, g)}.
+        </>
+      ),
+      href: `${base}/payments`,
+      cta: "See the payments",
+    });
+  if (!insights.length) insights.push({ key: "calm", text: <>Nothing is overdue, and nothing unusual stands out in the records.</>, href: `${base}/dashboard`, cta: "Financial overview" });
 
   return (
     <>
@@ -438,7 +451,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
         </section>
       ) : null}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           icon="trend"
           tone="brand"
@@ -640,11 +653,13 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
                     <span className={cx("absolute top-[11px] size-2.5 rounded-full", i === 0 ? "bg-accent" : "bg-line-strong")} />
                     {i < activity.length - 1 ? <span className="absolute bottom-[-12px] top-[22px] w-px bg-line" /> : null}
                   </span>
-                  <span className="w-[4.6rem] shrink-0 pt-[3px] text-xs text-muted">{sinceDays(daysBetween(a.date, w.today))}</span>
                   <Icon name={a.icon} className="mt-[2px] hidden size-[18px] shrink-0 text-muted sm:block" />
-                  <Link href={a.href} className="min-w-0 flex-1 text-sm text-ink hover:text-accent">
-                    {a.text}
-                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <Link href={a.href} className="block text-sm text-ink hover:text-accent">
+                      {a.text}
+                    </Link>
+                    <span className="mt-0.5 block text-xs text-muted">{sinceDays(daysBetween(a.date, w.today))}</span>
+                  </div>
                   <Badge tone={a.badge.tone}>{a.badge.label}</Badge>
                 </li>
               ))}
@@ -654,7 +669,7 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
           )}
         </Card>
 
-        <Card icon="calendar" title="Upcoming deadlines" sub="Next 14 days, from the records" pad={false}>
+        <Card icon="calendar" title="Upcoming deadlines" sub="What falls due next, from the records" pad={false}>
           {coming.length ? (
             <ul className="px-5 py-2">
               {coming.slice(0, 6).map((i) => {
@@ -687,16 +702,23 @@ export default async function Dashboard({ params, searchParams }: { params: Prom
           <Curves className="h-36 opacity-[0.09]" />
           <div className="relative flex items-center gap-2.5">
             <Icon name="sparkle" className="size-[22px] text-gold" strokeWidth={1.8} />
-            <h2 className="font-display text-[19px] text-white">Insight</h2>
+            <h2 className="font-display text-[19px] text-white">{insights.length > 1 ? "Insights" : "Insight"}</h2>
           </div>
-          <p className="relative mt-3 text-[15px] leading-relaxed text-sidebar-ink">{insight.text}</p>
-          <p className="relative mt-2 text-xs text-sidebar-muted">Worked out by Aerion from your records, not guessed by a model.</p>
-          <div className="relative mt-auto flex flex-wrap items-center gap-3 pt-5">
-            <Link href={insight.href} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gold/70 px-3.5 text-sm font-semibold text-gold hover:bg-gold/10 focus-visible:outline-2 focus-visible:outline-gold">
-              View details <Icon name="arrowRight" className="size-4" strokeWidth={2} />
-            </Link>
-            <Link href={`${base}/ask`} className="text-sm font-semibold text-sidebar-ink underline-offset-2 hover:underline">
-              Ask your books
+          <ul className="relative mt-3 space-y-4">
+            {insights.map((x, i) => (
+              <li key={x.key} className={cx(i > 0 && "border-t border-white/10 pt-4")}>
+                <p className="text-[15px] leading-relaxed text-sidebar-ink">{x.text}</p>
+                {/* A lighter gold than the token, so the link keeps its contrast on the green. */}
+                <Link href={x.href} className="mt-1.5 inline-flex items-center gap-1 rounded text-sm font-semibold text-[#e2c690] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
+                  {x.cta} <Icon name="arrowRight" className="size-4" strokeWidth={2} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="relative mt-4 text-xs text-sidebar-muted">Worked out by Aerion from your records, not guessed by a model.</p>
+          <div className="relative mt-auto pt-5">
+            <Link href={`${base}/ask`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gold/70 px-3.5 text-sm font-semibold text-[#e2c690] hover:bg-gold/10 focus-visible:outline-2 focus-visible:outline-gold">
+              Ask your books <Icon name="arrowRight" className="size-4" strokeWidth={2} />
             </Link>
           </div>
         </section>

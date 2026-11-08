@@ -119,9 +119,9 @@ Once the emails have gone out, **Next Monday →** lets that week's replies arri
 
 ## More than the Monday run
 
-### Insights
+### Financial overview
 
-**Insights** shows, for the tax year so far:
+The **Financial overview** shows, for the tax year so far:
 
 - what clients owe, by how late it is, and the most overdue invoices
 - how many days invoices take to get paid
@@ -133,7 +133,7 @@ It uses the same books and reference rates as the run. Every chart has its numbe
 
 ### Ask your books
 
-Ask in plain words: *What does Al Noor owe? How much came in last month? Which ePRCs are still missing? Who pays late? Where is INV-2026-029?* Aerion turns the question into one of nine read-only queries (owed, overdue, received, proceeds by month, banking-channel share, missing paperwork, cost of getting paid, days to pay, one invoice), and code works out the answer from the same books as Insights, with every line linked to the record behind it.
+Ask in plain words: *What does Al Noor owe? How much came in last month? Which ePRCs are still missing? Who pays late? Where is INV-2026-029?* Aerion turns the question into one of nine read-only queries (owed, overdue, received, proceeds by month, banking-channel share, missing paperwork, cost of getting paid, days to pay, one invoice), and code works out the answer from the same books as the financial overview, with every line linked to the record behind it.
 
 <p align="center">
   <img src="assets/screen-ask.png" alt="Ask your books, answering “What does Al Noor owe?”: USD 750.00, one open invoice, INV-2026-029, due 7 Nov 2026 and part paid, about PKR 211,050.00 at today's reference rates. Badges say the question was read by rules and the figures come from the records, with the query used: What clients owe. On the right, the nine kinds of question it can answer." width="100%">
@@ -192,7 +192,7 @@ Each line is done, waiting on someone outside (the bank, a client), or to do, wi
 
 **Bank statements** (CSV with the bank's columns) are read by code. Every running balance must follow from the line before, or the statement goes to a person. Each credit on the statement is tied to the credit already on record from the bank's advice; a credit the bank shows but no advice did is added, so the run can match it. In the demo, July to September were closed before it begins. October can be closed after the Monday run:
 
-1. Press **Run now**, then approve the six emails on **Today**.
+1. Press **Run now**, then approve the six emails on the **Dashboard**.
 2. Mark the task "Check the ePRC for INV-2026-018 with the accountant" done. A finished task, like an approved email, marks its flag as being handled.
 3. On **Month-end → October 2026**, press **Upload sample statements** (SIMULATED, made from the books).
 4. Press **Close October 2026**.
@@ -367,7 +367,7 @@ The live demo runs on this stack in Singapore (`sgp`), created by `pnpm infra:ap
 
 ```
 Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ──── queues runs ───▶ worker (pg-boss cron + run queue)
-                                       │ Today, approvals,                  │ plan → pull → read → reconcile
+                                       │ dashboard, approvals,              │ plan → pull → read → reconcile
                                        │ review, settings                   │ → flag → draft → send → follow-up
                      Vultr VM (Coolify, docker-compose)                     │
           ┌────────────────────────────┴──────────────┬─────────────────────┴───────────────┐
@@ -492,9 +492,9 @@ The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It bac
 
 | Path | What's in it |
 | --- | --- |
-| `apps/web` | Next.js app: landing page, sign-up and sign-in, setup, Today, Insights, Ask your books, search, runs, flags, payments, clients, invoices (editor and PDF), documents, tax-year file, rules, settings, audit log |
+| `apps/web` | Next.js app: landing page, sign-up and sign-in, setup, the dashboard, the financial overview, Ask your books, search, runs, flags, payments, clients, invoices (editor and PDF), documents, tax-year file, rules, settings, audit log |
 | `apps/worker` | Claims queued runs, runs the weekly cron, the mailbox check, the nightly backup and the demo clean-up, and has a CLI (runs, demo reset, backup and restore) |
-| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, invoices with their PDF, retainers, credit notes and write-offs, people, the mailbox, the Insights figures, Ask your books, and backups |
+| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, invoices with their PDF, retainers, credit notes and write-offs, people, the mailbox, the dashboard and overview figures, Ask your books, and backups |
 | `packages/core` | Pure rules: money, dates, matching, flags, templates, the numbers check, the approval policy |
 | `packages/ai` | The Vultr Serverless Inference client, prompts, extraction schemas, model-backed readers, the question planner for Ask your books, and the reading benchmark |
 | `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data and its answer key |
