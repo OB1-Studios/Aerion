@@ -6,7 +6,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, Empty, KeyValues, Notice, PageHeader, Status, Table, severityTone } from "@/components/ui";
-import { clock, day, money } from "@/lib/format";
+import { clock, day, money, shortDay } from "@/lib/format";
+import { countryName } from "@/lib/forms";
+import { FLAG_STATUS_LABEL, SEVERITY_LABEL } from "@/lib/labels";
 import { canAct, requireWorkspace } from "@/lib/session";
 import { creditAction, markInvoiceSentAction, sendInvoiceAction } from "../../manage-actions";
 import { CreditForm } from "./credit-form";
@@ -68,7 +70,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         title={`${inv.number} · ${row.client.name}`}
         sub={
           <span className="flex flex-wrap items-center gap-2">
-            <Status value={inv.status} label={inv.status === "part_paid" ? "part paid" : undefined} />
+            <Status value={inv.status} label={inv.status === "part_paid" ? "Part paid" : undefined} />
             <span>
               {money(inv.amount, inv.currency)} · issued {day(inv.issuedOn)} · due {day(inv.dueOn)}
             </span>
@@ -174,14 +176,14 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
                 ) : null}
                 {matches.map(({ m, tx }) => (
                   <tr key={m.id}>
-                    <td className="whitespace-nowrap tabular-nums text-muted">{tx.valueDate}</td>
+                    <td className="whitespace-nowrap tabular-nums text-muted">{shortDay(tx.valueDate)}</td>
                     <td className="whitespace-nowrap">
                       <Link href={`${base}/payments/${tx.id}`} className="text-ink hover:text-accent">
                         {money(tx.amount, tx.currency)}
                       </Link>
                     </td>
                     <td className="whitespace-nowrap tabular-nums">{money(m.appliedAmount, inv.currency)}</td>
-                    <td className="text-xs text-muted">{m.explanation[0]}</td>
+                    <td className="text-xs text-muted">{m.explanation[0]?.replace(/ \(tier [AB]\)/, "")}</td>
                   </tr>
                 ))}
               </Table>
@@ -246,7 +248,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
                 ["Name", <Link key="c" href={`${base}/clients/${row.client.id}`} className="text-ink hover:text-accent">{row.client.name}</Link>],
                 ["Contact", row.client.contactName ?? "—"],
                 ["Email", row.client.contactEmails.join(", ") || "—"],
-                ["Country", row.client.country ?? "—"],
+                ["Country", countryName(row.client.country) || "—"],
                 ["Terms", `${row.client.paymentTermsDays} days`],
               ]}
             />
@@ -289,8 +291,8 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
                 {flags.map((f) => (
                   <li key={f.id} className="px-4 py-2.5">
                     <div className="mb-1 flex gap-2">
-                      <Badge tone={severityTone(f.severity)}>{f.severity}</Badge>
-                      <Status value={f.status} />
+                      <Badge tone={severityTone(f.severity)}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
+                      <Status value={f.status} label={FLAG_STATUS_LABEL[f.status]} />
                     </div>
                     <Link href={`${base}/flags/${f.id}`} className="text-ink hover:text-accent">
                       {f.summary}

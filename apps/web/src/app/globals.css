@@ -12,26 +12,40 @@
   }
 }
 
+/*
+ * Aerion's identity: a ledger, not a dashboard template. Warm paper, deep treasury green for
+ * actions, brass only in the mark, hairline rules instead of shadows, a serif for titles and
+ * tabular figures everywhere money is shown.
+ */
 @theme {
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-panel: var(--panel);
+  --color-sunken: var(--sunken);
   --color-canvas: var(--canvas);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-accent-soft: var(--accent-soft);
+  --color-brass: var(--brass);
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-serif), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 :root {
-  --ink: #0f172a;
-  --muted: #64748b;
-  --line: #e2e8f0;
+  --ink: #17201c;
+  --muted: #5d6964;
+  --line: #e4e1d9;
+  --line-strong: #cfcac0;
   --panel: #ffffff;
-  --canvas: #f6f7f9;
-  --accent: #0f766e;
+  --sunken: #f9f8f4;
+  --canvas: #f4f3ee;
+  --accent: #1d5c48;
   --accent-ink: #ffffff;
+  --accent-soft: #e5efe9;
+  --brass: #9a6b2f;
   /* Chart series, validated on the panel surface in each mode (dataviz palette slots 1-2). */
   --series-1: #2a78d6;
   --series-2: #eb6834;
@@ -46,13 +60,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ink: #e2e8f0;
-    --muted: #94a3b8;
-    --line: #1e293b;
-    --panel: #0f172a;
-    --canvas: #020617;
-    --accent: #14b8a6;
-    --accent-ink: #042f2e;
+    --ink: #e6e9e4;
+    --muted: #9ba6a0;
+    --line: #26302b;
+    --line-strong: #36423c;
+    --panel: #151b18;
+    --sunken: #111613;
+    --canvas: #0d1210;
+    --accent: #5fb596;
+    --accent-ink: #0a1912;
+    --accent-soft: #17302a;
+    --brass: #c99a5b;
     --series-1: #3987e5;
     --series-2: #d95926;
     --age-1: #184f95;
@@ -65,13 +83,17 @@
 }
 
 :root[data-theme="dark"] {
-  --ink: #e2e8f0;
-  --muted: #94a3b8;
-  --line: #1e293b;
-  --panel: #0f172a;
-  --canvas: #020617;
-  --accent: #14b8a6;
-  --accent-ink: #042f2e;
+  --ink: #e6e9e4;
+  --muted: #9ba6a0;
+  --line: #26302b;
+  --line-strong: #36423c;
+  --panel: #151b18;
+  --sunken: #111613;
+  --canvas: #0d1210;
+  --accent: #5fb596;
+  --accent-ink: #0a1912;
+  --accent-soft: #17302a;
+  --brass: #c99a5b;
   --series-1: #3987e5;
   --series-2: #d95926;
   --age-1: #184f95;
@@ -87,23 +109,45 @@ body {
   color: var(--ink);
 }
 
+/* Money and counts line up in columns everywhere. */
+table,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* Quiet scrollbars for panels that scroll inside the page (the sidebar). */
+.scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply bg-accent text-accent-ink hover:opacity-90;
+    @apply bg-accent text-accent-ink shadow-[inset_0_-1px_0_rgb(0_0_0/0.15)] hover:brightness-110;
   }
   .btn-secondary {
-    @apply border border-line bg-panel text-ink hover:bg-canvas;
+    @apply border border-line-strong bg-panel text-ink hover:bg-sunken;
   }
   .btn-danger {
     @apply border border-rose-300 bg-panel text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950;
   }
+  .btn-ghost {
+    @apply text-muted hover:bg-sunken hover:text-ink;
+  }
   .input {
-    @apply w-full rounded-lg border border-line bg-panel px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline-2 focus:outline-accent;
+    @apply w-full rounded-md border border-line-strong bg-panel px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-2 focus:outline-offset-0 focus:outline-accent/30;
   }
   .link {
     @apply text-accent underline-offset-2 hover:underline;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted;
   }
 }

@@ -3,7 +3,7 @@ import { esfcaView, loadContext } from "@ebo/engine";
 import Link from "next/link";
 import { ActionForm } from "@/components/action-form";
 import { Badge, Card, Empty, Notice, PageHeader, Stat, Table } from "@/components/ui";
-import { day, money } from "@/lib/format";
+import { day, money, shortDay } from "@/lib/format";
 import { canAct, requireWorkspace } from "@/lib/session";
 import { recordConversionAction, removeConversionAction } from "../../manage-actions";
 import { ConversionForm } from "./conversion-form";
@@ -61,7 +61,7 @@ export default async function EsfcaPage({ params, searchParams }: { params: Prom
                     {a.conversions.map((c) => (
                       <tr key={c.id}>
                         <td className="whitespace-nowrap tabular-nums text-muted">
-                          {c.on}
+                          {shortDay(c.on)}
                           {c.reference ? <div className="text-xs">{c.reference}</div> : null}
                         </td>
                         <td className="whitespace-nowrap text-right tabular-nums">{money(c.amount, c.currency)}</td>
@@ -73,9 +73,11 @@ export default async function EsfcaPage({ params, searchParams }: { params: Prom
                           {c.costPct ? <div className="text-xs text-muted">{c.costPct}%</div> : null}
                         </td>
                         <td>
-                          {c.wide ? <Badge tone="amber">Wide spread</Badge> : null}
-                          {c.tiedToStatement ? <Badge tone="green">On statement</Badge> : null}
-                          {c.closed ? <Badge>Closed month</Badge> : null}
+                          <div className="flex flex-wrap gap-1">
+                            {c.wide ? <Badge tone="amber">Wide spread</Badge> : null}
+                            {c.tiedToStatement ? <Badge tone="green">On statement</Badge> : null}
+                            {c.closed ? <Badge>Closed month</Badge> : null}
+                          </div>
                         </td>
                         <td>{acts && !c.closed ? <ActionForm action={removeConversionAction.bind(null, slug, c.id)} label="Remove" pendingText="Removing…" variant="secondary" /> : null}</td>
                       </tr>
@@ -100,7 +102,7 @@ export default async function EsfcaPage({ params, searchParams }: { params: Prom
                     {a.monthEnds.map((m) => (
                       <tr key={m.month}>
                         <td>{m.label}</td>
-                        <td className="tabular-nums text-muted">{m.on}</td>
+                        <td className="whitespace-nowrap tabular-nums text-muted">{shortDay(m.on)}</td>
                         <td className="text-right tabular-nums">{money(m.balance, a.currency)}</td>
                       </tr>
                     ))}
@@ -123,7 +125,7 @@ export default async function EsfcaPage({ params, searchParams }: { params: Prom
         }
         pad={false}
       >
-        <p className="px-4 pt-3 text-sm text-muted">
+        <p className="px-4 pb-3 pt-3 text-sm text-muted">
           The limit we apply: the greater of USD {Number(view.rule.minUsd).toLocaleString("en-US")} a month or {view.rule.pct}% of the month&apos;s export proceeds, compared with what stayed in the ESFCA that month after conversions.
           {view.rule.verified ? "" : " This reading of the State Bank rule hasn't been checked against the source yet, so confirm with your bank before acting on it."}
         </p>

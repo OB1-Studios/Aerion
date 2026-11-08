@@ -21,6 +21,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ws: str
   if (!row) return new Response("Not found.", { status: 404 });
   const refused = twoFactorRefusal(row, row.role, session.user);
   if (refused) return refused;
+  if (!row.isDemo) return new Response("Sample documents are only for demo workspaces: a made-up payment must never reach real books.", { status: 403 });
   const sample = await sampleCreditAdvice(getDb(), row.id);
   if (!sample) return new Response("Every invoice paid by bank wire is settled; there's nothing for a sample to pay.", { status: 404 });
   return new Response(Buffer.from(sample.bytes), {

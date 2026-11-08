@@ -7,7 +7,7 @@ import { Badge, Card, Empty, PageHeader, Stat, Table } from "@/components/ui";
 import { day } from "@/lib/format";
 import { requireWorkspace } from "@/lib/session";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Insights" };
 
 /** Route names short enough for a chart row; the full ones are on invoices. */
 const ROUTE_SHORT: Record<string, string> = {
@@ -150,7 +150,16 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
 
   return (
     <>
-      <PageHeader title="Dashboard" sub={`Tax year ${d.year.label} so far, to ${day(d.today)}. Money received is in PKR at the reference rate of its day; money still owed, at today's rate.`} />
+      <PageHeader
+        eyebrow={`Tax year ${d.year.label}`}
+        title="Insights"
+        sub={`How the year is going, to ${day(d.today)}: who owes what, how fast clients pay, and what getting paid costs. Money received is in PKR at the reference rate of its day; money still owed, at today's rate.`}
+        actions={
+          <Link href={`/w/${slug}/ask`} className="btn btn-secondary">
+            Ask a question
+          </Link>
+        }
+      />
 
       {empty ? (
         <Empty>Nothing to show yet. Once you invoice clients and payments come in, this page shows what you're owed, how fast clients pay, and what getting paid costs.</Empty>
@@ -219,12 +228,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
                     </div>
                   ) : null}
                   {owed.unpriced.length ? <p className="mt-3 text-xs text-muted">No reference rate for {owed.unpriced.join(", ")} today, so those amounts are left out of the PKR totals.</p> : null}
-                  <ChartTable head={["How late", "Invoices", "PKR today", "In the invoice currency"]}>
+                  <ChartTable num={[1, 2]} head={["How late", "Invoices", "PKR today", "In the invoice currency"]}>
                     {owed.buckets.map((b) => (
                       <tr key={b.key}>
                         <td className="whitespace-nowrap">{b.label}</td>
-                        <td className="tabular-nums">{b.invoices}</td>
-                        <td className="whitespace-nowrap tabular-nums">{rupees(b.pkr, g)}</td>
+                        <td className="text-right tabular-nums">{b.invoices}</td>
+                        <td className="whitespace-nowrap text-right tabular-nums">{rupees(b.pkr, g)}</td>
                         <td className="tabular-nums text-muted">{b.byCurrency.map((c) => cash(c.amount, c.currency)).join(", ") || "—"}</td>
                       </tr>
                     ))}
@@ -250,18 +259,18 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
                     {hasPayoneer ? " Payoneer's conversion is estimated: what its withdrawals lost this year, spread over the payments received in that currency." : ""}
                     {hasEsfca ? " Money kept in the ESFCA hasn't been converted, so that route shows fees only." : ""}
                   </p>
-                  <ChartTable head={["Route", "Payments", "Received", "Fees", "Conversion", "Cost"]}>
+                  <ChartTable num={[1, 2, 3, 4, 5]} head={["Route", "Payments", "Received", "Fees", "Conversion", "Cost"]}>
                     {[...cost.byRoute, cost.total].map((r) => (
                       <tr key={r.key} className={r.key === "all" ? "font-medium" : undefined}>
                         <td className="whitespace-nowrap">{r.key === "all" ? "All routes" : (ROUTE_SHORT[r.key] ?? r.label)}</td>
-                        <td className="tabular-nums">{r.payments}</td>
-                        <td className="whitespace-nowrap tabular-nums">{rupees(r.valuePkr, g)}</td>
-                        <td className="whitespace-nowrap tabular-nums">{rupees(r.feesPkr, g)}</td>
-                        <td className="whitespace-nowrap tabular-nums">
+                        <td className="text-right tabular-nums">{r.payments}</td>
+                        <td className="whitespace-nowrap text-right tabular-nums">{rupees(r.valuePkr, g)}</td>
+                        <td className="whitespace-nowrap text-right tabular-nums">{rupees(r.feesPkr, g)}</td>
+                        <td className="whitespace-nowrap text-right tabular-nums">
                           {rupees(r.conversionPkr, g)}
                           {r.estimated ? <span className="text-muted"> est.</span> : null}
                         </td>
-                        <td className="whitespace-nowrap tabular-nums">{r.pct == null ? "—" : `${r.pct}%`}</td>
+                        <td className="whitespace-nowrap text-right tabular-nums">{r.pct == null ? "—" : `${r.pct}%`}</td>
                       </tr>
                     ))}
                   </ChartTable>
@@ -289,7 +298,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
                   .
                 </p>
                 <ColumnChart columns={columns} ticks={axis.ticks} top={axis.top} tickLabel={axis.label} />
-                <ChartTable head={["Month", "Credits", "PKR"]}>
+                <ChartTable num={[1, 2]} head={["Month", "Credits", "PKR"]}>
                   {months
                     .filter((m) => !m.future)
                     .map((m) => (
@@ -298,11 +307,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
                           {periodLabel(m.month)}
                           {m.month === thisMonth ? <span className="text-muted"> so far</span> : null}
                         </td>
-                        <td className="tabular-nums">
+                        <td className="text-right tabular-nums">
                           {m.credits}
                           {Number(m.openingPkr) > 0 ? <span className="text-muted"> + opening balance</span> : null}
                         </td>
-                        <td className="whitespace-nowrap tabular-nums">{rupees(m.pkr, g)}</td>
+                        <td className="whitespace-nowrap text-right tabular-nums">{rupees(m.pkr, g)}</td>
                       </tr>
                     ))}
                 </ChartTable>
@@ -314,7 +323,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
 
           <Card title="Clients" pad={false}>
             {d.clients.length ? (
-              <Table head={["Client", "Owed now", "Overdue", "Paid this year", "Days to pay (median)", "Cost of getting paid"]}>
+              <Table num={[1, 3, 4, 5]} head={["Client", "Owed now", "Overdue", "Invoices paid this year", "Days to pay (median)", "Cost of getting paid"]}>
                 {d.clients.map((c) => (
                   <tr key={c.clientId}>
                     <td className="min-w-40">
@@ -322,10 +331,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
                         {c.name}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap tabular-nums">{Number(c.owedPkr) > 0 ? rupees(c.owedPkr, g) : <span className="text-muted">—</span>}</td>
+                    <td className="whitespace-nowrap text-right tabular-nums">{Number(c.owedPkr) > 0 ? rupees(c.owedPkr, g) : <span className="text-muted">—</span>}</td>
                     <td>{c.overdueInvoices ? <Badge tone="amber">{plural(c.overdueInvoices, "invoice")}</Badge> : <span className="text-muted">—</span>}</td>
-                    <td className="tabular-nums">{c.paidInvoices || <span className="text-muted">—</span>}</td>
-                    <td className="whitespace-nowrap tabular-nums">
+                    <td className="text-right tabular-nums">{c.paidInvoices || <span className="text-muted">—</span>}</td>
+                    <td className="whitespace-nowrap text-right tabular-nums">
                       {c.medianDaysToPay != null ? (
                         <>
                           {plural(c.medianDaysToPay, "day")}
@@ -337,7 +346,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ ws: 
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap tabular-nums">
+                    <td className="whitespace-nowrap text-right tabular-nums">
                       {c.cost?.pct != null ? (
                         <>
                           {c.cost.pct}%{c.cost.estimated ? <span className="text-muted"> est.</span> : null}

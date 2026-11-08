@@ -164,12 +164,12 @@ export function ColumnChart({ columns, ticks, top, tickLabel, height = 160 }: { 
 }
 
 /** The chart's numbers as a table, folded away under the chart. */
-export function ChartTable({ head, children }: { head: ReactNode[]; children: ReactNode }) {
+export function ChartTable({ head, children, num }: { head: ReactNode[]; children: ReactNode; num?: number[] }) {
   return (
     <details className="mt-4">
       <summary className="cursor-pointer select-none text-xs text-muted hover:text-ink">Show the numbers</summary>
       <div className="-mx-4 mt-2">
-        <Table dense head={head}>
+        <Table dense head={head} num={num}>
           {children}
         </Table>
       </div>

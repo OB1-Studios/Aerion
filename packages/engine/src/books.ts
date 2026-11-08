@@ -296,7 +296,7 @@ export function flagSnapshot(b: Books, w: WorkspaceContext): FlagSnapshot {
 
 /** A cheaper way to pay for clients in these countries (main doc, routes table). Verify before relying on it. */
 const ROUTE_HINTS: Record<string, { currency: string; name: string; instructions: string }> = {
-  GB: { currency: "GBP", name: "Payoneer (GBP)", instructions: "pay in GBP to our UK receiving account through Payoneer, which avoids intermediary bank charges; details on request" },
+  GB: { currency: "GBP", name: "Payoneer (GBP)", instructions: "pay in GBP to our UK receiving account through Payoneer, which avoids intermediary bank charges. Details on request." },
 };
 
 /** What drafting needs (core/drafting.ts). */

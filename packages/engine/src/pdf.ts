@@ -22,7 +22,7 @@ export function simplePdf(lines: string[], opts: { fontSize?: number; title?: st
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
   objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>`;
   objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
-  objects[4] = `<< /Producer (IT Export Back Office) /Title (${pdfString(opts.title ?? "Document")}) >>`;
+  objects[4] = `<< /Producer (Aerion) /Title (${pdfString(opts.title ?? "Document")}) >>`;
   pages.forEach((pageLines, i) => {
     const body = pageLines.map((l) => `(${pdfString(l)}) Tj T*`).join("\n");
     const stream = `BT\n/F1 ${size} Tf\n${Math.round(size * 1.45)} TL\n50 ${PAGE_H - 60} Td\n${body}\nET`;

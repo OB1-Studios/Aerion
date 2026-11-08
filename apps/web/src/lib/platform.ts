@@ -29,3 +29,16 @@ export async function vultrStatus(): Promise<PlatformStatus | null> {
 export function readerInfo(): { mode: "vultr" | "offline"; model: string | null } {
   return process.env.VULTR_INFERENCE_API_KEY ? { mode: "vultr", model: process.env.VULTR_INFERENCE_MODEL || DEFAULT_MODEL } : { mode: "offline", model: null };
 }
+
+/**
+ * People who run this deployment, from OPERATOR_EMAILS (comma-separated). Only they see the
+ * hosting account's credit and inference spend; a business using Aerion never does.
+ */
+export function isOperator(u: { email?: string | null; isAnonymous?: boolean | null }): boolean {
+  if (!u.email || u.isAnonymous) return false;
+  const list = (process.env.OPERATOR_EMAILS ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return list.includes(u.email.toLowerCase());
+}

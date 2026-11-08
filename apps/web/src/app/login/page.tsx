@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AuthShell } from "@/components/auth-shell";
 import { getSession } from "@/lib/session";
 import { LoginForm } from "./login-form";
 
@@ -8,7 +9,7 @@ export const metadata = { title: "Sign in" };
 const DEMO_ACCOUNTS = [
   ["sana@ravicodeworks.example", "Owner, Ravi Code Works"],
   ["hamza@ravicodeworks.example", "Finance, Ravi Code Works"],
-  ["qureshi@qureshi-associates.example", "Accountant (both workspaces)"],
+  ["qureshi@qureshi-associates.example", "Accountant, both workspaces"],
   ["ayesha@ayeshabuilds.example", "Freelancer"],
 ];
 
@@ -18,32 +19,39 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const session = await getSession();
   if (session && !(session.user as { isAnonymous?: boolean | null }).isAnonymous) redirect(next ?? "/workspaces");
   return (
-    <main className="mx-auto grid min-h-dvh max-w-md content-center px-4 py-10">
-      <Link href="/" className="mb-6 text-sm text-muted hover:text-ink">
-        ← IT Export Back Office
-      </Link>
-      <div className="rounded-2xl border border-line bg-panel p-6 shadow-sm">
-        <h1 className="text-lg font-semibold">Sign in</h1>
-        <LoginForm next={next} email={q.email} />
-      </div>
-      <p className="mt-4 text-center text-sm text-muted">
-        New here?{" "}
-        <Link href={next ? `/signup?${new URLSearchParams({ next, ...(q.email ? { email: q.email } : {}) })}` : "/signup"} className="font-medium text-accent hover:underline">
-          Create an account
-        </Link>
-      </p>
-      <div className="mt-6 rounded-xl border border-line bg-panel p-4 text-sm">
-        <div className="font-medium">Shared demo accounts</div>
-        <p className="mt-1 text-muted">These share one copy of the demo. For your own copy, use &ldquo;Try the demo&rdquo; on the home page. The password is in the submission notes.</p>
-        <ul className="mt-2 space-y-1">
-          {DEMO_ACCOUNTS.map(([email, role]) => (
-            <li key={email} className="flex flex-wrap justify-between gap-2">
-              <code className="text-xs">{email}</code>
-              <span className="ml-auto text-right text-xs text-muted">{role}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </main>
+    <AuthShell
+      title="Sign in"
+      sub={
+        <>
+          New to Aerion?{" "}
+          <Link href={next ? `/signup?${new URLSearchParams({ next, ...(q.email ? { email: q.email } : {}) })}` : "/signup"} className="link font-medium">
+            Create an account
+          </Link>{" "}
+          or{" "}
+          <Link href="/" className="link font-medium">
+            try the demo
+          </Link>
+          .
+        </>
+      }
+      below={
+        <details className="rounded-[10px] border border-line bg-panel text-sm">
+          <summary className="cursor-pointer list-none px-4 py-3 font-medium text-ink [&::-webkit-details-marker]:hidden">Shared demo accounts ▾</summary>
+          <div className="border-t border-line px-4 py-3">
+            <p className="text-muted">These share one copy of the fictional demo data. For a private copy, use &ldquo;Try the demo&rdquo; on the home page.</p>
+            <ul className="mt-2 space-y-1.5">
+              {DEMO_ACCOUNTS.map(([email, role]) => (
+                <li key={email} className="flex flex-wrap justify-between gap-x-3">
+                  <code className="text-xs text-ink">{email}</code>
+                  <span className="ml-auto text-right text-xs text-muted">{role}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
+      }
+    >
+      <LoginForm next={next} email={q.email} />
+    </AuthShell>
   );
 }

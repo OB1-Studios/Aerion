@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, Empty, KeyValues, Notice, PageHeader, Status, Table, cx } from "@/components/ui";
 import { countryName, CURRENCIES } from "@/lib/forms";
-import { day, money } from "@/lib/format";
+import { day, money, shortDay } from "@/lib/format";
 import { canAct, requireWorkspace } from "@/lib/session";
 import { addRetainerAction, stopRetainerAction } from "../../manage-actions";
 import { RetainerForm } from "./retainer-form";
@@ -87,7 +87,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
                     <td className="whitespace-nowrap text-muted">{day(i.dueOn)}</td>
                     <td className="whitespace-nowrap text-right tabular-nums">{money(i.amount, i.currency)}</td>
                     <td>
-                      <Status value={i.status} label={i.status === "part_paid" ? "part paid" : undefined} />
+                      <Status value={i.status} />
                     </td>
                   </tr>
                 ))}
@@ -103,7 +103,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
               <Table head={["Value date", "Payment", "Settled", "Invoice"]}>
                 {payments.map((p) => (
                   <tr key={`${p.tx.id}-${p.invoiceId}`}>
-                    <td className="whitespace-nowrap tabular-nums text-muted">{p.tx.valueDate}</td>
+                    <td className="whitespace-nowrap tabular-nums text-muted">{shortDay(p.tx.valueDate)}</td>
                     <td className="whitespace-nowrap">
                       <Link href={`${base}/payments/${p.tx.id}`} className="text-ink hover:text-accent">
                         {money(p.tx.amount, p.tx.currency)}

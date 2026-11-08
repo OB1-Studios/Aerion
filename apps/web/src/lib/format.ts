@@ -3,6 +3,16 @@ import { formatDateLong, formatMoney, type EvidenceValue, formatEvidence, TEMPLA
 export const money = (amount: string | null | undefined, currency: string | null | undefined) => (amount == null || !currency ? "—" : formatMoney(amount, currency));
 export const day = (d: string | null | undefined) => (d ? formatDateLong(d) : "—");
 
+const SHORT = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+/** "30 Oct 2026": a calendar day, for table cells where the long form wraps. */
+export const shortDay = (d: string | null | undefined) => (d ? SHORT.format(new Date(`${d}T00:00:00Z`)) : "—");
+
+/** "23 Oct 2026": the calendar day of a moment, in the workspace's time zone. */
+export function dayIn(d: Date | null | undefined, timeZone = "Asia/Karachi") {
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone }).format(d);
+}
+
 /** "Mon 2 Nov 2026, 09:00" in the workspace's time zone. */
 export function clock(d: Date | null | undefined, timeZone = "Asia/Karachi") {
   if (!d) return "—";
@@ -25,6 +35,18 @@ export const duration = (a: Date | null | undefined, b: Date | null | undefined)
 };
 
 export const evidenceText = (v: EvidenceValue) => formatEvidence(v);
+
+const WORDS: Record<string, string> = { pseb: "PSEB", ntn: "NTN", eprc: "ePRC", eprcs: "ePRCs", wht: "WHT", fx: "FX", pkr: "PKR", iban: "IBAN", swift: "SWIFT", uetr: "UETR", mt103: "MT103", atl: "ATL", esfca: "ESFCA", usd: "USD", reg: "registration", no: "number", pct: "(%)", ref: "reference", ccy: "currency", qty: "quantity" };
+
+/** "client.contact_first_name" → "Client contact first name": evidence keys in words, for people. */
+export function evidenceLabel(key: string): string {
+  const words = key
+    .split(/[._]/)
+    .filter(Boolean)
+    .map((w) => WORDS[w.toLowerCase()] ?? w.toLowerCase());
+  const text = words.join(" ").replace(/ \(%\)/, " (%)");
+  return text.replace(/^[a-z]/, (c) => c.toUpperCase());
+}
 export const templateName = (t: string | null | undefined) => (t ? (TEMPLATE_NAMES[t as TemplateKey] ?? t) : "Task");
 export const humanize = (s: string) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 

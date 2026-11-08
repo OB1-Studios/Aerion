@@ -1,4 +1,5 @@
 import { FIELDS } from "@ebo/ai";
+import { formatAmount, formatRate } from "@ebo/core";
 import { document, getDb, run, storageFromEnv, transaction, type DocumentKind } from "@ebo/db";
 import { csvRecords, documentText, type ConfirmedReading } from "@ebo/engine";
 import { and, desc, eq } from "drizzle-orm";
@@ -12,6 +13,8 @@ import { fieldLabel, REVIEW_KINDS } from "@/lib/review";
 import { canAct, requireWorkspace } from "@/lib/session";
 import { confirmDocument, setAsideDocument } from "../../actions";
 import { ReviewForm, type ReviewField } from "./review-form";
+import { documentKindLabel, documentStatusLabel, readerLabel, SOURCE_LABEL, TRANSACTION_KIND } from "@/lib/labels";
+import { shortDay } from "@/lib/format";
 
 export const metadata = { title: "Document" };
 
@@ -21,6 +24,30 @@ interface Extracted {
   evidence?: Record<string, { quote?: string | null; confidence?: string }> | null;
   notes?: string | null;
   confirmed?: ConfirmedReading;
+}
+
+/** Who or what read the document, in words (the same reading as the badge on the documents list). */
+function readerName(model: string | null): string {
+  switch (readerLabel(model).kind) {
+    case "rules":
+      return "Aerion's built-in reader (no AI model)";
+    case "simulated":
+      return "Nobody: sample history that came with the demo";
+    case "person":
+      return "A person, by hand";
+    case "model":
+      return `${model}, an AI model on Vultr Serverless Inference`;
+    default:
+      return "—";
+  }
+}
+
+/** Extracted values as the rest of the app shows them: dates as "30 Oct 2026", amounts grouped. */
+function shownValue(kind: string | null, name: string, v: string): string {
+  const type = (FIELDS[kind as DocumentKind] ?? {})[name]?.type;
+  if (type === "date" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return shortDay(v);
+  if (type === "money" && /^-?\d+(\.\d+)?$/.test(v)) return name === "fx_rate_applied" ? formatRate(v) : formatAmount(v);
+  return v;
 }
 
 const KIND_TABS: Array<{ kind: DocumentKind; label: string }> = [
@@ -55,7 +82,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
     }
   }
   const x = (d.extracted ?? {}) as Extracted;
-  const fields = Object.entries(x.fields ?? {}).filter(([, v]) => v != null);
+  const fields = Object.entries(x.fields ?? {}).filter((e): e is [string, string] => e[1] != null);
   const fileUrl = `/api/w/${slug}/documents/${d.id}`;
   const base = `/w/${slug}`;
   const setAside = d.parseStatus === "skipped" && d.reviewReasons?.[0]?.startsWith("Set aside by");
@@ -80,9 +107,9 @@ export default async function DocumentPage({ params, searchParams }: { params: P
         title={d.originalName ?? "Document"}
         sub={
           <span className="flex flex-wrap items-center gap-2">
-            <Status value={d.parseStatus} label={d.parseStatus === "needs_review" ? "needs a person" : setAside ? "set aside" : undefined} />
+            <Status value={d.parseStatus} label={documentStatusLabel(d)} />
             <span>
-              {humanize(d.kind)} · received {clock(d.receivedAt, ws.timezone)} · {d.source}
+              {documentKindLabel(d.kind)} · received {clock(d.receivedAt, ws.timezone)} · {SOURCE_LABEL[d.source] ?? d.source}
             </span>
           </span>
         }
@@ -163,11 +190,11 @@ export default async function DocumentPage({ params, searchParams }: { params: P
           <Card title="What the reader saw">
             <KeyValues
               rows={[
-                ["Read by", d.model ?? "—"],
-                ["Classified as", `${humanize(x.classification?.kind ?? d.kind)}${x.classification?.confidence ? ` (${x.classification.confidence} confidence)` : ""}`],
+                ["Read by", readerName(d.model)],
+                ["Classified as", `${documentKindLabel(x.classification?.kind ?? d.kind)}${x.classification?.confidence ? ` (${x.classification.confidence} confidence)` : ""}`],
                 ...(x.classification?.workspaceMatch === "no" || x.classification?.workspaceMatch === false ? ([["Addressed to us?", <Badge key="m" tone="red">no: different account holder</Badge>]] as Array<[string, React.ReactNode]>) : []),
                 ...(x.confirmed ? ([["Checked by", `${x.confirmed.byName}, ${clock(new Date(x.confirmed.at), ws.timezone)}`]] as Array<[string, string]>) : []),
-                ...(d.promptVersion ? ([["Prompt version", d.promptVersion]] as Array<[string, string]>) : []),
+                ...(d.promptVersion ? ([[readerLabel(d.model).kind === "model" ? "Prompt version" : "Reader version", d.promptVersion]] as Array<[string, string]>) : []),
               ]}
             />
           </Card>
@@ -180,7 +207,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                     <li key={k} className="px-4 py-2">
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="text-xs text-muted">{fieldLabel(k)}</span>
-                        <span className="break-all text-right text-ink">{v}</span>
+                        <span className="break-all text-right text-ink tabular-nums">{shownValue(d.kind, k, v)}</span>
                       </div>
                       {e?.quote ? <div className="mt-0.5 truncate text-xs text-muted">from “{e.quote}”</div> : null}
                     </li>
@@ -195,7 +222,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                 {txs.map((t) => (
                   <li key={t.id} className="flex justify-between gap-2 px-4 py-2">
                     <Link href={`${base}/payments/${t.id}`} className="text-ink hover:text-accent">
-                      {t.valueDate} · {humanize(t.kind)}
+                      {shortDay(t.valueDate)} · {TRANSACTION_KIND[t.kind] ?? humanize(t.kind)}
                     </Link>
                     <span className="tabular-nums">{money(t.amount, t.currency)}</span>
                   </li>

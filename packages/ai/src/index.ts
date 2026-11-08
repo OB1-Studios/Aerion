@@ -1,8 +1,10 @@
-import type { Readers } from "@ebo/engine";
+import type { AskPlanner, Readers } from "@ebo/engine";
+import { modelAskPlanner } from "./ask";
 import { LIST_PRICES } from "./catalog";
 import { inferenceClient } from "./client";
 import { modelReaders } from "./readers";
 
+export * from "./ask";
 export * from "./bench";
 export * from "./catalog";
 export * from "./client";
@@ -42,4 +44,21 @@ export function readersFromEnv(env: Record<string, string | undefined> = process
     usdPerMillionOutput: Number(env.VULTR_INFERENCE_USD_PER_M_OUT ?? 0) || LIST_PRICES[model]?.output || 0,
   });
   return { ...readers, model };
+}
+
+/**
+ * The question planner for Ask (W29) on Vultr Serverless Inference, with the same key and model
+ * as the readers, or null without a key: then the built-in rules alone choose the query.
+ */
+export function askPlannerFromEnv(env: Record<string, string | undefined> = process.env): AskPlanner | null {
+  const apiKey = env.VULTR_INFERENCE_API_KEY;
+  if (!apiKey) return null;
+  const model = env.VULTR_INFERENCE_MODEL || DEFAULT_MODEL;
+  return modelAskPlanner({
+    client: inferenceClient({ apiKey, baseUrl: env.VULTR_INFERENCE_URL || undefined }),
+    model,
+    jsonMode: env.VULTR_INFERENCE_JSON_MODE === "schema" ? "schema" : "object",
+    usdPerMillionInput: Number(env.VULTR_INFERENCE_USD_PER_M_IN ?? 0) || undefined,
+    usdPerMillionOutput: Number(env.VULTR_INFERENCE_USD_PER_M_OUT ?? 0) || undefined,
+  });
 }

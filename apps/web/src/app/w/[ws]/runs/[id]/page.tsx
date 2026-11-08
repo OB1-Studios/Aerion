@@ -8,6 +8,7 @@ import { RunPoller } from "@/components/run-poller";
 import { Badge, Card, PageHeader, Status, Table, cx, severityTone } from "@/components/ui";
 import { clock, day, duration, humanize, templateName } from "@/lib/format";
 import { requireWorkspace } from "@/lib/session";
+import { documentKindLabel, intentLabel, runCountLabel, SEVERITY_LABEL } from "@/lib/labels";
 
 export const metadata = { title: "Run" };
 
@@ -24,6 +25,9 @@ const STEPS: Array<{ step: RunStepName; label: string; does: string }> = [
 
 type Out = Record<string, unknown>;
 const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+
+/** What a run did with each document, in words. */
+const DOC_ACTION: Record<string, string> = { created: "payment recorded", corrected: "payment corrected", already_imported: "already imported", certificate_on_file: "filed as a certificate" };
 
 export default async function RunPage({ params }: { params: Promise<{ ws: string; id: string }> }) {
   const { ws: slug, id } = await params;
@@ -52,8 +56,7 @@ export default async function RunPage({ params }: { params: Promise<{ ws: string
         sub={
           <span className="flex flex-wrap items-center gap-2">
             <Status value={r.status} />
-            <span className="capitalize">{r.kind.replace("_", " ")} run</span>
-            <span>· started by {r.triggeredBy ? (row.anon ? "a visitor" : (row.who ?? "a person")) : "the Monday schedule"}</span>
+            <span>{r.kind === "on_arrival" ? "Started when new mail arrived" : r.triggeredBy ? `Started by ${row.anon ? "a visitor" : (row.who ?? "a person")}` : "Started by the Monday schedule"}</span>
             {r.finishedAt ? <span>· took {duration(r.startedAt, r.finishedAt)}</span> : null}
           </span>
         }
@@ -93,7 +96,7 @@ export default async function RunPage({ params }: { params: Promise<{ ws: string
                     </div>
                     <span className="flex items-center gap-2 text-xs text-muted">
                       {s?.finishedAt ? duration(s.startedAt, s.finishedAt) : null}
-                      <Status value={state === "waiting" ? "pending" : state} label={state} />
+                      <Status value={state === "waiting" ? "pending" : state} label={state.charAt(0).toUpperCase() + state.slice(1)} />
                     </span>
                   </div>
                   <div className="px-4 pb-3 pt-2 text-sm">
@@ -132,7 +135,9 @@ export default async function RunPage({ params }: { params: Promise<{ ws: string
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([k, v]) => (
                     <div key={k} className="contents">
-                      <dt className="text-muted">{humanize(k)}</dt>
+                      <dt className="text-muted" title={k}>
+                        {runCountLabel(k)}
+                      </dt>
                       <dd className="text-right tabular-nums text-ink">{v}</dd>
                     </div>
                   ))}
@@ -223,8 +228,8 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
                   <Status value={d.status} />
                   <span className="min-w-0 truncate">{d.document}</span>
                   <span className="text-xs text-muted">
-                    {d.kind ? humanize(d.kind) : ""}
-                    {d.action === "imported" ? ` · ${d.created} of ${d.rows} rows new` : d.action ? ` · ${humanize(d.action)}` : ""}
+                    {d.kind ? documentKindLabel(d.kind) : ""}
+                    {d.action === "imported" ? ` · ${d.created} of ${d.rows} rows new` : d.action ? ` · ${DOC_ACTION[d.action] ?? humanize(d.action).toLowerCase()}` : ""}
                   </span>
                   {d.reasons?.length ? <span className="w-full pl-1 text-xs text-amber-700 dark:text-amber-400">{d.reasons.join(" ")}</span> : null}
                 </li>
@@ -235,7 +240,7 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
             <Lines>
               {emails.map((m, i) => (
                 <li key={i} className="flex flex-wrap items-baseline gap-2">
-                  <Badge tone={m.intent === "bank_detail_change" ? "red" : m.intent === "other" ? "gray" : "blue"}>{humanize(m.intent)}</Badge>
+                  <Badge tone={m.intent === "bank_detail_change" ? "red" : m.intent === "other" ? "gray" : "blue"}>{intentLabel(m.intent)}</Badge>
                   <span className="min-w-0 truncate">{m.subject}</span>
                   <span className="text-xs text-muted">
                     {m.forwardedFrom ? `forwarded; originally from ${m.forwardedFrom}` : m.from}
@@ -264,11 +269,11 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
                     {m.received} → {m.invoice}
                   </Link>{" "}
                   <span className="text-xs text-muted">
-                    tier {m.tier}
+                    {m.tier === "A" ? "by reference and payer" : "by payer and amount"}
                     {m.fee ? ` · fee ${m.fee}` : ""}
                     {m.unexplained ? ` · ${m.unexplained} unexplained` : ""}
                   </span>
-                  {m.explanation?.length ? <div className="text-xs text-muted">{m.explanation[0]}</div> : null}
+                  {m.explanation?.length ? <div className="text-xs text-muted">{m.explanation[0]!.replace(/ \(tier [AB]\)/, "")}</div> : null}
                 </li>
               ))}
             </Lines>
@@ -293,7 +298,7 @@ function StepDetail({ step, out, base, tz }: { step: RunStepName; out: Out; base
             <Lines>
               {opened.map((f) => (
                 <li key={f.key} className="flex items-baseline gap-2">
-                  <Badge tone={severityTone(f.severity)}>{f.severity}</Badge>
+                  <Badge tone={severityTone(f.severity)}>{SEVERITY_LABEL[f.severity] ?? f.severity}</Badge>
                   <span>{f.summary}</span>
                 </li>
               ))}

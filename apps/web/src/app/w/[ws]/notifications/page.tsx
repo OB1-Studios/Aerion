@@ -38,7 +38,7 @@ export default async function NotificationsPage({ params, searchParams }: { para
 
   return (
     <>
-      <PageHeader title="Notifications" sub="What needs you: approvals, tasks, high-risk flags, documents to check and payments to place. The Inbox is where you act on them." />
+      <PageHeader title="Notifications" sub="What needs you: approvals, tasks, high-risk flags, documents to check and payments to place. Today is where you act on them." />
       {q.saved ? <Notice>Saved.</Notice> : null}
       {q.sent ? <Notice>Sent to {user.email}.</Notice> : null}
 

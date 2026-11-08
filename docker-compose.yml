@@ -49,6 +49,8 @@ services:
       VULTR_DATABASE_ID: ${VULTR_DATABASE_ID:-}
       VULTR_OBJECT_STORAGE_ID: ${VULTR_OBJECT_STORAGE_ID:-}
       VULTR_INFERENCE_ID: ${VULTR_INFERENCE_ID:-}
+      # Optional: comma-separated emails of the people who run this deployment; only they see the Vultr credit and inference spend.
+      OPERATOR_EMAILS: ${OPERATOR_EMAILS:-}
     expose: ["3000"]
     volumes: ["documents:/data/storage"]
     depends_on:

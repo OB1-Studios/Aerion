@@ -254,8 +254,8 @@ export async function renderInvoicePdf(d: InvoiceDocument): Promise<Uint8Array> 
   const seller = d.ws.legalName ?? d.ws.name;
   pdf.setTitle(`Invoice ${d.inv.number}`);
   pdf.setAuthor(seller);
-  pdf.setCreator("IT Export Back Office");
-  pdf.setProducer("IT Export Back Office (pdf-lib)");
+  pdf.setCreator("Aerion");
+  pdf.setProducer("Aerion (pdf-lib)");
   pdf.setCreationDate(new Date(`${d.inv.issuedOn}T00:00:00Z`));
   pdf.setModificationDate(new Date(`${d.inv.issuedOn}T00:00:00Z`));
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
@@ -412,7 +412,7 @@ export async function draftInvoiceEmail(db: Db, workspaceId: string, invoiceId: 
   if (existing && ["sending", "sent", "approved", "scheduled"].includes(existing.status)) return { ok: false, reason: "This invoice's email is already on its way." };
   const draftId = existing
     ? (await db.update(draftAction).set(content).where(eq(draftAction.id, existing.id)).returning({ id: draftAction.id }))[0]!.id
-    : (await db.insert(draftAction).values({ workspaceId, key: plan.key, flagIds: [], ...content }).returning({ id: draftAction.id }))[0]!.id;
+    : (await db.insert(draftAction).values({ workspaceId, key: plan.key, flagIds: [], ...content, createdAt: workspaceClock(d.ws) }).returning({ id: draftAction.id }))[0]!.id;
   await audit(db, { workspaceId, ...actor, action: "draft.created", objectType: "draft_action", objectId: draftId, details: { template: "T11", invoice: d.inv.number, to: plan.to, status: content.status } });
   return { ok: true, draftId };
 }

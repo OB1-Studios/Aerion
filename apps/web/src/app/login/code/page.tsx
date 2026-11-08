@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AuthShell } from "@/components/auth-shell";
 import { getSession } from "@/lib/session";
 import { CodeForm } from "./code-form";
 
@@ -21,32 +22,25 @@ export default async function SignInCodePage({ searchParams }: { searchParams: P
   };
 
   return (
-    <main className="mx-auto grid min-h-dvh max-w-md content-center px-4 py-10">
-      <Link href="/" className="mb-6 text-sm text-muted hover:text-ink">
-        ← IT Export Back Office
-      </Link>
-      <div className="rounded-2xl border border-line bg-panel p-6 shadow-sm">
-        <h1 className="text-lg font-semibold">{backup ? "Use a backup code" : "Enter your sign-in code"}</h1>
-        {pending ? (
-          <>
-            <p className="mt-1 text-sm text-muted">{backup ? "One of the codes you kept when you set up two-factor sign-in. Each works once." : "Open your authenticator app and type the six-digit code for IT Export Back Office."}</p>
-            <CodeForm next={next} backup={backup} />
-            <p className="mt-4 text-sm">
-              <Link href={here(!backup)} className="link">
-                {backup ? "Use the authenticator app instead" : "Lost your phone? Use a backup code"}
-              </Link>
-            </p>
-          </>
-        ) : (
-          <p className="mt-2 text-sm">
-            This sign-in has expired, or it's already finished.{" "}
-            <Link href={next ? `/login?${new URLSearchParams({ next })}` : "/login"} className="link">
-              Sign in again
+    <AuthShell title={backup ? "Use a backup code" : "Enter your sign-in code"} sub={pending ? (backup ? "One of the codes you kept when you set up two-factor sign-in. Each works once." : "Open your authenticator app and type the six-digit code for Aerion.") : undefined}>
+      {pending ? (
+        <>
+          <CodeForm next={next} backup={backup} />
+          <p className="mt-4 text-sm">
+            <Link href={here(!backup)} className="link">
+              {backup ? "Use the authenticator app instead" : "Lost your phone? Use a backup code"}
             </Link>
-            .
           </p>
-        )}
-      </div>
-    </main>
+        </>
+      ) : (
+        <p className="text-sm">
+          This sign-in has expired, or it&apos;s already finished.{" "}
+          <Link href={next ? `/login?${new URLSearchParams({ next })}` : "/login"} className="link">
+            Sign in again
+          </Link>
+          .
+        </p>
+      )}
+    </AuthShell>
   );
 }

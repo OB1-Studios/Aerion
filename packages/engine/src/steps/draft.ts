@@ -1,9 +1,10 @@
-import { businessDaysBetween, dateInZone, formatDateLong, formatMoney, periodLabel, planDrafts, type FlagCandidate, type RuleKey } from "@ebo/core";
+import { businessDaysBetween, checkNumbers, dateInZone, formatDateLong, formatMoney, periodLabel, planDrafts, TEMPLATE_ALLOW_LIST, type FlagCandidate, type RuleKey } from "@ebo/core";
 import { draftAction, flag, task } from "@ebo/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { audit } from "../context";
 import { draftContext, loadBooks } from "../books";
 import { draftDueRetainers } from "../retainers";
+import { EDITED_BY_PERSON } from "../send";
 import { bump, type Step } from "./types";
 
 /** A bank gets this many business days to answer a document request before a person chases it. */
@@ -65,7 +66,7 @@ export const draftStep: Step = {
       if (p.kind === "internal_task") {
         const existing = tasks.get(p.key);
         if (!existing) {
-          await db.insert(task).values({ workspaceId: wsId, key: p.key, title: p.subject, detail: p.body, ownerId: p.ownerUserId ?? null, dueOn: p.dueOn ?? null, flagId: ids[0] ?? null });
+          await db.insert(task).values({ workspaceId: wsId, key: p.key, title: p.subject, detail: p.body, ownerId: p.ownerUserId ?? null, dueOn: p.dueOn ?? null, flagId: ids[0] ?? null, createdAt: c.w.clock });
           newTasks.push(p.subject);
         } else if (existing.status === "open") {
           await db.update(task).set({ title: p.subject, detail: p.body }).where(eq(task.id, existing.id));
@@ -99,9 +100,26 @@ export const draftStep: Step = {
           approvedAt: mode === "auto" ? c.w.clock : null,
           model: "template",
           runId: c.runId,
+          createdAt: c.w.clock, // the workspace's clock, like the flags it answers (a demo runs on a simulated one)
         });
         created.push({ key: p.key, template: p.template, to: p.to, subject: p.subject, decision: p.decision });
         bump(c, `drafts_${status}`);
+      } else if ((existing.status === "draft" || existing.status === "blocked") && existing.model === EDITED_BY_PERSON) {
+        // A person rewrote this email: keep their words, bring the facts up to date, and check
+        // their text against those facts. If the records moved under it, it's held, not redrafted.
+        const check = checkNumbers(`${existing.subject ?? ""}\n${existing.bodyRendered ?? ""}`, p.evidence, TEMPLATE_ALLOW_LIST);
+        await db
+          .update(draftAction)
+          .set({
+            flagIds: ids,
+            evidence: p.evidence,
+            numbersCheck: check,
+            status: check.ok ? "draft" : "blocked",
+            rejectedReason: check.ok ? null : "The records changed after a person edited this email; a number in it no longer matches.",
+            sendDecision: check.ok ? { mode: "approve", reasons: ["A person edited this email, so a person approves it before it goes."] } : { mode: "blocked", reasons: ["A number in the edited text no longer matches the records."] },
+          })
+          .where(eq(draftAction.id, existing.id));
+        refreshed.push(p.key);
       } else if (existing.status === "draft" || existing.status === "blocked") {
         await db.update(draftAction).set({ ...content, status, rejectedReason: null }).where(eq(draftAction.id, existing.id)); // a draft held back after the invoice changed is redrafted here
         refreshed.push(p.key);
@@ -114,7 +132,7 @@ export const draftStep: Step = {
       const what = f.kind === "missing_eprc" ? "ePRC" : "withholding certificate";
       const inv = f.evidence["invoice.number"]?.type === "text" ? f.evidence["invoice.number"].value : "";
       const bank = f.evidence["bank.name"]?.type === "text" ? f.evidence["bank.name"].value : "the bank";
-      await db.insert(task).values({ workspaceId: wsId, key, title: `Call ${bank} about the ${what}${inv ? ` for ${inv}` : ""}`, detail: `Requested by email on ${formatDateLong(since)} and still not received. ${f.summary}`, ownerId: books.owners[0] ?? null, dueOn: c.w.today, flagId: f.id });
+      await db.insert(task).values({ workspaceId: wsId, key, title: `Call ${bank} about the ${what}${inv ? ` for ${inv}` : ""}`, detail: `Requested by email on ${formatDateLong(since)} and still not received. ${f.summary}`, ownerId: books.owners[0] ?? null, dueOn: c.w.today, flagId: f.id, createdAt: c.w.clock });
       newTasks.push(`Chase the ${what}${inv ? ` for ${inv}` : ""}`);
     }
 

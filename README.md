@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="IT Export Back Office. A ledger slip shows a credit advice read, matched to an invoice, and an ePRC item opened, stamped MATCHED." width="100%">
+<img src="assets/banner.svg" alt="Aerion, the finance back office for Pakistan's software houses and IT freelancers. A ledger slip shows a credit advice read, matched to an invoice, and an ePRC item opened, stamped MATCHED." width="100%">
 
 <br><br>
 
@@ -30,7 +30,7 @@
 
 <br>
 
-An agent that runs the weekly finance back office for Pakistani software houses and IT freelancers. It makes sure every payment arrives, is matched to an invoice, and counts as an IT export. **It never moves money.**
+**Aerion** runs the weekly finance back office for Pakistani software houses and IT freelancers. It makes sure every payment arrives, is matched to an invoice, and counts as an IT export. **It never moves money.** The name comes from the Aerarium, the public treasury of ancient Rome.
 
 Built for the lablab.ai × Vultr **Agent Rush** hackathon, Challenge 2 (Finance & Accounting: invoice processing, transaction reconciliation, anomaly flagging, payment follow-ups). It runs entirely on Vultr, live at **https://45-76-150-156.sslip.io**.
 
@@ -119,9 +119,9 @@ Once the emails have gone out, **Next Monday →** lets that week's replies arri
 
 ## More than the Monday run
 
-### Dashboard
+### Insights
 
-The **Dashboard** shows, for the tax year so far:
+**Insights** shows, for the tax year so far:
 
 - what clients owe, by how late it is, and the most overdue invoices
 - how many days invoices take to get paid
@@ -130,6 +130,12 @@ The **Dashboard** shows, for the tax year so far:
 - each client's record
 
 It uses the same books and reference rates as the run. Every chart has its numbers in a table underneath.
+
+### Ask your books
+
+Ask in plain words: *What does Al Noor owe? How much came in last month? Which ePRCs are still missing? Who pays late? Where is INV-2026-029?* Aerion turns the question into one of nine read-only queries (owed, overdue, received, proceeds by month, banking-channel share, missing paperwork, cost of getting paid, days to pay, one invoice), and code works out the answer from the same books as Insights, with every line linked to the record behind it.
+
+Built-in rules read the question first. Only when they can't place it, and only where the workspace allows AI, minimax-m3.1-flash on Vultr Serverless Inference chooses the query from the question, today's date and the client names: never amounts or documents. Aerion checks that choice (a real query, a client and invoice that exist, real dates) before using it, and every answer says whether the rules or the model chose the query. The model never writes a number, model questions are capped per workspace per day, and each call is recorded with its tokens and cost.
 
 ### Credit notes, write-offs and voids
 
@@ -209,6 +215,7 @@ Each line is done, waiting on someone outside (the bank, a client), or to do, wi
 - **Code decides, the model reads.** Amounts, dates, currencies and IBANs are validated after extraction. A value that doesn't quote the source text, or doesn't parse, is marked for review instead of being used.
 - **Numbers are checked twice.** Every amount, date and invoice number in an outgoing email must match the records, both when the email is drafted and again at send time. A draft that fails is blocked and never sent.
 - **Code decides whose document it is.** A document only counts for a workspace if its IBAN or legal name matches. The model can lower that match, never raise it.
+- **A person can rewrite any email before it goes.** Approve, edit or reject. An edited email gets the same numbers check as the agent's draft, a number that doesn't trace to the records holds it, and a later run keeps the person's words. The audit log keeps the text it replaced.
 - **A policy decides what goes out.** In *supervised* mode (the default), a person approves every email. In *autopilot* mode, routine emails go out on their own, sensitive ones wait 30 minutes so anyone can cancel them, some always need a person, and there is an optional amount cap.
 - **A person checks what the agent can't.** A document that fails a check (an account that isn't the workspace's, an amount that doesn't parse, a date after the document arrived, a scan with no text) goes to the review queue. A person corrects the fields beside the document and confirms, or sets it aside with a reason. The confirmed values go through the same checks as anything the model reads, and the audit log records who changed which field.
 - **The workflow survives a model outage.** Calls that hit a rate limit or a server error are retried with backoff, and an unusable reply gets one more try that says what was wrong. After that, the reader falls back to the built-in layout rules. The run still completes, and the failed calls are recorded on its page.
@@ -481,11 +488,11 @@ The restore drill runs as a test (`packages/engine/test/backup.test.ts`). It bac
 
 | Path | What's in it |
 | --- | --- |
-| `apps/web` | Next.js app: landing page, sign-up and sign-in, setup, the inbox, dashboard, runs, flags, payments, clients, invoices (editor and PDF), documents, tax-year file, rules, settings, audit log |
+| `apps/web` | Next.js app: landing page, sign-up and sign-in, setup, Today, Insights, Ask your books, search, runs, flags, payments, clients, invoices (editor and PDF), documents, tax-year file, rules, settings, audit log |
 | `apps/worker` | Claims queued runs, runs the weekly cron, the mailbox check, the nightly backup and the demo clean-up, and has a CLI (runs, demo reset, backup and restore) |
-| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, invoices with their PDF, retainers, credit notes and write-offs, people, the mailbox, the dashboard figures, and backups |
+| `packages/engine` | The workflow: the eight steps, the offline document readers, PDF text, uploads and the sample credit advice, sending; workspace setup, clients, invoices with their PDF, retainers, credit notes and write-offs, people, the mailbox, the Insights figures, Ask your books, and backups |
 | `packages/core` | Pure rules: money, dates, matching, flags, templates, the numbers check, the approval policy |
-| `packages/ai` | The Vultr Serverless Inference client, prompts, extraction schemas, model-backed readers and the reading benchmark |
+| `packages/ai` | The Vultr Serverless Inference client, prompts, extraction schemas, model-backed readers, the question planner for Ask your books, and the reading benchmark |
 | `packages/db` | Drizzle schema and migrations, storage (Object Storage or local), the demo data and its answer key |
 | `packages/vultr` | A typed Vultr API client generated from the OpenAPI document, plus platform status |
 | `infra` | `plan`, `apply` and `status` for the Vultr stack |

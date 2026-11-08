@@ -29,7 +29,8 @@ export const flagStep: Step = {
       const row = byKey.get(f.key);
       const fields = { kind: f.kind, severity: f.severity, subjectType: f.subject.type, subjectId: f.subject.id, summary: f.summary, evidence: f.evidence, ruleKeys: f.ruleKeys, updatedAt: now };
       if (!row) {
-        await db.insert(flag).values({ workspaceId: wsId, key: f.key, status: "open", runId: c.runId, ...fields });
+        // Raised at the workspace's clock, like every other date the run writes (a demo runs on a simulated one).
+        await db.insert(flag).values({ workspaceId: wsId, key: f.key, status: "open", runId: c.runId, createdAt: now, ...fields });
         opened.push(f);
       } else if (row.status === "resolved") {
         await db.update(flag).set({ ...fields, status: "open", resolvedAt: null, resolvedByRunId: null, runId: c.runId }).where(eq(flag.id, row.id));

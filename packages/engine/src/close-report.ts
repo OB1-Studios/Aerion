@@ -20,8 +20,8 @@ export async function renderCloseReport(d: { ws: Workspace; view: CloseView; clo
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Month-end report: ${v.label}`);
   pdf.setAuthor(business);
-  pdf.setCreator("IT Export Back Office");
-  pdf.setProducer("IT Export Back Office (pdf-lib)");
+  pdf.setCreator("Aerion");
+  pdf.setProducer("Aerion (pdf-lib)");
   pdf.setCreationDate(d.closedAt);
   pdf.setModificationDate(d.closedAt);
   const regular = await pdf.embedFont(StandardFonts.Helvetica);

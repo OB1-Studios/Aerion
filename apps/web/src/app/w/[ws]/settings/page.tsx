@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, KeyValues, Notice, PageHeader, Table, cx } from "@/components/ui";
 import { day, ROLE_LABEL } from "@/lib/format";
 import { describeCredit } from "@ebo/vultr";
-import { readerInfo, vultrStatus } from "@/lib/platform";
+import { isOperator, readerInfo, vultrStatus } from "@/lib/platform";
 import { requireWorkspace } from "@/lib/session";
 import { setAiReading, setPolicy } from "../actions";
 import { inviteAction, revokeInviteAction, setRoleAction, setTwoFactorRequired } from "../manage-actions";
@@ -39,6 +39,8 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   } catch (err) {
     platformError = err instanceof Error ? err.message : String(err);
   }
+  // The hosting bill belongs to whoever runs the deployment, not to the businesses using it.
+  const operator = isOperator(me as { email?: string | null; isAnonymous?: boolean | null });
   const policy = ws.approvalPolicy;
   const isOwner = role === "owner";
   const managePeople = isOwner && !ws.isDemo;
@@ -260,26 +262,39 @@ export default async function SettingsPage({ params, searchParams }: { params: P
           <p className="mt-2 text-xs text-muted">Models never write numbers into emails. CSV exports are always parsed by code.</p>
         </Card>
 
-        <Card title="Running on Vultr" className="xl:col-span-2">
-          {platform?.credit ? (
+        <Card title={operator ? "Running on Vultr" : "Where your data lives"} className="xl:col-span-2">
+          <p className="mb-3 text-sm text-ink">
+            Aerion runs on Vultr in Singapore: the app server, a managed PostgreSQL database with automatic backups, and private object storage for your documents. When an owner turns on AI reading, documents are read by Vultr Serverless Inference in Vultr&apos;s US data centres. Aerion never holds or moves money.
+          </p>
+          {operator && platform?.credit ? (
             <Notice tone={platform.credit.low ? "amber" : "green"}>
               Vultr credit: {describeCredit(platform.credit)}. Pending charges this month: USD {platform.credit.pendingChargesUsd.toFixed(2)}.
             </Notice>
           ) : null}
           {platform ? (
             <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <Part title="App server (VM)" lines={platform.vm ? [`${platform.vm.label ?? ""} ${platform.vm.status ?? ""}`, `power ${platform.vm.power ?? "?"}, ${platform.vm.health ?? ""}`, `backups: ${platform.vm.backupSchedule ?? "?"}`, platform.vm.latestBackup ? `latest ${platform.vm.latestBackup}` : "no backup yet"] : ["not configured"]} />
-              <Part title="Managed PostgreSQL" lines={platform.database ? [`${platform.database.label ?? ""} ${platform.database.status ?? ""}`, platform.database.plan ?? "", platform.database.latestBackup ? `latest backup ${platform.database.latestBackup}` : "no backup yet"] : ["not configured"]} />
-              <Part title="Object Storage" lines={platform.objectStorage ? [`${platform.objectStorage.label ?? ""} ${platform.objectStorage.status ?? ""}`, platform.objectStorage.hostname ?? ""] : ["not configured"]} />
+              <Part title="App server" lines={platform.vm ? [`${platform.vm.status === "active" ? "Running" : (platform.vm.status ?? "")}${platform.vm.health ? `, ${platform.vm.health}` : ""}`, platform.vm.latestBackup ? `Latest backup ${platform.vm.latestBackup}` : "No backup yet", ...(operator ? [`${platform.vm.label ?? ""} · power ${platform.vm.power ?? "?"} · backups ${platform.vm.backupSchedule ?? "?"}`] : [])] : ["Not set up in this environment"]} />
+              <Part title="Database (PostgreSQL)" lines={platform.database ? [`${platform.database.status === "Running" ? "Running" : (platform.database.status ?? "")}`, platform.database.latestBackup ? `Latest backup ${platform.database.latestBackup}` : "No backup yet", ...(operator ? [`${platform.database.label ?? ""} · ${platform.database.plan ?? ""}`] : [])] : ["Not set up in this environment"]} />
+              <Part title="Document storage" lines={platform.objectStorage ? [platform.objectStorage.status === "active" ? "Running" : (platform.objectStorage.status ?? ""), "Private: files are only served to members", ...(operator ? [`${platform.objectStorage.label ?? ""} · ${platform.objectStorage.hostname ?? ""}`] : [])] : ["Not set up in this environment"]} />
               <Part
-                title="Serverless Inference"
-                lines={platform.inference ? [...platform.inference.models.map((m) => `${m.model}: ${m.inputTokens + m.outputTokens} tokens`), `this month ≈ USD ${platform.inference.totalCostUsd.toFixed(4)}`] : ["not configured"]}
+                title="AI reading (Serverless Inference)"
+                lines={
+                  platform.inference
+                    ? operator
+                      ? [...platform.inference.models.map((m) => `${m.model}: ${m.inputTokens + m.outputTokens} tokens`), `this month ≈ USD ${platform.inference.totalCostUsd.toFixed(4)}`]
+                      : [reader.mode === "vultr" ? `Available (${reader.model})` : "Not available", "Used only where an owner switches it on"]
+                    : ["Not set up in this environment"]
+                }
               />
-              {platform.errors.length ? <p className="text-xs text-rose-600 sm:col-span-2 lg:col-span-4">{platform.errors.join(" · ")}</p> : null}
+              {operator && platform.errors.length ? (
+                <p className="text-xs text-muted sm:col-span-2 lg:col-span-4" title={platform.errors.join(" · ")}>
+                  Some live figures couldn&apos;t be read from the Vultr API just now ({platform.errors.map((e) => e.split(":")[0]).join(", ")}). The app itself is unaffected; they&apos;ll show on the next visit once the API answers.
+                </p>
+              ) : null}
             </div>
-          ) : (
+          ) : operator ? (
             <p className="text-sm text-muted">{platformError ? `Couldn't reach the Vultr API: ${platformError}` : "Live status needs a Vultr API key in this environment. Deployed, this shows the VM, Managed PostgreSQL, Object Storage and Serverless Inference usage read through the Vultr API."}</p>
-          )}
+          ) : null}
         </Card>
       </div>
     </>

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Badge, Card, KeyValues, Notice } from "@/components/ui";
+import { PlainShell } from "@/components/plain-shell";
+import { Badge, Card, KeyValues, Notice, PageHeader } from "@/components/ui";
 import { myWorkspaces, requireUser } from "@/lib/session";
 import { twoFactorUnavailable, workspacesRequiringTwoFactor } from "@/lib/two-factor";
 import { signOut } from "../actions";
@@ -18,18 +19,21 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const back = asked && on ? { href: `/w/${asked.slug}/inbox`, text: `Back to ${asked.name}` } : { href: "/workspaces", text: "Your workspaces" };
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-4 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Link href={back.href} className="text-sm text-muted hover:text-ink">
+    <PlainShell
+      width="max-w-2xl"
+      actions={
+        <>
+          <Link href={back.href} className="btn btn-ghost">
             ← {back.text}
           </Link>
-          <h1 className="mt-1 text-lg font-semibold">Your account</h1>
-        </div>
-        <form action={signOut}>
-          <button className="btn btn-secondary">Sign out</button>
-        </form>
-      </div>
+          <form action={signOut}>
+            <button className="btn btn-ghost">Sign out</button>
+          </form>
+        </>
+      }
+    >
+      <div className="space-y-6">
+      <PageHeader title="Your account" sub="Your sign-in, for every workspace you belong to." />
 
       {asked && !on ? <Notice tone="amber">{asked.name} asks owners and finance to sign in with a code from an authenticator app as well as a password. Set it up below to carry on.</Notice> : null}
       {q.done === "on" && on ? (
@@ -96,6 +100,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           </div>
         )}
       </Card>
-    </main>
+      </div>
+    </PlainShell>
   );
 }

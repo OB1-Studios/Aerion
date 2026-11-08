@@ -168,7 +168,7 @@ export function matchCredit(credit: CreditForMatching, ctx: MatchContext): Match
       allocations,
       unappliedAmount: fixed2(unapplied),
       explanation: [
-        `Reference "${credit.reference}" names ${sameClient.map((i) => i.number).join(", ")} and the payer "${credit.payerName}" is ${clientName(clientId)} (tier A).`,
+        `Reference "${credit.reference}" names ${sameClient.map((i) => i.number).join(", ")} and the payer "${credit.payerName}" is ${clientName(clientId)}.`,
         ...notes,
       ],
     };
@@ -202,7 +202,7 @@ export function matchCredit(credit: CreditForMatching, ctx: MatchContext): Match
       allocations,
       unappliedAmount: fixed2(unapplied),
       explanation: [
-        `Payer "${credit.payerName}" is ${clientName(inv.clientId)}, and ${inv.number} is the only open invoice of theirs that fits the amount (tier B).`,
+        `Payer "${credit.payerName}" is ${clientName(inv.clientId)}, and ${inv.number} is the only open invoice of theirs that fits the amount.`,
         ...notes,
       ],
     };

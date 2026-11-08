@@ -1,4 +1,4 @@
-import { attachesInvoice, checkNumbers, dateInZone, TEMPLATE_ALLOW_LIST } from "@ebo/core";
+import { attachesInvoice, checkNumbers, dateInZone, TEMPLATE_ALLOW_LIST, type NumbersCheckResult, type SendDecision } from "@ebo/core";
 import { complianceItem, document, documentKey, draftAction, flag, invoice, invoiceReminder, message, sha256, workspace, type Db, type Storage } from "@ebo/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { audit, workspaceClock, type Mailer, type OutgoingEmail } from "./context";
@@ -112,6 +112,66 @@ export async function approveAndSend(deps: SendDeps, draftId: string, userId: st
   await db.update(draftAction).set({ status: "approved", approvedBy: userId, approvedAt: ws ? workspaceClock(ws) : new Date() }).where(eq(draftAction.id, d.id));
   await audit(db, { workspaceId: d.workspaceId, actorType: "user", actorId: userId, action: "draft.approved", objectType: "draft_action", objectId: d.id, details: { template: d.template, subject: d.subject } });
   return sendDraft(deps, draftId, { type: "user", id: userId });
+}
+
+/** The longest subject and text a person can give an email. */
+export const DRAFT_LIMITS = { subject: 200, body: 20_000 } as const;
+
+/** Marks a draft whose words a person wrote, so later runs keep them (see steps/draft.ts). */
+export const EDITED_BY_PERSON = "person";
+
+export type EditDraftResult = { ok: true; changed: boolean; check: NumbersCheckResult } | { ok: false; problems: string[] };
+
+/**
+ * A person rewrites an email before it goes. Their text gets the same numbers check as the
+ * agent's: every amount, date and invoice number must still trace to the records, or the email
+ * is held until it does. An edited email always waits for a person to approve it, whatever the
+ * approval policy says, and the audit log keeps the text it replaced.
+ */
+export async function editDraft(db: Db, draftId: string, userId: string, input: { subject: string; body: string }): Promise<EditDraftResult> {
+  const subject = input.subject.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+  const body = input.body
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+$/gm, "")
+    .replace(/^\n+|\n+$/g, "");
+  const problems: string[] = [];
+  if (!subject) problems.push("The email needs a subject.");
+  if (subject.length > DRAFT_LIMITS.subject) problems.push(`The subject is too long (${DRAFT_LIMITS.subject} characters at most).`);
+  if (!body.trim()) problems.push("The email needs some text.");
+  if (body.length > DRAFT_LIMITS.body) problems.push(`The text is too long (${DRAFT_LIMITS.body.toLocaleString("en")} characters at most).`);
+  const [d] = await db.select().from(draftAction).where(eq(draftAction.id, draftId));
+  if (!d) return { ok: false, problems: ["This email no longer exists."] };
+  if (d.kind === "internal_task") return { ok: false, problems: ["Tasks aren't emails."] };
+  if (!["draft", "blocked", "scheduled"].includes(d.status)) return { ok: false, problems: [`This email has been ${d.status === "sent" ? "sent" : d.status}, so it can't be changed.`] };
+  if (problems.length) return { ok: false, problems };
+  const evidence = d.evidence ?? {};
+  if (subject === d.subject && body === d.bodyRendered) return { ok: true, changed: false, check: d.numbersCheck ?? checkNumbers(`${subject}\n${body}`, evidence, TEMPLATE_ALLOW_LIST) };
+
+  const check = checkNumbers(`${subject}\n${body}`, evidence, TEMPLATE_ALLOW_LIST);
+  const decision: SendDecision = check.ok
+    ? { mode: "approve", reasons: ["A person edited this email, so a person approves it before it goes."] }
+    : { mode: "blocked", reasons: ["A number in the edited text doesn't match the records. Fix it before it can be sent."] };
+  await db
+    .update(draftAction)
+    .set({ subject, bodyRendered: body, numbersCheck: check, sendDecision: decision, status: check.ok ? "draft" : "blocked", scheduledFor: null, rejectedReason: null, model: EDITED_BY_PERSON })
+    .where(eq(draftAction.id, d.id));
+  await audit(db, {
+    workspaceId: d.workspaceId,
+    actorType: "user",
+    actorId: userId,
+    action: "draft.edited",
+    objectType: "draft_action",
+    objectId: d.id,
+    details: {
+      template: d.template,
+      ...(subject !== d.subject ? { subject: { from: d.subject, to: subject } } : {}),
+      ...(body !== d.bodyRendered ? { previousText: d.bodyRendered } : {}),
+      numbersOk: check.ok,
+      ...(check.ok ? {} : { unmatched: check.failures.map((f) => f.text) }),
+      wasScheduled: d.status === "scheduled",
+    },
+  });
+  return { ok: true, changed: true, check };
 }
 
 export async function rejectDraft(db: Db, draftId: string, userId: string, reason: string): Promise<void> {

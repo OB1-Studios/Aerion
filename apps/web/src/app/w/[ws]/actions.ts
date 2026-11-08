@@ -4,11 +4,12 @@ import { FIELDS, normalizeExtraction } from "@ebo/ai";
 import { addDays, dateInZone, weekday } from "@ebo/core";
 import { document, draftAction, flag, getDb, receivingAccount, storageFromEnv, task, workspace, type DocumentKind } from "@ebo/db";
 import { resetDemoWorkspace } from "@ebo/db/seed";
-import { addUpload, advanceDemoClock, approveAndSend, audit, rejectDraft as reject, sampleCreditAdvice, UPLOAD_MAX_FILES, validateCredit } from "@ebo/engine";
+import { addUpload, advanceDemoClock, approveAndSend, audit, editDraft, rejectDraft as reject, sampleCreditAdvice, UPLOAD_MAX_FILES, validateCredit } from "@ebo/engine";
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { engineDeps, startRun } from "@/lib/engine";
+import type { FormState } from "@/lib/forms";
 import { humanProblem, REVIEW_KINDS, type ReviewState } from "@/lib/review";
 import { actor } from "@/lib/actor";
 
@@ -104,6 +105,18 @@ export async function approveAll(slug: string) {
   redirect(`/w/${slug}/inbox?sentAll=${sent}`);
 }
 
+/** A person rewrites an email before approving it; the numbers check runs on their text too. */
+export async function editDraftAction(slug: string, draftId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const { user, ws } = await actor(slug);
+  const d = await draftIn(ws.id, draftId);
+  if (!d) notFound();
+  const values = { subject: String(form.get("subject") ?? ""), body: String(form.get("body") ?? "") };
+  const r = await editDraft(getDb(), d.id, user.id, values);
+  if (!r.ok) return { problems: r.problems, values };
+  refresh(slug);
+  redirect(`/w/${slug}/drafts/${d.id}?edited=${!r.changed ? "same" : r.check.ok ? "ok" : "held"}`);
+}
+
 export async function rejectDraft(slug: string, draftId: string, form: FormData) {
   const { user, ws } = await actor(slug);
   const d = await draftIn(ws.id, draftId);
@@ -134,8 +147,8 @@ export async function completeTask(slug: string, taskId: string, form: FormData)
 
 export async function dismissFlag(slug: string, flagId: string, form: FormData) {
   const { user, ws } = await actor(slug);
-  const reason = String(form.get("reason") ?? "").trim();
-  if (!reason) throw new Error("Say why the flag doesn't need action.");
+  const reason = String(form.get("reason") ?? "").trim().slice(0, 500);
+  if (!reason) redirect(`/w/${slug}/flags/${encodeURIComponent(flagId)}?error=reason`);
   const db = getDb();
   const [f] = await db
     .update(flag)
@@ -229,6 +242,7 @@ export async function pasteText(slug: string, form: FormData) {
 /** Demo help: a SIMULATED credit advice paying the oldest open invoice, uploaded and read at once. */
 export async function uploadSample(slug: string) {
   const { user, ws } = await actor(slug);
+  if (!ws.isDemo) redirect(`/w/${slug}/documents?upload=not-demo`);
   const deps = engineDeps();
   const sample = await sampleCreditAdvice(deps.db, ws.id);
   if (!sample) redirect(`/w/${slug}/documents?upload=nothing-open`);

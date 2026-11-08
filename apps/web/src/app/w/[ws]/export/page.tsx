@@ -2,7 +2,7 @@ import { addDays, isIsoDate, periodLabel, taxYearOf } from "@ebo/core";
 import { OPENING_CHANNEL_LABELS, taxYearOpenings, workspaceToday } from "@ebo/engine";
 import Link from "next/link";
 import { Badge, Card, Empty, KeyValues, Notice, PageHeader, Stat, Table, cx } from "@/components/ui";
-import { clock, day, money } from "@/lib/format";
+import { clock, day, money, shortDay } from "@/lib/format";
 import { canAct, canExport, requireWorkspace } from "@/lib/session";
 import { builtPacks, taxPackPreview } from "@/lib/tax-file";
 import { buildTaxPackAction } from "./actions";
@@ -94,7 +94,7 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
         <Stat label="Banking-channel share" value={share ? `${share.sharePct}%` : "—"} hint={`minimum ${f.rules["banking_share.min_pct"]}% (rule unverified)`} tone={share ? (Number(share.sharePct) >= Number(f.rules["banking_share.warn_pct"]) ? "good" : "warn") : undefined} />
         <Stat label="Export credits" value={f.lines.filter((l) => !l.ownTransfer).length} hint={`${f.lines.filter((l) => l.ownTransfer).length} more from our own wallet`} />
         <Stat label="ePRCs outstanding" value={s.eprc.missing} tone={s.eprc.missing ? "warn" : "good"} hint="missing or requested" />
-        <Stat label="Wallet money not yet banked" value={share ? `USD ${share.walletHeldUsd}` : "—"} hint={share && share.walletSpentUsd !== "0.00" ? `USD ${share.walletSpentUsd} spent by card` : "at reference rates"} />
+        <Stat label="Wallet money not yet banked" value={share ? money(share.walletHeldUsd, "USD") : "—"} hint={share && share.walletSpentUsd !== "0.00" ? `${money(share.walletSpentUsd, "USD")} spent by card` : "at reference rates"} />
       </div>
 
       <Card title={`Year-end tax pack ${f.year.label}`} className="mb-6">
@@ -195,7 +195,7 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
           <Table head={["Date", "Payer", "Amount", "PKR", "Code", "Invoices", "ePRC", "WHT cert."]}>
             {f.lines.map((l) => (
               <tr key={l.id}>
-                <td className="whitespace-nowrap tabular-nums text-muted">{l.valueDate}</td>
+                <td className="whitespace-nowrap tabular-nums text-muted">{shortDay(l.valueDate)}</td>
                 <td className="min-w-40">
                   {l.payer ?? "—"}
                   {l.ownTransfer ? <div className="text-xs text-muted">from our own wallet</div> : null}
@@ -296,5 +296,5 @@ export default async function ExportPage({ params, searchParams }: { params: Pro
 
 function Paper({ status }: { status: string }) {
   const tone = status === "on file" ? "green" : status.startsWith("wrong") ? "red" : status === "requested" ? "blue" : status === "missing" ? "amber" : "gray";
-  return <Badge tone={tone}>{status}</Badge>;
+  return <Badge tone={tone}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
 }

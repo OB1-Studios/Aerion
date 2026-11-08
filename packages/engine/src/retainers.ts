@@ -84,7 +84,7 @@ export async function draftDueRetainers(db: Db, w: WorkspaceContext, runId: stri
     const askPerson = (title: string, detail: string) =>
       db
         .insert(task)
-        .values({ workspaceId: ws.id, key: taskKey, title, detail, dueOn: today })
+        .values({ workspaceId: ws.id, key: taskKey, title, detail, dueOn: today, createdAt: w.clock })
         .onConflictDoUpdate({ target: [task.workspaceId, task.key], set: { title, detail, status: "open" } });
 
     // Gives the month back, so the next run tries again.

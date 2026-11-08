@@ -114,6 +114,8 @@ function businessDayBefore(d: IsoDate): IsoDate {
  */
 export async function sampleCreditAdvice(db: Db, workspaceId: string): Promise<{ name: string; bytes: Uint8Array; invoiceNumber: string } | null> {
   const w = await loadContext(db, workspaceId);
+  // A made-up payment must never reach real books: samples are for demo workspaces only.
+  if (!w.ws.isDemo) return null;
   const books = await loadBooks(db, w);
   const accounts = await db.select().from(receivingAccount).where(eq(receivingAccount.workspaceId, workspaceId));
   const bankAccount = (id: string | null) => accounts.find((a) => a.id === id && a.iban && (a.kind === "pkr_account" || a.kind === "esfca"));

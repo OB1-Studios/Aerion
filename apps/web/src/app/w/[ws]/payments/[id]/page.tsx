@@ -5,8 +5,9 @@ import { and, eq, or } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Card, Empty, KeyValues, PageHeader, Status, severityTone } from "@/components/ui";
-import { day, humanize, money } from "@/lib/format";
+import { day, humanize, money, shortDay } from "@/lib/format";
 import { requireWorkspace } from "@/lib/session";
+import { documentKindLabel, TRANSACTION_KIND } from "@/lib/labels";
 
 export const metadata = { title: "Payment" };
 
@@ -40,7 +41,7 @@ export default async function PaymentPage({ params }: { params: Promise<{ ws: st
           <span className="flex flex-wrap items-center gap-2">
             <Status value={tx.matchStatus} />
             <span>
-              {humanize(tx.kind)} · {day(tx.valueDate)} · {account?.label}
+              {TRANSACTION_KIND[tx.kind] ?? humanize(tx.kind)} · {day(tx.valueDate)} · {account?.label}
             </span>
           </span>
         }
@@ -68,7 +69,7 @@ export default async function PaymentPage({ params }: { params: Promise<{ ws: st
                   "Read from",
                   doc[0] ? (
                     <Link key="d" href={`${base}/documents/${doc[0].id}`} className="link">
-                      {doc[0].name ?? humanize(doc[0].kind)}
+                      {doc[0].name ?? documentKindLabel(doc[0].kind)}
                     </Link>
                   ) : (
                     "seeded history"
@@ -87,12 +88,12 @@ export default async function PaymentPage({ params }: { params: Promise<{ ws: st
                       <Link href={`${base}/invoices/${m.invoiceId}`} className="font-medium text-ink hover:text-accent">
                         {number}
                       </Link>
-                      <Badge tone={m.tier === "A" ? "green" : "blue"}>tier {m.tier}</Badge>
-                      {m.feeProbable ? <Badge tone="amber">fee probable</Badge> : null}
+                      <Badge tone={m.tier === "A" ? "green" : "blue"}>{m.tier === "A" ? "By reference and payer" : "By payer and amount"}</Badge>
+                      {m.feeProbable ? <Badge tone="amber">Bank fee likely</Badge> : null}
                     </div>
                     <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-ink">
                       {m.explanation.map((e, i) => (
-                        <li key={i}>{e}</li>
+                        <li key={i}>{e.replace(/ \(tier [AB]\)/, "")}</li>
                       ))}
                     </ul>
                     <dl className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -125,9 +126,9 @@ export default async function PaymentPage({ params }: { params: Promise<{ ws: st
                           view
                         </Link>
                       ) : c.dueOn ? (
-                        `due ${c.dueOn}`
+                        `due ${shortDay(c.dueOn)}`
                       ) : null}
-                      <Status value={c.status} label={c.status === "wrong_code" ? `wrong code${c.purposeCodeOnDocument ? ` ${c.purposeCodeOnDocument}` : ""}` : undefined} />
+                      <Status value={c.status} label={c.status === "wrong_code" ? `Wrong code${c.purposeCodeOnDocument ? ` ${c.purposeCodeOnDocument}` : ""}` : undefined} />
                     </span>
                   </li>
                 ))}

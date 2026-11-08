@@ -10,7 +10,7 @@ export function SignUpForm({ next, email }: { next?: string; email?: string }) {
   const [state, action] = useActionState(signUp, FORM_START);
   const v = state.values ?? (email ? { email } : {});
   return (
-    <form action={action} key={JSON.stringify(state.values)} className="mt-4 space-y-4">
+    <form action={action} key={JSON.stringify(state.values)} className="space-y-4">
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <FormProblems problems={state.problems} title="Not yet:" />
       <Field label="Your name">
@@ -23,15 +23,15 @@ export function SignUpForm({ next, email }: { next?: string; email?: string }) {
         <input name="password" type="password" required minLength={10} maxLength={128} autoComplete="new-password" className="input w-full" />
       </Field>
       <label className="flex gap-2 text-sm">
-        <input type="checkbox" name="terms" defaultChecked={v.terms === "on"} className="mt-1" />
+        <input type="checkbox" name="terms" defaultChecked={v.terms === "on"} className="mt-1 accent-[var(--accent)]" />
         <span>
-          I understand this is a pilot built for a hackathon. I&apos;ll only upload documents I&apos;m allowed to share, and I can ask for my workspace and its documents to be deleted at any time.
+          I understand Aerion is in an early pilot. I&apos;ll only upload documents I&apos;m allowed to share, and I can export or delete my workspace and its documents at any time. Aerion is not tax advice.
         </span>
       </label>
       <label className="flex gap-2 text-sm">
-        <input type="checkbox" name="ai" defaultChecked={state.values ? v.ai === "on" : true} className="mt-1" />
+        <input type="checkbox" name="ai" defaultChecked={state.values ? v.ai === "on" : true} className="mt-1 accent-[var(--accent)]" />
         <span>
-          Read my documents with AI on Vultr Serverless Inference. <span className="text-muted">Without this only the built-in layout rules read them, and more documents will need typing in by hand. Either way, numbers are always checked against the document.</span>
+          Read my documents with AI on Vultr Serverless Inference (in Vultr&apos;s US data centres). <span className="text-muted">Without this only the built-in layout rules read them, and more documents will need typing in by hand. Either way, numbers are always checked against the document.</span>
         </span>
       </label>
       <SubmitButton pendingText="Creating your account…" className="w-full">
