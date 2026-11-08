@@ -36,6 +36,9 @@ const readme = (await response.text())
   // A relative link to a file in the repo only works on github.com. The assets are published with the page.
   .replace(/href="(?!https?:|mailto:|#|assets\/)([^"]+)"/g, `href="${repoUrl}/blob/main/$1"`);
 
+// The app's own mark, so the tab looks the same on both.
+const icon = `data:image/svg+xml,${encodeURIComponent(readFileSync(join(root, "apps/web/src/app/icon.svg"), "utf8").trim())}`;
+
 const page = `<!doctype html>
 <html lang="en">
 <head>
@@ -43,27 +46,28 @@ const page = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aerion</title>
 <meta name="description" content="Aerion runs the weekly finance back office for Pakistani software houses and IT freelancers. It never moves money.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2314233B'/%3E%3Cpath d='M8 17l5 5 11-12' fill='none' stroke='%23F3F6FA' stroke-width='3.5'/%3E%3C/svg%3E">
+<link rel="icon" href="${icon}">
 <style>
 :root {
   color-scheme: light dark;
-  --ink: #14233b;
-  --muted: #4a5a72;
-  --line: #d5deec;
-  --panel: #f3f6fa;
-  --canvas: #fbfcfe;
-  --link: #3346a8;
-  --accent: #b93a2f;
+  /* The app's palette (apps/web/src/app/globals.css). */
+  --ink: #17201c;
+  --muted: #5d6964;
+  --line: #e4e1d9;
+  --panel: #ffffff;
+  --canvas: #f4f3ee;
+  --link: #1d5c48;
+  --accent: #9a6b2f;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --ink: #e6ecf5;
-    --muted: #a9b6ca;
-    --line: #2f4163;
-    --panel: #18263d;
-    --canvas: #0f1a2c;
-    --link: #a6b9ff;
-    --accent: #ff9d92;
+    --ink: #e6e9e4;
+    --muted: #9ba6a0;
+    --line: #26302b;
+    --panel: #151b18;
+    --canvas: #0d1210;
+    --link: #5fb596;
+    --accent: #c99a5b;
   }
 }
 * { box-sizing: border-box; }
@@ -75,6 +79,8 @@ a { color: var(--link); }
 .bar h1 { margin: 0; font-size: 1rem; font-weight: 600; }
 main { max-width: 60rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; overflow-wrap: break-word; }
 img { max-width: 100%; height: auto; }
+/* The screenshots share the page's background; an edge keeps them apart. */
+img[src^="assets/screen-"] { border: 1px solid var(--line); border-radius: 8px; }
 div[align="center"] p { margin: 0; }
 hr { margin: 2.5rem 0; border: 0; border-top: 1px solid var(--line); }
 .markdown-heading { display: flex; align-items: baseline; gap: 0.5rem; margin: 2rem 0 1rem; }

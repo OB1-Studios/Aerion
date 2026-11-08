@@ -81,39 +81,39 @@ Each run is recorded step by step, and the run page shows what each step did and
 
 ## See it work
 
-These are the live demo's own screens, drawn from the deployed app on 2026-11-07. Everything in them is fictional and marked SIMULATED.
+These are screenshots of the live demo, taken on 2026-11-08. The software house, its clients and its money are sample data, and the bar at the top shows the demo's simulated clock.
 
-### Monday morning: the inbox
+### Monday morning: what needs a person
 
 <p align="center">
-  <img src="assets/screen-inbox.svg" alt="The Inbox of the demo software house, Ravi Code Works, after the first Monday run. Tiles show 6 emails to approve, 9 open flags (4 high), 3 tasks and checks, and a 99.20% banking-channel share. Five of the six drafted emails are listed with their risk and how many numbers were checked, each with Review and Approve and send buttons. The last run's summary is on the right." width="100%">
+  <img src="assets/screen-today.png" alt="The Today page of the demo software house, Ravi Code Works, after the first Monday run on the simulated clock (Mon 2 Nov 2026, 09:00). Tiles show 9 things that need a person, PKR 2.57M owed, PKR 816K overdue and a 99.20% banking-channel share. Six drafted emails wait for approval, each with its risk and how many of its numbers were checked, with Review and Approve and send buttons. Below them are three tasks for a person. On the right: what's coming up, the overdue invoice and the last run's summary." width="100%">
 </p>
 
-After its first Monday run (the demo clock says Mon 2 Nov 2026, 09:00), the software house has six emails waiting for approval. Each shows its risk and how many of its numbers were checked against the records. Nine flags are open, four of them high, and three tasks wait for a person.
+After its first Monday run (the demo clock says Mon 2 Nov 2026, 09:00), nine things need a person: six emails to approve and three tasks, such as calling a client to confirm the bank details. Each email shows its risk and how many of its numbers were checked against the records. Nine flags are open, four of them high.
 
 ### Every step on the record
 
 <p align="center">
-  <img src="assets/screen-run.svg" alt="The page for one run: eight steps from Plan to Follow up, each with its time, status and what it did, such as the emails pulled in, the documents parsed, a payment matched to INV-2026-025 at tier A, two high flags and an email to approve. On the right, the model calls to Vultr Serverless Inference with their tokens and milliseconds, and the run's counts." width="100%">
+  <img src="assets/screen-run.png" alt="The page for that run, which took 15.4 seconds. Plan, Pull and Read are shown with their times: Pull brought in nine emails and a Payoneer export, and Read lists every document and email with what it was read as, such as a credit advice, a remittance advice or a request to change bank details. On the right: the run's report, its counts and the model calls to Vultr Serverless Inference with their tokens and milliseconds." width="100%">
 </p>
 
-Each run has its own page: what every step did and how long it took, and every model call with its tokens and time. Here the Read step took 17.8 seconds, because Serverless Inference read nine documents and nine emails. Every other step took milliseconds.
+Each run has its own page: what every step did and how long it took, and every model call with its tokens and time. This run took 15.4 seconds, 14.5 of them in the Read step, where Serverless Inference read the documents and emails in 25 model calls. Every other step took milliseconds.
 
 ### Every number traced
 
 <p align="center">
-  <img src="assets/screen-draft.svg" alt="A drafted short-payment email to Al Noor Trading for INV-2026-029. Every number in it is highlighted, and the Numbers check panel traces each one to a record: 28 October 2026 is the value date, 6,750.00 was received, 7,500.00 is the invoice amount, 0.00 is the fee and 750.00 is unexplained. The email needs a person because the workspace approves every outgoing message." width="100%">
+  <img src="assets/screen-draft.png" alt="The drafted short-payment email to Al Noor Trading FZ-LLC for INV-2026-029. Every number in it is highlighted, and the Numbers check panel traces each one to the records: 28 October 2026 is the value date, 750.00 is unexplained, 6,750.00 was received, 7,500.00 is the invoice amount and 0.00 is the fee. It needs a person because the workspace approves every outgoing message, and it answers a high-risk short-payment flag." width="100%">
 </p>
 
-In a draft, every number is highlighted and traced to a record: the value date, the amount received, the invoice amount, the fee and the unexplained difference. Approving runs the check again on the exact text, and holds the email back if anything in the records has changed.
+In a draft, every number is highlighted and traced to a record: the value date, the amount received, the invoice amount, the fee and the unexplained difference. Approving runs the check again on the exact text, and holds the email back if anything in the records has changed. In the demo, an approved email is recorded, not delivered.
 
 ### Next Monday, flags close on their own
 
 <p align="center">
-  <img src="assets/screen-flags.svg" alt="The Flags page after the first Monday: 9 open flags, 4 high. A last column shows the next Monday: the short payment, the wrong purpose code, the unconfirmed payment claim and the missing ePRC are resolved because the rest was paid, the bank corrected the code, the money arrived and the ePRC arrived. The lookalike-domain warning and four medium flags stay open." width="100%">
+  <img src="assets/screen-flags.png" alt="The Flags page on the next Monday (Mon 9 Nov 2026, 09:00), on the Resolved tab: 5 open, 4 resolved, 0 dismissed. The four resolved flags are Brightlane Health's claim that INV-2026-032 was paid, the wrong purpose code on Dr. Elena Varga's EUR 1,200.00 payment, Al Noor Trading's USD 750.00 short payment on INV-2026-029, and a missing ePRC for a USD 7,500.00 credit. All four were resolved at 09:00 that day." width="100%">
 </p>
 
-Once the emails have gone out, **Next Monday →** lets that week's replies arrive and runs again. The rest of Al Noor's payment comes in, the bank corrects the purpose code, Brightlane's money lands and the missing ePRC arrives, so four flags close on their own. The lookalike-domain warning stays open, with a task for a person to call the client.
+Once the emails have gone out, **Next Monday →** lets that week's replies arrive and runs again. The rest of Al Noor's payment comes in, the bank corrects the purpose code, Brightlane's money lands and the missing ePRC arrives, so four flags close on their own. Five stay open: the lookalike-domain warning, with a task for a person to call the client, and four medium flags. Three of the five are already being handled.
 
 ---
 
@@ -134,6 +134,10 @@ It uses the same books and reference rates as the run. Every chart has its numbe
 ### Ask your books
 
 Ask in plain words: *What does Al Noor owe? How much came in last month? Which ePRCs are still missing? Who pays late? Where is INV-2026-029?* Aerion turns the question into one of nine read-only queries (owed, overdue, received, proceeds by month, banking-channel share, missing paperwork, cost of getting paid, days to pay, one invoice), and code works out the answer from the same books as Insights, with every line linked to the record behind it.
+
+<p align="center">
+  <img src="assets/screen-ask.png" alt="Ask your books, answering “What does Al Noor owe?”: USD 750.00, one open invoice, INV-2026-029, due 7 Nov 2026 and part paid, about PKR 211,050.00 at today's reference rates. Badges say the question was read by rules and the figures come from the records, with the query used: What clients owe. On the right, the nine kinds of question it can answer." width="100%">
+</p>
 
 Built-in rules read the question first. Only when they can't place it, and only where the workspace allows AI, minimax-m3.1-flash on Vultr Serverless Inference chooses the query from the question, today's date and the client names: never amounts or documents. Aerion checks that choice (a real query, a client and invoice that exist, real dates) before using it, and every answer says whether the rules or the model chose the query. The model never writes a number, model questions are capped per workspace per day, and each call is recorded with its tokens and cost.
 
@@ -188,7 +192,7 @@ Each line is done, waiting on someone outside (the bank, a client), or to do, wi
 
 **Bank statements** (CSV with the bank's columns) are read by code. Every running balance must follow from the line before, or the statement goes to a person. Each credit on the statement is tied to the credit already on record from the bank's advice; a credit the bank shows but no advice did is added, so the run can match it. In the demo, July to September were closed before it begins. October can be closed after the Monday run:
 
-1. Press **Run now**, then approve the six emails in the Inbox.
+1. Press **Run now**, then approve the six emails on **Today**.
 2. Mark the task "Check the ePRC for INV-2026-018 with the accountant" done. A finished task, like an approved email, marks its flag as being handled.
 3. On **Month-end → October 2026**, press **Upload sample statements** (SIMULATED, made from the books).
 4. Press **Close October 2026**.
@@ -363,7 +367,7 @@ The live demo runs on this stack in Singapore (`sgp`), created by `pnpm infra:ap
 
 ```
 Browser ── HTTPS ──▶ Coolify proxy ──▶ web (Next.js) ──── queues runs ───▶ worker (pg-boss cron + run queue)
-                                       │ inbox, approvals,                  │ plan → pull → read → reconcile
+                                       │ Today, approvals,                  │ plan → pull → read → reconcile
                                        │ review, settings                   │ → flag → draft → send → follow-up
                      Vultr VM (Coolify, docker-compose)                     │
           ┌────────────────────────────┴──────────────┬─────────────────────┴───────────────┐
